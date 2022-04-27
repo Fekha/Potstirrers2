@@ -28,6 +28,7 @@ public class Player
     public int Wins = 0;
     public int LocalWins = 0;
     public int SelectedDie = 0;
+    public int SelectedDie2 = 0;
     public int SelectedMeat = 0;
     public int SelectedVeggie = 0;
     public int SelectedFruit = 0;

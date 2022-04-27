@@ -44,15 +44,15 @@ public class MainMenuController : MonoBehaviour
     private void GetPlayerCallback(string data)
     {
         var player = sql.jsonConvert<Player>(data);      
-        if (player.Xp != Settings.LoggedInPlayer.Xp || player.Level != Settings.LoggedInPlayer.Level)
+        if (player.Xp != Settings.LoggedInPlayer.Xp && player.Level != Settings.LoggedInPlayer.Level)
         {
             var starsGained = player.Stars - Settings.LoggedInPlayer.Stars;
-            Settings.LoggedInPlayer.Stars = player.Stars;
-            Settings.LoggedInPlayer.Level = player.Level;
-            Settings.LoggedInPlayer.Xp = player.Xp;
             alertText.text = $"Congrats you hit level {Settings.LoggedInPlayer.Level}! You gained {starsGained} Calories!";
             alert.SetActive(true);
         }
+        Settings.LoggedInPlayer.Stars = player.Stars;
+        Settings.LoggedInPlayer.Level = player.Level;
+        Settings.LoggedInPlayer.Xp = player.Xp;
         UpdateLvlText();
     }
     void Awake()

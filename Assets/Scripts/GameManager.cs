@@ -412,15 +412,15 @@ Additionally, the AI will make less mistakes the more wins you have, enjoy :)"
         lowerMove = roll1 > roll2 ? roll2 : roll1;
 
 
-        if (GetActivePlayer().player.Username == Settings.LoggedInPlayer.Username && !Settings.LoggedInPlayer.UseD8s && Settings.LoggedInPlayer.SelectedDie != 0)
+        if (GetActivePlayer().player.Username == Settings.LoggedInPlayer.Username && !Settings.LoggedInPlayer.UseD8s )
         {
-            HigherRoll.gameObject.GetComponent<Image>().sprite = allD10s[Settings.LoggedInPlayer.SelectedDie];
-            LowerRoll.gameObject.GetComponent<Image>().sprite = allD10s[Settings.LoggedInPlayer.SelectedDie];
+            HigherRoll.gameObject.GetComponent<Image>().sprite = Settings.LoggedInPlayer.SelectedDie != 0 ? allD10s[Settings.LoggedInPlayer.SelectedDie] : GetActivePlayer().TeamYellow ? yellowDie : purpleDie;
+            LowerRoll.gameObject.GetComponent<Image>().sprite = Settings.LoggedInPlayer.SelectedDie2 != 0 ? allD10s[Settings.LoggedInPlayer.SelectedDie2] : GetActivePlayer().TeamYellow ? yellowDie : purpleDie;
         }
-        else if (GetActivePlayer().player.Username == Settings.SecondPlayer.Username && !Settings.LoggedInPlayer.UseD8s && Settings.SecondPlayer.SelectedDie != 0)
+        else if (GetActivePlayer().player.Username == Settings.SecondPlayer.Username && !Settings.LoggedInPlayer.UseD8s)
         {
-            HigherRoll.gameObject.GetComponent<Image>().sprite = allD10s[Settings.SecondPlayer.SelectedDie];
-            LowerRoll.gameObject.GetComponent<Image>().sprite = allD10s[Settings.SecondPlayer.SelectedDie];
+            HigherRoll.gameObject.GetComponent<Image>().sprite = Settings.SecondPlayer.SelectedDie != 0 ? allD10s[Settings.SecondPlayer.SelectedDie] : GetActivePlayer().TeamYellow ? yellowDie : purpleDie;
+            LowerRoll.gameObject.GetComponent<Image>().sprite = Settings.SecondPlayer.SelectedDie2 != 0 ? allD10s[Settings.SecondPlayer.SelectedDie2] : GetActivePlayer().TeamYellow ? yellowDie : purpleDie;
         }
         else if (GetActivePlayer().TeamYellow)
         {
@@ -752,6 +752,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             ?? StompEnemy(TeamIngredients)
             ?? StompSafeZone(EnemyIngredients)
             ?? GoToTrash(EnemyIngredients)
+            ?? StompEnemy(EnemyIngredients)
             ?? SlideOnThermometor(TeamIngredients)
             ?? MoveFrontMostIngredient(TeamIngredients)
             ?? MoveNotPastPrep(TeamIngredients)
@@ -768,6 +769,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             ?? StompEnemy(TeamIngredients)
             ?? StompSafeZone(EnemyIngredients)
             ?? GoToTrash(EnemyIngredients)
+            ?? StompEnemy(EnemyIngredients)
             ?? SlideOnThermometor(TeamIngredients);
         moveWithLowerFirst = (ing != null);
     }
@@ -818,8 +820,8 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     {
         if (teamToMove.Count == 0) return null;
         return teamToMove.FirstOrDefault(x => (x.routePosition + Steps) < 26 //Dont move past preparation
-        && !(x.routePosition > 17 && x.routePosition < 20) //Dont move from scoring position
-        && ((x.fullRoute[(x.routePosition + Steps) % 26].hasSpatula && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps -6) % 26))
+        && !(x.routePosition > 16) //Dont move from scoring position
+        && ((x.fullRoute[(x.routePosition + Steps) % 26].hasSpatula && (Steps < 4 || Steps > 7) && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps -6) % 26))
         || (x.fullRoute[(x.routePosition + Steps) % 26].hasSpoon && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps + 6) % 26))));
     } 
     

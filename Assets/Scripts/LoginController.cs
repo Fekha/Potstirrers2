@@ -33,7 +33,8 @@ public class LoginController : MonoBehaviour
         if (Settings.LoggedInPlayer.UserId == 0)
         {
             alertText.text = @"Latest Updates:
-XP and Levels added to the game!";
+XP and Levels added to the game!
+New Dice in Unlockables!";
             alert.SetActive(true);
         }
         StartCoroutine(sql.RequestRoutine(url, GetDeviceCallback, true));
