@@ -6,6 +6,7 @@ public static class Settings
     public static Player LoggedInPlayer = new Player();
     public static Player SecondPlayer = new Player();
     public static bool IsDebug = false;
+    public static bool EnteredGame = false;
     public static Player[] PlayingPlayers = new Player[2] {
         new Player() { Username = "Joe", playerType = PlayerTypes.CPU },
         new Player() { Username = "Zach", playerType = PlayerTypes.CPU },

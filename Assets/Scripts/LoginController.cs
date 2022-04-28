@@ -33,8 +33,7 @@ public class LoginController : MonoBehaviour
         if (Settings.LoggedInPlayer.UserId == 0)
         {
             alertText.text = @"Latest Updates:
-XP and Levels added to the game!
-New Dice in Unlockables!";
+The game is played in portrait mode now!";
             alert.SetActive(true);
         }
         StartCoroutine(sql.RequestRoutine(url, GetDeviceCallback, true));

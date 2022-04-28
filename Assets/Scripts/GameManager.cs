@@ -152,9 +152,7 @@ Additionally, the AI will make less mistakes the more wins you have, enjoy :)"
 
     private void Start()
     {
-#if UNITY_EDITOR
-        Settings.IsDebug = true;
-#endif
+
         if (!Settings.LoggedInPlayer.IsGuest)
         {
             AllIngredients = playerList.SelectMany(y => y.myIngredients).ToList();
@@ -226,8 +224,11 @@ Additionally, the AI will make less mistakes the more wins you have, enjoy :)"
     private void Awake()
     {
         instance = this;
+#if UNITY_EDITOR
+        Settings.IsDebug = true;
+#endif
         sql = new SqlController();
-        if (Settings.LoggedInPlayer.Wins > 0)
+        if (Settings.LoggedInPlayer.Wins > 0 || Settings.IsDebug)
             activePlayer = Random.Range(0, 2);
         else
         {
@@ -589,7 +590,6 @@ Additionally, the AI will make less mistakes the more wins you have, enjoy :)"
                 if (lowerMove != 0 && state != States.GAME_OVER)
                     yield return StartCoroutine(GetBestIngredientToMoveWithLower());
             }
-            moveWithLowerFirst = false;
         }
     }
     private void DoneReset()
@@ -625,7 +625,6 @@ Additionally, the AI will make less mistakes the more wins you have, enjoy :)"
         {
             if (playerList.Any(x => x.myIngredients.All(y => y.isCooked)))
             {
-                
                 GameIsOver();
             }
             else if (firstMoveTaken == true)
@@ -719,7 +718,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
 
     private IEnumerator SetCPUVariables()
     {
-        AllIngredients = playerList.SelectMany(y => y.myIngredients.Where(x => x != lastMovedIngredient)).ToList();
+        AllIngredients = playerList.SelectMany(y => y.myIngredients.Where(x => x != lastMovedIngredient)).OrderByDescending(x => x.routePosition).ToList();
         TeamIngredients = AllIngredients.Where(x => x.TeamYellow == GetActivePlayer().TeamYellow).OrderByDescending(x => x.routePosition).ToList();
         EnemyIngredients = AllIngredients.Where(x => x.TeamYellow != GetActivePlayer().TeamYellow).OrderByDescending(x => x.routePosition).ToList();
         while (state == States.DRINKING)
@@ -756,7 +755,6 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             ?? SlideOnThermometor(TeamIngredients)
             ?? MoveFrontMostIngredient(TeamIngredients)
             ?? MoveNotPastPrep(TeamIngredients)
-            ?? MoveNotPastPrep(EnemyIngredients)
             ?? MoveRandomly(TeamIngredients)));
     }
     private IEnumerator CheckShouldMoveLowerFirst()
@@ -800,7 +798,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
         if (teamToMove.Count == 0) return null;
 
         var smartMoves = teamToMove.Where(x => (x.routePosition + Steps) < 23 //Dont move past prep
-        && !(x.routePosition > 16) //Dont move from scoring position
+        && x.routePosition < 17 //Dont move from scoring position
         && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps) % 26) //Dont stomp yourself
         && !(x.fullRoute[(x.routePosition + Steps) % 26].isSafe && x.fullRoute[(x.routePosition + Steps) % 26].ingredient != null) //Dont stomp on safe area
         && !x.fullRoute[(x.routePosition + Steps) % 26].hasSpatula //weve already checked if sliding was a good idea
@@ -820,7 +818,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     {
         if (teamToMove.Count == 0) return null;
         return teamToMove.FirstOrDefault(x => (x.routePosition + Steps) < 26 //Dont move past preparation
-        && !(x.routePosition > 16) //Dont move from scoring position
+        && x.routePosition < 17 //Dont move from scoring position
         && ((x.fullRoute[(x.routePosition + Steps) % 26].hasSpatula && (Steps < 4 || Steps > 7) && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps -6) % 26))
         || (x.fullRoute[(x.routePosition + Steps) % 26].hasSpoon && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps + 6) % 26))));
     } 
@@ -872,7 +870,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
         if (!Settings.IsDebug && (Settings.LoggedInPlayer.Wins == 0 || (Random.Range(0, Settings.LoggedInPlayer.Wins) == 0 && !hasBeenDumb))) {
             hasBeenDumb = true;
             var toMove = teamToMove[Random.Range(0, teamToMove.Count)];
-            if (toMove.routePosition < 18)
+            if (toMove.routePosition < 17)
             {
                 return toMove;
             }

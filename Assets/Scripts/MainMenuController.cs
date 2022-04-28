@@ -33,6 +33,12 @@ public class MainMenuController : MonoBehaviour
         debugClicks = 0;
         Settings.SecondPlayer = new Player();
         StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Settings.LoggedInPlayer.UserId}", GetPlayerCallback));
+        if (Settings.LoggedInPlayer.IsGuest && Settings.EnteredGame)
+        {
+            alertText.text = $"If you enjoyed the game make an account! You can unlock new pieces and dice to play with and compete on the leaderboard";
+            alert.SetActive(true);
+            Settings.EnteredGame = false;
+        }
 
     }
     public void UpdateLvlText() {
@@ -47,7 +53,7 @@ public class MainMenuController : MonoBehaviour
         if (player.Xp != Settings.LoggedInPlayer.Xp && player.Level != Settings.LoggedInPlayer.Level)
         {
             var starsGained = player.Stars - Settings.LoggedInPlayer.Stars;
-            alertText.text = $"Congrats you hit level {Settings.LoggedInPlayer.Level}! You gained {starsGained} Calories!";
+            alertText.text = $"Congrats you hit level {player.Level}! You gained {starsGained} Calories!";
             alert.SetActive(true);
         }
         Settings.LoggedInPlayer.Stars = player.Stars;
@@ -194,6 +200,7 @@ public class MainMenuController : MonoBehaviour
     }
     public void StartTheGame(bool cpu)
     {
+        Settings.EnteredGame = true;
         if (cpu)
         {
             global::Settings.PlayingPlayers[0] = global::Settings.LoggedInPlayer;
