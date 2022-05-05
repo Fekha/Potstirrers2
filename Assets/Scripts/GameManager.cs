@@ -63,7 +63,7 @@ public class GameManager : MonoBehaviour
 @"
 
 The following pages will explain the rules of Pot Stirrers to you.
-Click to view the next page or press the x at the top right to play at any point.
+Click anywhere to view the next page or press the x at the top right to play at any point.
 
 Note: The AI's skill gets better as you get more wins!
 
@@ -72,19 +72,30 @@ For more in depth help join our discord! https://discord.gg/fab.",
 @"How to win:
 
 Cook all 3 of your ingredients!
-One of your uncooked ingredients becomes cooked when you enter the pot with any of your ingredients.",
+One of your uncooked ingredients becomes cooked when you enter the pot with any of your ingredients.
+
+Note: A cooked ingredient scoring cooks one of you uncooked ingredients!",
 
 @"Taking a turn:
 
 Roll two dice.
 Move one ingredient from your team with the highest roll.
 Move one ingredient from any team with the lowest roll.
-Do the moves in either order, but the same ingredient may not be moved twice.
+The order you do these does not matter, but the same ingredient may not be moved twice.
 If doubles were rolled, take another turn.",
+
+@"Exact Tiles:
+
+There are three tiles labeled Exact, landing on them does NOTHING. 
+They are notifying you about a split in the path that you may take if you have exactly one move left.
+The first two you come across on the board each lead into a trash can.
+The last leads to the pot, where you may cook one of the uncooked ingredients on your team.
+The ingredient that moves onto one of these three tiles are moved to Prep.",
 
 @"Landing on an ingredient:
 
-If you land on another ingredient, send it to Prep, unless it is in a safe area, in which the ingredient that was moved goes back to Prep instead.",
+If you land on another ingredient, send them to Prep, unless it is in a safe area.
+If it was in a safe are send the the ingredient that was moved to Prep instead.",
 
 @"Sliding:
 
@@ -93,28 +104,15 @@ If another ingredient was on the other side, send them back to Prep!",
 
 @"Prep:
 
-All ingredients start on and respawn on Prep, at the top left side of the board.
-You can be moved onto or past Prep from the end of the board so be careful!
-Prep is it's own tile when counting.",
+All ingredients start on on Prep, and are sent here after being landed on. Prep is it's own tile when counting.
 
-@"Trash cans:
-
-The first two arrows you come across on the board each lead into a trash can.
-You must get an exact number to move an ingredient into one.
-When an ingredient is moved into a trash can it goes to Prep.",
-
-@"The Pot:
-
-The arrow coming from the last tile on the board sends an ingredient to the pot.
-Just as with the other two arrows, you must get an exact number to move an ingredient here.
-Upon entering the pot, one of the uncooked ingredients on your team are flipped, and is now considered “cooked” with a pot as their background image.
-The ingredient that moved into the pot moves back to Prep.",
+Note: You can be moved onto or past Prep from the end of the board so be careful!
+",
 
 @"Conclusion:
 
 " + Settings.LoggedInPlayer.Username + @", thanks for playing and taking the time to learn the rules.
-Playtesting is the core of game design, without you there is no game, so please let me know about any feedback you have!
-Additionally, the AI will make less mistakes the more wins you have, enjoy :)"
+Playtesting is the core of game design, without you there is no game, so please let me know about any feedback you have!"
  };
 
     private List<Ingredient> AllIngredients;
@@ -224,6 +222,7 @@ Additionally, the AI will make less mistakes the more wins you have, enjoy :)"
     private void Awake()
     {
         instance = this;
+        Application.targetFrameRate = 60;
 #if UNITY_EDITOR
         Settings.IsDebug = true;
 #endif
@@ -900,7 +899,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             nextTile.ingredient = ingredientToMove;
         }
 
-        yield return ingredientToMove.MoveToNextTile(nextTile.transform.position);
+        yield return ingredientToMove.MoveToNextTile(nextTile.transform.position,10f);
     }
 
     public void promptExit()

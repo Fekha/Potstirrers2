@@ -144,13 +144,13 @@ public class Ingredient : MonoBehaviour
         {
             //move to thermometor tip
             routePosition = routePosition + 6;
-            yield return StartCoroutine(MoveToNextTile());
+            yield return StartCoroutine(MoveToNextTile(null,11f));
         }
         else if (fullRoute[routePosition].hasSpatula)
         {
             //move to thermometor tip
             routePosition = routePosition - 6;
-            yield return StartCoroutine(MoveToNextTile());
+            yield return StartCoroutine(MoveToNextTile(null, 11f));
         }
         else if (routePosition == fullRoute.Count - 1)
         {
@@ -200,7 +200,7 @@ public class Ingredient : MonoBehaviour
         yield return new WaitForSeconds(.1f);
     }
 
-    public IEnumerator MoveToNextTile(Vector3? nextPos = null, float speed = 8f)
+    public IEnumerator MoveToNextTile(Vector3? nextPos = null, float speed = 9f)
     {
         if(routePosition != 0)
             anim.Play("Moving");
@@ -211,7 +211,8 @@ public class Ingredient : MonoBehaviour
         var yValue = .12f;
         if (fullRoute[routePosition].isTaken && GameManager.instance.Steps > 1)
         {
-            yValue = .24f;
+            speed = 12f;
+            yValue = .34f;
         }
 
         var goalPos = new Vector3(nextPos.Value.x, yValue, nextPos.Value.z);

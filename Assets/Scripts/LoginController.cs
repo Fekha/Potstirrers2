@@ -14,7 +14,6 @@ public class LoginController : MonoBehaviour
     public GameObject password;
     public GameObject username;
     public Text alertText;
-    public Text usernameText;
     private Guid deviceId;
     private bool rememberMe = false; 
     public Toggle rememberToggle;
@@ -30,12 +29,12 @@ public class LoginController : MonoBehaviour
             PlayerPrefs.SetString("UniqueIdentifier", Guid.NewGuid().ToString());
         deviceId = Guid.Parse(PlayerPrefs.GetString("UniqueIdentifier"));
         var url = "player/GetDevice?deviceId=" + deviceId;
-        if (Settings.LoggedInPlayer.UserId == 0)
-        {
-            alertText.text = @"Latest Updates:
-The game is played in portrait mode now!";
-            alert.SetActive(true);
-        }
+//        if (Settings.LoggedInPlayer.UserId == 0)
+//        {
+//            alertText.text = @"Latest Updates:
+//The game is played in portrait mode now!";
+//            alert.SetActive(true);
+//        }
         StartCoroutine(sql.RequestRoutine(url, GetDeviceCallback, true));
     }
     public void RememberMe()
@@ -73,7 +72,7 @@ The game is played in portrait mode now!";
     }
     public void LoginButton()
     {
-        if (!String.IsNullOrEmpty(usernameText.text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
+        if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
         {
             alertText.text = "Loading...";
             alert.SetActive(true);
@@ -81,7 +80,7 @@ The game is played in portrait mode now!";
         }
         else
         {
-            if (String.IsNullOrEmpty(usernameText.text))
+            if (String.IsNullOrEmpty(username.GetComponent<InputField>().text))
             {
                 alertText.text = "Username may not be blank.";
             }
@@ -102,7 +101,7 @@ The game is played in portrait mode now!";
 
     private IEnumerator Login()
     {
-        var url = $"player/LoginUser?username={usernameText.text}&rememberMe={rememberMe}&deviceId={deviceId}&password={Encrypt(password.GetComponent<InputField>().text)}";
+        var url = $"player/LoginUser?username={username.GetComponent<InputField>().text}&rememberMe={rememberMe}&deviceId={deviceId}&password={Encrypt(password.GetComponent<InputField>().text)}";
         yield return StartCoroutine(sql.RequestRoutine(url, GetPlayerCallback, true));  
     }
 
@@ -112,7 +111,7 @@ The game is played in portrait mode now!";
         Settings.LoggedInPlayer = Player;
         if (Player == null)
         {  
-            StartCoroutine(sql.RequestRoutine($"player/RegisterUser?username={usernameText.text}&password={Encrypt(password.GetComponent<InputField>().text)}&rememberMe={rememberMe}&deviceId={deviceId}", RegisterCallback, true));
+            StartCoroutine(sql.RequestRoutine($"player/RegisterUser?username={username.GetComponent<InputField>().text.Trim()}&password={Encrypt(password.GetComponent<InputField>().text)}&rememberMe={rememberMe}&deviceId={deviceId}", RegisterCallback, true));
         }
         else
         {
@@ -147,13 +146,13 @@ The game is played in portrait mode now!";
 
     public void RegisterButton()
     {
-        if (!String.IsNullOrEmpty(usernameText.text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
+        if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
         {
-            StartCoroutine(sql.RequestRoutine("player/GetUserByName?username=" + usernameText.text, GetPlayerRegisterCallback,true));
+            StartCoroutine(sql.RequestRoutine("player/GetUserByName?username=" + username.GetComponent<InputField>().text, GetPlayerRegisterCallback,true));
         }
         else
         {
-            if (String.IsNullOrEmpty(usernameText.text))
+            if (String.IsNullOrEmpty(username.GetComponent<InputField>().text))
             {
                 alertText.text = "Username may not be blank.";
             }

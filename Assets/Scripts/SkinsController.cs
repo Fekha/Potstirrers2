@@ -102,6 +102,7 @@ public class SkinsController : MonoBehaviour
         {
             IngPanel.SetActive(true);
             DiePanel.SetActive(false);
+          
         }
         else if (panel == "die")
         {
@@ -206,9 +207,9 @@ public class SkinsController : MonoBehaviour
         var ingData = sql.jsonConvert<IEnumerable<ItemData>>(data);
         IngredientData = ingData.ToList();
         StartCoroutine(sql.RequestRoutine($"purchase/GetPlayerPurchasables?UserId={Settings.LoggedInPlayer.UserId}", GetPlayerPurchaseCallback));
-        meatNameText.text = currentMeat == 0 ? "Chiken" : IngredientData.FirstOrDefault(x => x.PurchaseId == allMeatIngredients[currentMeat].purchaseId).PurchaseName;
-        veggieNameText.text = currentVeggie == 0 ? "Potato" : IngredientData.FirstOrDefault(x => x.PurchaseId == allVeggieIngredients[currentVeggie].purchaseId).PurchaseName;
-        fruitNameText.text = currentFruit == 0 ? "Eggplant" : IngredientData.FirstOrDefault(x => x.PurchaseId == allFruitIngredients[currentFruit].purchaseId).PurchaseName;
+        //meatNameText.text = currentMeat == 0 ? "Chiken" : IngredientData.FirstOrDefault(x => x.PurchaseId == allMeatIngredients[currentMeat].purchaseId).PurchaseName;
+        //veggieNameText.text = currentVeggie == 0 ? "Potato" : IngredientData.FirstOrDefault(x => x.PurchaseId == allVeggieIngredients[currentVeggie].purchaseId).PurchaseName;
+        //fruitNameText.text = currentFruit == 0 ? "Eggplant" : IngredientData.FirstOrDefault(x => x.PurchaseId == allFruitIngredients[currentFruit].purchaseId).PurchaseName;
     }
     public void SaveAndExit()
     {

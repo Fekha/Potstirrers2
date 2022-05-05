@@ -31,7 +31,7 @@ public class LeaderboardController : MonoBehaviour
     private void leaderboardCallback(string jdata)
     {
         playerList = sql.jsonConvert<List<Player>>(jdata);
-        currentShowing = Random.Range(0, numLeaderboards);
+        currentShowing = 1;// Random.Range(0, numLeaderboards);
         ShowLeaderboard();
         loading.SetActive(false);
     }

@@ -12,7 +12,7 @@ public class MainMenuController : MonoBehaviour
     public Text lvlText;
     public Text xpText;
     public Text alertText;
-    public Text usernameText;
+    public GameObject usernameText;
     public GameObject settings;
     public GameObject button;
     public Toggle wineToggle;
@@ -117,17 +117,17 @@ public class MainMenuController : MonoBehaviour
     public void Login()
     {
 
-        if (String.IsNullOrEmpty(usernameText.text))
+        if (String.IsNullOrEmpty(usernameText.GetComponent<InputField>().text))
         {
-            if (String.IsNullOrEmpty(usernameText.text))
+            if (String.IsNullOrEmpty(usernameText.GetComponent<InputField>().text))
             {
                 alertText.text = "Username may not be blank.";
             }
             alert.SetActive(true);
         }
-        else if (usernameText.text == global::Settings.LoggedInPlayer.Username)
+        else if (usernameText.GetComponent<InputField>().text == global::Settings.LoggedInPlayer.Username)
         {
-            if (string.IsNullOrEmpty(usernameText.text))
+            if (string.IsNullOrEmpty(usernameText.GetComponent<InputField>().text))
             {
                 alertText.text = "User already in use!";
             }
@@ -135,7 +135,7 @@ public class MainMenuController : MonoBehaviour
         }
         else
         {
-            StartCoroutine(sql.RequestRoutine("player/GetUserByName?username=" + usernameText.text, this.GetByUsernameCallback, true));
+            StartCoroutine(sql.RequestRoutine("player/GetUserByName?username=" + usernameText.GetComponent<InputField>().text, this.GetByUsernameCallback, true));
         }
     }
     public void showSettings()
