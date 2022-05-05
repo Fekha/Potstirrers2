@@ -17,6 +17,7 @@ public class MainMenuController : MonoBehaviour
     public GameObject button;
     public Toggle wineToggle;
     public Toggle d8Toggle;
+    public Toggle ExperimentalToggle;
     public Toggle doubleToggle;
     public Toggle playAsPurple;
     private bool toggleActivated;
@@ -53,7 +54,7 @@ public class MainMenuController : MonoBehaviour
         if (player.Xp != Settings.LoggedInPlayer.Xp && player.Level != Settings.LoggedInPlayer.Level)
         {
             var starsGained = player.Stars - Settings.LoggedInPlayer.Stars;
-            alertText.text = $"Congrats you hit level {player.Level}! You gained {starsGained} Calories!";
+            alertText.text = $"Congrats you hit level {player.Level}! You gained {starsGained} Stars!";
             alert.SetActive(true);
         }
         Settings.LoggedInPlayer.Stars = player.Stars;
@@ -65,6 +66,7 @@ public class MainMenuController : MonoBehaviour
     {
         wineToggle.isOn = global::Settings.LoggedInPlayer.WineMenu;
         d8Toggle.isOn = global::Settings.LoggedInPlayer.UseD8s;
+        ExperimentalToggle.isOn = global::Settings.Experimental;
         doubleToggle.isOn = global::Settings.LoggedInPlayer.DisableDoubles;
         playAsPurple.isOn = global::Settings.LoggedInPlayer.PlayAsPurple;
     }
@@ -78,7 +80,7 @@ public class MainMenuController : MonoBehaviour
         settings.SetActive(false);
         if (!Settings.LoggedInPlayer.IsGuest && toggleActivated)
         {
-            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(global::Settings.LoggedInPlayer.UserId)}&WineMenu={(global::Settings.LoggedInPlayer.WineMenu)}&UseD8s={(global::Settings.LoggedInPlayer.UseD8s)}&DisableDoubles={(global::Settings.LoggedInPlayer.DisableDoubles)}&PlayAsPurple={(global::Settings.LoggedInPlayer.PlayAsPurple)}"));
+            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(global::Settings.LoggedInPlayer.UserId)}&WineMenu={(global::Settings.LoggedInPlayer.WineMenu)}&UseD8s={(global::Settings.LoggedInPlayer.UseD8s)}&DisableDoubles={(global::Settings.LoggedInPlayer.DisableDoubles)}&PlayAsPurple={(global::Settings.LoggedInPlayer.PlayAsPurple)}&Experimental={(global::Settings.Experimental)}"));
         }
         toggleActivated = false;
     }
@@ -179,6 +181,10 @@ public class MainMenuController : MonoBehaviour
             else if(toggle == "purple")
             {
                 global::Settings.LoggedInPlayer.PlayAsPurple = !global::Settings.LoggedInPlayer.PlayAsPurple;
+            } 
+            else if(toggle == "exp")
+            {
+                global::Settings.Experimental = !global::Settings.Experimental;
             }
         }
     }

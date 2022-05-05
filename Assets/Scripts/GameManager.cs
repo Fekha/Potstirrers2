@@ -50,8 +50,10 @@ public class GameManager : MonoBehaviour
     public Sprite yellowD8;
     public Sprite purpleD8;
     private bool hasBeenDumb = false;
-    private bool moveWithLowerFirst = false;
+    private Ingredient IngredientMovedWithLower;
     public List<Sprite> allD10s;
+    public GameObject FullBoard;
+    public Material AdvancedBoard;
     public List<Material> allMeatMaterials;
     public List<Material> allVeggieMaterials;
     public List<Material> allFruitMaterials;
@@ -150,6 +152,13 @@ Playtesting is the core of game design, without you there is no game, so please 
 
     private void Start()
     {
+        if (Settings.Experimental)
+        {
+            var boardQuad = FullBoard.GetComponent<MeshRenderer>();
+            var boardMats = boardQuad.materials;
+            boardMats[0] = AdvancedBoard;
+            boardQuad.materials = boardMats;
+        }
 
         if (!Settings.LoggedInPlayer.IsGuest)
         {
@@ -222,18 +231,19 @@ Playtesting is the core of game design, without you there is no game, so please 
     private void Awake()
     {
         instance = this;
-        Application.targetFrameRate = 60;
+        Application.targetFrameRate = 30;
 #if UNITY_EDITOR
         Settings.IsDebug = true;
+        Settings.Experimental = true;
 #endif
         sql = new SqlController();
-        if (Settings.LoggedInPlayer.Wins > 0 || Settings.IsDebug)
-            activePlayer = Random.Range(0, 2);
-        else
+        activePlayer = Random.Range(0, 2);
+        
+        if ((Settings.LoggedInPlayer.Wins == 0 || Settings.Experimental) && !Settings.IsDebug)
         {
             getHelp();
-            activePlayer = 0;
         }
+
         state = States.TAKE_TURN;
         if (Settings.LoggedInPlayer.PlayAsPurple)
         {
@@ -354,8 +364,16 @@ Playtesting is the core of game design, without you there is no game, so please 
         if (!isPaused)
         {
             isPaused = true;
-            pageNum = 0;
-            helpText.text = helpTextList[pageNum];
+            if (Settings.Experimental)
+            {
+                pageNum = helpTextList.Count() - 1;
+                helpText.text = "Experimental Mode: \n \n In this game mode cooked ingredients can NOT be cooked again. \n Each ingredient on your team must be individually cooked to win the game. \n There are no trashcans. \n \n While moving, do NOT count spaces with cooked ingredients!.";
+            }
+            else
+            {
+                pageNum = 0;
+                helpText.text = helpTextList[pageNum];
+            }
             HelpCanvas.SetActive(true);
         }
         else
@@ -566,18 +584,15 @@ Playtesting is the core of game design, without you there is no game, so please 
 
     public IEnumerator MoveCPUIngredient()
     {
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(.5f);
 
         if (!DoubleDoubles || !Settings.LoggedInPlayer.DisableDoubles)
         {
-            if(lowerMove != 0 && Settings.LoggedInPlayer.Wins > 0)
-                yield return StartCoroutine(CheckShouldMoveLowerFirst());
+            if (lowerMove != 0 && (Settings.IsDebug || Settings.LoggedInPlayer.Wins > 0))
+                yield return StartCoroutine(MoveWithLowerFirst());
 
-            if (moveWithLowerFirst)
+            if (IngredientMovedWithLower != null)
             {
-                if (state != States.GAME_OVER)
-                    yield return StartCoroutine(GetBestIngredientToMoveWithLower());
-
                 if (state != States.GAME_OVER)
                     yield return StartCoroutine(GetBestIngredientToMoveWithHigher());
             }
@@ -595,12 +610,11 @@ Playtesting is the core of game design, without you there is no game, so please 
     {
         undoButton.interactable = false;
         hasBeenDumb = false;
-        moveWithLowerFirst = false;
         doublesText.text = "";
         firstMoveTaken = false;
         lastMovedIngredient = null;
         RolledPanel.SetActive(false);
-        moveWithLowerFirst = false;
+        IngredientMovedWithLower = null;
         LastLandedOnIngredient = null;
     }
     internal IEnumerator DoneMoving()
@@ -676,18 +690,18 @@ Playtesting is the core of game design, without you there is no game, so please 
             if (playerWhoWon.player.playerType == PlayerTypes.HUMAN)
             {
                 eventText.text += @"
-You gained 150 Calories and " + wonXp + " Xp!";
+You gained 150 Stars and " + wonXp + " Xp!";
             }
             else
             {
                 eventText.text += @"
-You gained " + lostCount * 50 + " Calories and " + lostXp + " Xp!";
+You gained " + lostCount * 50 + " Stars and " + lostXp + " Xp!";
             }
         }
         else
         {
             eventText.text += @"
-You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWon.player.Username +  " gained " + wonXp + " XP and " + playerwhoLost.player.Username + " gained " + lostXp + " xp!";
+You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.player.Username +  " gained " + wonXp + " XP and " + playerwhoLost.player.Username + " gained " + lostXp + " xp!";
         }
 
         foreach (var gamePlayer in playerList.Where(x=>x.player.playerType == PlayerTypes.HUMAN && !x.player.IsGuest))
@@ -717,7 +731,17 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
 
     private IEnumerator SetCPUVariables()
     {
-        AllIngredients = playerList.SelectMany(y => y.myIngredients.Where(x => x != lastMovedIngredient)).OrderByDescending(x => x.routePosition).ToList();
+        AllIngredients = playerList.SelectMany(y => y.myIngredients.Where(x => x != lastMovedIngredient)).OrderBy(x=>x.isCooked).ThenByDescending(x => x.routePosition).ToList();
+        foreach (var ing in AllIngredients)
+        {
+            ing.endPosition = ing.routePosition+Steps;
+            for (int i = ing.routePosition; i <= ing.endPosition; i++)
+            {
+                if (ing.fullRoute[i%26].ingredient != null && ing.fullRoute[i % 26].ingredient.isCooked) {
+                    ing.endPosition++;
+                }
+            }
+        }
         TeamIngredients = AllIngredients.Where(x => x.TeamYellow == GetActivePlayer().TeamYellow).OrderByDescending(x => x.routePosition).ToList();
         EnemyIngredients = AllIngredients.Where(x => x.TeamYellow != GetActivePlayer().TeamYellow).OrderByDescending(x => x.routePosition).ToList();
         while (state == States.DRINKING)
@@ -727,22 +751,24 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     }
     private IEnumerator GetBestIngredientToMoveWithHigher()
     {
-        yield return StartCoroutine(SetCPUVariables());
         yield return RollSelected(true, false);
+        yield return StartCoroutine(SetCPUVariables());
         yield return StartCoroutine(MoveCPUIngredient(CookIngredient(TeamIngredients)
             ?? BeDumb(TeamIngredients)
             ?? SlideOnEnemy(TeamIngredients)
             ?? StompEnemy(TeamIngredients)
             ?? SlideOnThermometor(TeamIngredients)
+            ?? MoveFrontMostIngredient(TeamIngredients.Where(x => !x.isCooked).ToList())
             ?? MoveFrontMostIngredient(TeamIngredients)
             ?? MoveNotPastPrep(TeamIngredients)
+            ?? MoveCookedIngredient(TeamIngredients)
             ?? MoveRandomly(TeamIngredients)));
     }
 
     private IEnumerator GetBestIngredientToMoveWithLower()
     {
-        yield return StartCoroutine(SetCPUVariables());
         yield return RollSelected(false, false);
+        yield return StartCoroutine(SetCPUVariables());
         yield return StartCoroutine(MoveCPUIngredient(CookIngredient(TeamIngredients)
             ?? BeDumb(AllIngredients)
             ?? MovePastPrep(EnemyIngredients)
@@ -751,15 +777,17 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             ?? StompSafeZone(EnemyIngredients)
             ?? GoToTrash(EnemyIngredients)
             ?? StompEnemy(EnemyIngredients)
-            ?? SlideOnThermometor(TeamIngredients)
+            ?? SlideOnThermometor(TeamIngredients) 
+            ?? MoveFrontMostIngredient(TeamIngredients.Where(x=>!x.isCooked).ToList())
             ?? MoveFrontMostIngredient(TeamIngredients)
             ?? MoveNotPastPrep(TeamIngredients)
+            ?? MoveCookedIngredient(TeamIngredients)
             ?? MoveRandomly(TeamIngredients)));
     }
-    private IEnumerator CheckShouldMoveLowerFirst()
+    private IEnumerator MoveWithLowerFirst()
     {
-        yield return StartCoroutine(SetCPUVariables());
         Steps = lowerMove;
+        yield return StartCoroutine(SetCPUVariables());
         var ing = CookIngredient(TeamIngredients)
             ?? MovePastPrep(EnemyIngredients)
             ?? SlideOnEnemy(TeamIngredients)
@@ -768,7 +796,13 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             ?? GoToTrash(EnemyIngredients)
             ?? StompEnemy(EnemyIngredients)
             ?? SlideOnThermometor(TeamIngredients);
-        moveWithLowerFirst = (ing != null);
+        IngredientMovedWithLower = ing;
+        if (ing != null)
+        {
+            yield return RollSelected(false, false);
+            yield return StartCoroutine(MoveCPUIngredient(IngredientMovedWithLower));
+        }
+        
     }
     private IEnumerator MoveCPUIngredient(Ingredient ingredientToMove)
     {
@@ -786,22 +820,27 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     private Ingredient MoveNotPastPrep(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
-        var BestMoves = teamToMove.Where(x => (x.routePosition + Steps) < 26
-        && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps) % 26)).ToList();
-        if (BestMoves.Count == 0) return null;
-        return BestMoves[Random.Range(0, BestMoves.Count())];
+        return teamToMove.FirstOrDefault(x => x.endPosition < 26 
+        && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endPosition % 26));
+    }
+
+    private Ingredient MoveCookedIngredient(List<Ingredient> teamToMove)
+    {
+        if (teamToMove.Count == 0 || !Settings.Experimental) return null;
+        return teamToMove.FirstOrDefault(x => x.isCooked 
+        && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endPosition % 26));
     }
 
     private Ingredient MoveFrontMostIngredient(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
 
-        var smartMoves = teamToMove.Where(x => (x.routePosition + Steps) < 23 //Dont move past prep
+        var smartMoves = teamToMove.Where(x => x.endPosition < 23 //Dont move past prep
         && x.routePosition < 17 //Dont move from scoring position
-        && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps) % 26) //Dont stomp yourself
-        && !(x.fullRoute[(x.routePosition + Steps) % 26].isSafe && x.fullRoute[(x.routePosition + Steps) % 26].ingredient != null) //Dont stomp on safe area
-        && !x.fullRoute[(x.routePosition + Steps) % 26].hasSpatula //weve already checked if sliding was a good idea
-        && !x.fullRoute[(x.routePosition + Steps) % 26].hasSpoon).ToList(); //weve already checked if sliding was a good idea
+        && !TeamIngredients.Any(y => (!Settings.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //Dont stomp yourself, unless cooked and advanced
+        && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null) //Dont stomp on safe area
+        && !x.fullRoute[x.endPosition % 26].hasSpatula //weve already checked if sliding was a good idea
+        && !x.fullRoute[x.endPosition % 26].hasSpoon).ToList(); //weve already checked if sliding was a good idea
 
         if (smartMoves.Count() > 0)
         {
@@ -816,52 +855,52 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     private Ingredient SlideOnThermometor(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => (x.routePosition + Steps) < 26 //Dont move past preparation
+        return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
         && x.routePosition < 17 //Dont move from scoring position
-        && ((x.fullRoute[(x.routePosition + Steps) % 26].hasSpatula && (Steps < 4 || Steps > 7) && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps -6) % 26))
-        || (x.fullRoute[(x.routePosition + Steps) % 26].hasSpoon && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps + 6) % 26))));
+        && ((x.fullRoute[x.endPosition % 26].hasSpatula && (Steps < 4 || Steps > 7) && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps - 6) % 26))
+        || (x.fullRoute[x.endPosition % 26].hasSpoon && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps + 6) % 26))));
     } 
     
     private Ingredient SlideOnEnemy(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => (x.routePosition + Steps) < 26 //Dont move past preparation
-        && ((x.fullRoute[(x.routePosition + Steps) % 26].hasSpatula && EnemyIngredients.Any(y => y.routePosition == (x.routePosition + Steps - 6) % 26))
-        || (x.fullRoute[(x.routePosition + Steps) % 26].hasSpoon && EnemyIngredients.Any(y => y.routePosition == (x.routePosition + Steps + 6) % 26))));
+        return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
+        && ((x.fullRoute[x.endPosition % 26].hasSpatula && EnemyIngredients.Any(y => y.routePosition == (x.routePosition + Steps - 6) % 26))
+        || (x.fullRoute[x.endPosition % 26].hasSpoon && EnemyIngredients.Any(y => y.routePosition == (x.routePosition + Steps + 6) % 26))));
 
     }
     private Ingredient GoToTrash(List<Ingredient> teamToMove)
     {
-        if (teamToMove.Count == 0) return null;
+        if (teamToMove.Count == 0 || Settings.Experimental) return null;
         return teamToMove.FirstOrDefault(x => ( Steps < 6 && (x.routePosition + Steps % 26) == 10) || (x.routePosition + Steps % 26) == 18); //Check for trash cans
     }
 
     private Ingredient StompEnemy(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => (x.routePosition + Steps) < 26 //Dont move past preparation
-        && EnemyIngredients.Any(y => y.routePosition == (x.routePosition + Steps) % 26) //Stomp Enemy
-        && !x.fullRoute[(x.routePosition + Steps) % 26].isSafe); //Dont stomp safe area if someone is there
+        return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
+        && EnemyIngredients.Any(y => (!Settings.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //Stomp Enemy
+        && !x.fullRoute[x.endPosition % 26].isSafe); //Dont stomp safe area if someone is there
     } 
     private Ingredient StompSafeZone(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => (x.routePosition + Steps) < 26 //Dont move past preparation
+        return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
         && x.routePosition != 0 //dont move them from prep
-        && AllIngredients.Any(y => y.routePosition == (x.routePosition + Steps) % 26 //anyone there?
-        && x.fullRoute[(x.routePosition + Steps) % 26].isSafe)); //Stomp self if safe
+        && AllIngredients.Any(y => (!Settings.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //anyone there?
+        && x.fullRoute[x.endPosition % 26].isSafe); //Stomp self if safe
     }
 
     private Ingredient CookIngredient(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => (x.routePosition + Steps) == 26); //Move into pot
+        return teamToMove.FirstOrDefault(x => x.endPosition == 26 && (!Settings.Experimental || !x.isCooked)); //Move into pot
     }
 
     private Ingredient MovePastPrep(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
-        return teamToMove.OrderBy(x=>x.routePosition).FirstOrDefault(x => (x.routePosition + Steps) >= 26); //Move past pot
+        return teamToMove.OrderBy(x=>x.routePosition).FirstOrDefault(x => x.endPosition >= 26 && (!Settings.Experimental || !x.isCooked)); //Move past pot
     }
     private Ingredient BeDumb(List<Ingredient> teamToMove)
     {

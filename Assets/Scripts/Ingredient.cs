@@ -19,6 +19,7 @@ public class Ingredient : MonoBehaviour
     public Animator anim;
     public string ingredientName;
     public int routePosition;
+    public int endPosition;
     public bool TeamYellow;
     private int startNodeIndex;
     
@@ -62,14 +63,8 @@ public class Ingredient : MonoBehaviour
         GameManager.instance.isMoving = true;
 
         yield return StartCoroutine(BeforeMoving());
-       
-        while (GameManager.instance.Steps > 0)
-        {
-            GameManager.instance.UpdateMoveText(GameManager.instance.Steps);
-
-            yield return StartCoroutine(DoMovement());
-            GameManager.instance.Steps--;
-        }
+      
+        yield return StartCoroutine(DoMovement()); 
 
         yield return StartCoroutine(AfterMovement());
 
@@ -89,7 +84,6 @@ public class Ingredient : MonoBehaviour
         {
             currentTile = fullRoute[routePosition];
             currentTile.ingredient = null;
-            currentTile.isTaken = false;
         }
         else
         {
@@ -100,66 +94,78 @@ public class Ingredient : MonoBehaviour
 
     private IEnumerator DoMovement()
     {
-        if (GameManager.instance.Steps == 1 && TeamYellow != GameManager.instance.GetActivePlayer().TeamYellow && (routePosition == 9 || routePosition == 17))
+        while (GameManager.instance.Steps > 0)
         {
-            if (routePosition == 9)
-            {
-                yield return StartCoroutine(MoveToNextTile(GameManager.instance.TrashCan2.transform.position));
-            }
-            else if (routePosition == 17)
-            {
-                yield return StartCoroutine(MoveToNextTile(GameManager.instance.TrashCan3.transform.position));
-            }
-            yield return new WaitForSeconds(0.2f);
-            routePosition = 0;
-        }
-        else if (GameManager.instance.Steps == 1 && routePosition == fullRoute.Count - 2 && TeamYellow == GameManager.instance.GetActivePlayer().TeamYellow) //go to pot only if its your team
-        {
-            routePosition++;
-        }
-        else if (routePosition != fullRoute.Count - 2) //go forward one
-        {
-            routePosition++;
-        }  
-        else //go back to prep
-        {
-            routePosition = 0;
-        }
+            GameManager.instance.UpdateMoveText(GameManager.instance.Steps);
 
-        if (routePosition == 0)
-        {
-            yield return StartCoroutine(GameManager.instance.MoveToNextEmptySpace(this));
-        }
-        else
-        {
-            yield return StartCoroutine(MoveToNextTile());
-        }
-    }
+            if (GameManager.instance.Steps == 1 && !Settings.Experimental && TeamYellow != GameManager.instance.GetActivePlayer().TeamYellow && (routePosition == 9 || routePosition == 17))
+            {
+                if (routePosition == 9)
+                {
+                    yield return StartCoroutine(MoveToNextTile(GameManager.instance.TrashCan2.transform.position));
+                }
+                else if (routePosition == 17)
+                {
+                    yield return StartCoroutine(MoveToNextTile(GameManager.instance.TrashCan3.transform.position));
+                }
+                yield return new WaitForSeconds(0.2f);
+                routePosition = 0;
+            }
+            else if (GameManager.instance.Steps == 1 && routePosition == fullRoute.Count - 2 && TeamYellow == GameManager.instance.GetActivePlayer().TeamYellow && (!Settings.Experimental || !isCooked)) //go to pot only if its your team
+            {
+                routePosition++;
+            }
+            else if (routePosition != fullRoute.Count - 2) //go forward one
+            {
+                routePosition++;
+            }  
+            else //go back to prep
+            {
+                routePosition = 0;
+            }
 
-    private IEnumerator AfterMovement()
-    {
+            if (routePosition == 0)
+            {
+                yield return StartCoroutine(GameManager.instance.MoveToNextEmptySpace(this));
+            }
+            else
+            {
+                yield return StartCoroutine(MoveToNextTile());
+            }
+
+            if (!(Settings.Experimental && fullRoute[routePosition].ingredient != null && fullRoute[routePosition].ingredient.isCooked))
+            {
+                GameManager.instance.Steps--;
+            }
+        }
         GameManager.instance.UpdateMoveText();
-
+    }
+    private IEnumerator Slide() {
         if (fullRoute[routePosition].hasSpoon)
         {
             //move to thermometor tip
             routePosition = routePosition + 6;
-            yield return StartCoroutine(MoveToNextTile(null,11f));
+            yield return StartCoroutine(MoveToNextTile(null, 11f));
         }
-        else if (fullRoute[routePosition].hasSpatula)
+        if (fullRoute[routePosition].hasSpatula)
         {
             //move to thermometor tip
             routePosition = routePosition - 6;
             yield return StartCoroutine(MoveToNextTile(null, 11f));
         }
-        else if (routePosition == fullRoute.Count - 1)
+    }
+    private IEnumerator AfterMovement()
+    {
+        
+        //Cook!
+        if (routePosition == fullRoute.Count - 1)
         {
             Ingredient IngredientToCook = null;
             if (!isCooked)
             {
                 IngredientToCook = this;
             }
-            else
+            else if (!Settings.Experimental)
             {
                 IngredientToCook = GameManager.instance.GetActivePlayer().myIngredients.FirstOrDefault(x => !x.isCooked);
             }
@@ -172,21 +178,32 @@ public class Ingredient : MonoBehaviour
             yield return new WaitForSeconds(.1f);
             yield return StartCoroutine(GameManager.instance.MoveToNextEmptySpace(this));
         }
-        
-        //cant be else if because slide then kill
-        if (fullRoute[routePosition].isTaken)
+        else
         {
-            if (fullRoute[routePosition].isSafe)
+            yield return StartCoroutine(Slide());
+
+            var TileTakenBy = fullRoute[routePosition].ingredient;
+            //Check for kill after slide
+            if (TileTakenBy != null)
             {
-                yield return StartCoroutine(GameManager.instance.MoveToNextEmptySpace(this));
-            }
-            else //moving other ingredient
-            {
-                var landedOnIngredient = fullRoute[routePosition].ingredient;
-                //landedOnIngredient.startTurnPos = routePosition;
-                //landedOnIngredient.startTurnTile = fullRoute[routePosition];
-                //GameManager.instance.LastLandedOnIngredient = landedOnIngredient;
-                yield return StartCoroutine(GameManager.instance.MoveToNextEmptySpace(landedOnIngredient));
+                //skip the spot if experimental and cooked
+                if (Settings.Experimental && TileTakenBy.isCooked)
+                {
+                    while (fullRoute[routePosition].ingredient != null && fullRoute[routePosition].ingredient.isCooked)
+                    {
+                        GameManager.instance.Steps++;
+                        yield return StartCoroutine(DoMovement());
+                        yield return StartCoroutine(Slide());
+                    }
+                }
+                else if (fullRoute[routePosition].isSafe)
+                {
+                    yield return StartCoroutine(GameManager.instance.MoveToNextEmptySpace(this));
+                }
+                else //moving other ingredient
+                {
+                    yield return StartCoroutine(GameManager.instance.MoveToNextEmptySpace(TileTakenBy));
+                }
             }
         }
 
@@ -194,25 +211,24 @@ public class Ingredient : MonoBehaviour
         if (routePosition != 0)
         {
             currentTile.ingredient = this;
-            currentTile.isTaken = true;
         }
 
         yield return new WaitForSeconds(.1f);
     }
 
-    public IEnumerator MoveToNextTile(Vector3? nextPos = null, float speed = 9f)
+    public IEnumerator MoveToNextTile(Vector3? nextPos = null, float speed = 8.5f)
     {
-        if(routePosition != 0)
+        var yValue = .12f;
+
+        if (routePosition != 0)
             anim.Play("Moving");
 
         if(nextPos == null)
             nextPos = fullRoute[routePosition].gameObject.transform.position;
-
-        var yValue = .12f;
-        if (fullRoute[routePosition].isTaken && GameManager.instance.Steps > 1)
+        
+        if (fullRoute[routePosition].ingredient != null && GameManager.instance.Steps > 1)
         {
-            speed = 12f;
-            yValue = .34f;
+            yValue = .24f;
         }
 
         var goalPos = new Vector3(nextPos.Value.x, yValue, nextPos.Value.z);
