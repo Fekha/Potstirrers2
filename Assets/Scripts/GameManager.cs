@@ -24,6 +24,7 @@ public class GameManager : MonoBehaviour
     public List<GamePlayer> playerList = new List<GamePlayer>();
     public List<Tile> tiles = new List<Tile>();
     public GameObject EventCanvas;
+    public GameObject ShouldTrashPopup;
     public GameObject HelpCanvas;
     public GameObject RollButton;
     public Button HigherRoll;
@@ -44,13 +45,14 @@ public class GameManager : MonoBehaviour
     public Text turnText;
     public Text doublesText;
     private Ingredient lastMovedIngredient;
-    public Ingredient LastLandedOnIngredient;
+    internal Ingredient LastLandedOnIngredient;
     public Sprite yellowDie;
     public Sprite purpleDie;
     public Sprite yellowD8;
     public Sprite purpleD8;
     private bool hasBeenDumb = false;
     private Ingredient IngredientMovedWithLower;
+    private Ingredient IngredientMovedWithHigher;
     public List<Sprite> allD10s;
     public GameObject FullBoard;
     public Material AdvancedBoard;
@@ -60,12 +62,11 @@ public class GameManager : MonoBehaviour
 
     private int pageNum = 0;
     public bool isMoving = false;
-    public bool isPaused = false;
     private List<string> helpTextList = new List<string>() { @"Welcome, " + Settings.LoggedInPlayer.Username +"!"+
 @"
 
 The following pages will explain the rules of Pot Stirrers to you.
-Click anywhere to view the next page or press the x at the top right to play at any point.
+Click anywhere to view the next page.
 
 Note: The AI's skill gets better as you get more wins!
 
@@ -74,9 +75,10 @@ For more in depth help join our discord! https://discord.gg/fab.",
 @"How to win:
 
 Cook all 3 of your ingredients!
-One of your uncooked ingredients becomes cooked when you enter the pot with any of your ingredients.
+An ingredient becomes cooked when you enter the pot with one of your uncooked ingredients.
 
-Note: A cooked ingredient scoring cooks one of you uncooked ingredients!",
+Note: Cooked ingredients can not enter the pot again, but still may be used to send ingredients back to prep. 
+You also skip spaces cooked ingredients are on while moving, this gives you a boost!",
 
 @"Taking a turn:
 
@@ -91,22 +93,24 @@ If doubles were rolled, take another turn.",
 There are three tiles labeled Exact, landing on them does NOTHING. 
 They are notifying you about a split in the path that you may take if you have exactly one move left.
 The first two you come across on the board each lead into a trash can.
-The last leads to the pot, where you may cook one of the uncooked ingredients on your team.
-The ingredient that moves onto one of these three tiles are moved to Prep.",
+The last leads to the pot, where you cook your ingredients.",
 
 @"Landing on an ingredient:
 
 If you land on another ingredient, send them to Prep, unless it is in a safe area.
-If it was in a safe are send the the ingredient that was moved to Prep instead.",
+If it was in a safe area, send the the ingredient that was moved to Prep instead.
+
+Note: Cooked ingredients can't be landed on because you never count the spaces they are on while moving.",
 
 @"Sliding:
 
 If an ingredient ends it's movement exactly on a tile with a utensil handle on it, immediately move it to the other side of the utensil.
-If another ingredient was on the other side, send them back to Prep!",
+If another uncooked ingredient was on the other side, send them back to Prep! If it was a cooked ingredient, then skip it and move to the next space.",
 
 @"Prep:
 
-All ingredients start on on Prep, and are sent here after being landed on. Prep is it's own tile when counting.
+All ingredients start on on Prep, and are sent there after being landed on. Prep is it's own tile when counting.
+Prep is always counted dispite the amount of cooked ingredients on it.
 
 Note: You can be moved onto or past Prep from the end of the board so be careful!
 ",
@@ -121,11 +125,12 @@ Playtesting is the core of game design, without you there is no game, so please 
     private List<Ingredient> TeamIngredients;
     private List<Ingredient> EnemyIngredients;
     private GamePlayer playerWhoWon;
+    public bool? ShouldTrash = null;
     public int higherMove = 0;
     public int lowerMove = 0;
     public bool firstMoveTaken;
     public bool higherMoveSelected;
-    private float drinkingTimeStart;
+    private float readingTimeStart;
     internal bool IsCPUTurn()
     {
         return GetActivePlayer().player.playerType == PlayerTypes.CPU;
@@ -141,7 +146,7 @@ Playtesting is the core of game design, without you there is no game, so please 
         TAKE_TURN,
         SWITCH_PLAYER,
         GAME_OVER,
-        DRINKING
+        READING
     }
 
     public States state;
@@ -150,15 +155,17 @@ Playtesting is the core of game design, without you there is no game, so please 
     SqlController sql;
     [HideInInspector]public int Steps;
 
+    
+
     private void Start()
     {
-        if (Settings.Experimental)
-        {
-            var boardQuad = FullBoard.GetComponent<MeshRenderer>();
-            var boardMats = boardQuad.materials;
-            boardMats[0] = AdvancedBoard;
-            boardQuad.materials = boardMats;
-        }
+        //if (Settings.LoggedInPlayer.Experimental)
+        //{
+        //    var boardQuad = FullBoard.GetComponent<MeshRenderer>();
+        //    var boardMats = boardQuad.materials;
+        //    boardMats[0] = AdvancedBoard;
+        //    boardQuad.materials = boardMats;
+        //}
 
         if (!Settings.LoggedInPlayer.IsGuest)
         {
@@ -234,12 +241,12 @@ Playtesting is the core of game design, without you there is no game, so please 
         Application.targetFrameRate = 30;
 #if UNITY_EDITOR
         Settings.IsDebug = true;
-        Settings.Experimental = true;
+        Settings.LoggedInPlayer.Experimental = true;
 #endif
         sql = new SqlController();
         activePlayer = Random.Range(0, 2);
         
-        if ((Settings.LoggedInPlayer.Wins == 0 || Settings.Experimental) && !Settings.IsDebug)
+        if ((Settings.LoggedInPlayer.Wins == 0 || Settings.LoggedInPlayer.Experimental) && !Settings.IsDebug)
         {
             getHelp();
         }
@@ -276,7 +283,6 @@ Playtesting is the core of game design, without you there is no game, so please 
                 {
                     turnText.color = new Color32(255, 202, 24, 255);
                     actionText.color = new Color32(255, 202, 24, 255);
-                    
                 }
                 else
                 {
@@ -300,15 +306,14 @@ Playtesting is the core of game design, without you there is no game, so please 
                 break; 
             case States.GAME_OVER:
                 UpdateMoveText(Steps);
-               
                 EventCanvas.SetActive(true);
                 break;
-            case States.DRINKING:
-                var timeSince = Time.time - drinkingTimeStart;
-                EventCanvas.SetActive(true);
-                if (Input.GetKeyDown(KeyCode.Mouse0) || timeSince > 2.0)
-                {                  
-                    EventCanvas.SetActive(false);
+            case States.READING:
+                HelpCanvas.SetActive(true);
+                var timeSince = Time.time - readingTimeStart;
+                if (IsCPUTurn() && Settings.IsDebug && timeSince > 2.0)
+                {
+                    HelpCanvas.SetActive(false);
                     state = States.WAITING;
                 }
                 break;
@@ -331,12 +336,11 @@ Playtesting is the core of game design, without you there is no game, so please 
 
     public void setWineMenuText(bool teamYellow, int v)
     {
-        drinkingTimeStart = Time.time;
-        state = States.DRINKING;
-        eventText.text = (teamYellow ? "Yellow" : "Purple") + " team drinks for " + v + (v == 1 ? " second" : " seconds") + @".
+        readingTimeStart = Time.time;
+        helpText.text = (teamYellow ? "Yellow" : "Purple") + " team drinks for " + v + (v == 1 ? " second" : " seconds") + @".
 
 (1 second for each ingredient in Prep)";
-        EventCanvas.SetActive(true);
+        state = States.READING;
     }
     internal void UpdateMoveText(int? moveAmount = null)
     {
@@ -361,36 +365,62 @@ Playtesting is the core of game design, without you there is no game, so please 
     }
     public void getHelp()
     {
-        if (!isPaused)
+        if (state == States.WAITING)
         {
-            isPaused = true;
-            if (Settings.Experimental)
-            {
-                pageNum = helpTextList.Count() - 1;
-                helpText.text = "Experimental Mode: \n \n In this game mode cooked ingredients can NOT be cooked again. \n Each ingredient on your team must be individually cooked to win the game. \n There are no trashcans. \n \n While moving, do NOT count spaces with cooked ingredients!.";
-            }
-            else
-            {
+            //if (Settings.LoggedInPlayer.Experimental)
+            //{
+            //    pageNum = helpTextList.Count() - 1;
+            //    helpText.text = "Experimental Mode: \n \n In this game mode cooked ingredients can NOT be cooked again. \n \n While moving, you jump over cooked ingredients to give you a further move distance!";
+            //}
+            //else
+            //{
                 pageNum = 0;
                 helpText.text = helpTextList[pageNum];
-            }
-            HelpCanvas.SetActive(true);
+            //}
+            readingTimeStart = Time.time;
+            state = States.READING;
         }
         else
         {
-            isPaused = false;
+            state = States.WAITING;
             pageNum = 0;
             HelpCanvas.SetActive(false);
         }
     }
+    internal IEnumerator AskShouldTrash()
+    {
+        ShouldTrashPopup.SetActive(true);
+        while (ShouldTrash == null)
+        {
+            yield return new WaitForSeconds(0.5f);
+        }
+        yield return ShouldTrash;
+
+    }
+    public void ShouldTrashButton(bool trash)
+    {
+        ShouldTrash = trash;
+        ShouldTrashPopup.SetActive(false);
+    }
+    internal void FirstScoreHelp()
+    {
+        if (Settings.LoggedInPlayer.Experimental)
+        {
+            pageNum = helpTextList.Count() - 1;
+            helpText.text = "An Ingredient was cooked! \n \n Remember: Cooked ingredients can NOT be cooked again. \n \n Cooked ingredients can still be used to send ingredients back to prep and are always skipped over while moving to give you a further move distance!";
+            readingTimeStart = Time.time;
+            state = States.READING;
+        }
+    }
+
     public void nextPage()
     {
-        if (isPaused)
+        if (state == States.READING)
         {
             if (helpTextList.Count - 1 <= pageNum)
             {
                 HelpCanvas.SetActive(false);
-                isPaused = false;
+                state = States.WAITING;
             }
             else
             {
@@ -588,20 +618,23 @@ Playtesting is the core of game design, without you there is no game, so please 
 
         if (!DoubleDoubles || !Settings.LoggedInPlayer.DisableDoubles)
         {
-            if (lowerMove != 0 && (Settings.IsDebug || Settings.LoggedInPlayer.Wins > 0))
+            if (IsCPUTurn())
+                yield return StartCoroutine(CheckForScore());
+
+            if (lowerMove != 0 && IngredientMovedWithLower == null && IsCPUTurn() && (Settings.IsDebug || Settings.LoggedInPlayer.Wins > 0))
                 yield return StartCoroutine(MoveWithLowerFirst());
 
             if (IngredientMovedWithLower != null)
             {
-                if (state != States.GAME_OVER)
+                if (state != States.GAME_OVER && IngredientMovedWithHigher == null && IsCPUTurn())
                     yield return StartCoroutine(GetBestIngredientToMoveWithHigher());
             }
             else
             {
-                if (state != States.GAME_OVER)
+                if (state != States.GAME_OVER && IngredientMovedWithHigher == null && IsCPUTurn())
                     yield return StartCoroutine(GetBestIngredientToMoveWithHigher());
 
-                if (lowerMove != 0 && state != States.GAME_OVER)
+                if (lowerMove != 0 && state != States.GAME_OVER && IngredientMovedWithLower == null && IsCPUTurn())
                     yield return StartCoroutine(GetBestIngredientToMoveWithLower());
             }
         }
@@ -615,11 +648,12 @@ Playtesting is the core of game design, without you there is no game, so please 
         lastMovedIngredient = null;
         RolledPanel.SetActive(false);
         IngredientMovedWithLower = null;
+        IngredientMovedWithHigher = null;
         LastLandedOnIngredient = null;
     }
     internal IEnumerator DoneMoving()
     {
-        while (state == States.DRINKING)
+        while (state == States.READING)
         {
             yield return new WaitForSeconds(0.5f);
         }
@@ -729,22 +763,37 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
         state = GameManager.States.GAME_OVER;
     }
 
-    private IEnumerator SetCPUVariables()
+    private IEnumerator SetCPUVariables(bool higher)
     {
         AllIngredients = playerList.SelectMany(y => y.myIngredients.Where(x => x != lastMovedIngredient)).OrderBy(x=>x.isCooked).ThenByDescending(x => x.routePosition).ToList();
         foreach (var ing in AllIngredients)
         {
-            ing.endPosition = ing.routePosition+Steps;
-            for (int i = ing.routePosition; i <= ing.endPosition; i++)
+            ing.endHigherPosition = ing.routePosition+higherMove;
+            ing.endLowerPosition = ing.routePosition+lowerMove;
+            for (int i = ing.routePosition+1; i <= ing.endHigherPosition; i++)
             {
                 if (ing.fullRoute[i%26].ingredient != null && ing.fullRoute[i % 26].ingredient.isCooked) {
-                    ing.endPosition++;
+                    ing.endHigherPosition++;
                 }
+            }
+            for (int i = ing.routePosition+1; i <= ing.endLowerPosition; i++)
+            {
+                if (ing.fullRoute[i%26].ingredient != null && ing.fullRoute[i % 26].ingredient.isCooked) {
+                    ing.endLowerPosition++;
+                }
+            }
+            if (higher)
+            {
+                ing.endPosition = ing.endHigherPosition;
+            }
+            else
+            {
+                ing.endPosition = ing.endLowerPosition;
             }
         }
         TeamIngredients = AllIngredients.Where(x => x.TeamYellow == GetActivePlayer().TeamYellow).OrderByDescending(x => x.routePosition).ToList();
         EnemyIngredients = AllIngredients.Where(x => x.TeamYellow != GetActivePlayer().TeamYellow).OrderByDescending(x => x.routePosition).ToList();
-        while (state == States.DRINKING)
+        while (state == States.READING)
         {
             yield return new WaitForSeconds(0.5f);
         }
@@ -752,7 +801,7 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
     private IEnumerator GetBestIngredientToMoveWithHigher()
     {
         yield return RollSelected(true, false);
-        yield return StartCoroutine(SetCPUVariables());
+        yield return StartCoroutine(SetCPUVariables(true));
         yield return StartCoroutine(MoveCPUIngredient(CookIngredient(TeamIngredients)
             ?? BeDumb(TeamIngredients)
             ?? SlideOnEnemy(TeamIngredients)
@@ -768,7 +817,7 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
     private IEnumerator GetBestIngredientToMoveWithLower()
     {
         yield return RollSelected(false, false);
-        yield return StartCoroutine(SetCPUVariables());
+        yield return StartCoroutine(SetCPUVariables(false));
         yield return StartCoroutine(MoveCPUIngredient(CookIngredient(TeamIngredients)
             ?? BeDumb(AllIngredients)
             ?? MovePastPrep(EnemyIngredients)
@@ -777,17 +826,19 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
             ?? StompSafeZone(EnemyIngredients)
             ?? GoToTrash(EnemyIngredients)
             ?? StompEnemy(EnemyIngredients)
-            ?? SlideOnThermometor(TeamIngredients) 
+            ?? SlideOnThermometor(TeamIngredients)
+            ?? MoveIntoScoring(TeamIngredients)
             ?? MoveFrontMostIngredient(TeamIngredients.Where(x=>!x.isCooked).ToList())
             ?? MoveFrontMostIngredient(TeamIngredients)
-            ?? MoveNotPastPrep(TeamIngredients)
             ?? MoveCookedIngredient(TeamIngredients)
+            ?? MoveNotPastPrep(TeamIngredients)
+            ?? MoveRandomly(EnemyIngredients)
             ?? MoveRandomly(TeamIngredients)));
     }
     private IEnumerator MoveWithLowerFirst()
     {
         Steps = lowerMove;
-        yield return StartCoroutine(SetCPUVariables());
+        yield return StartCoroutine(SetCPUVariables(false));
         var ing = CookIngredient(TeamIngredients)
             ?? MovePastPrep(EnemyIngredients)
             ?? SlideOnEnemy(TeamIngredients)
@@ -795,14 +846,38 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
             ?? StompSafeZone(EnemyIngredients)
             ?? GoToTrash(EnemyIngredients)
             ?? StompEnemy(EnemyIngredients)
-            ?? SlideOnThermometor(TeamIngredients);
+            ?? SlideOnThermometor(TeamIngredients)
+            ?? MoveIntoScoring(TeamIngredients);
         IngredientMovedWithLower = ing;
         if (ing != null)
         {
             yield return RollSelected(false, false);
             yield return StartCoroutine(MoveCPUIngredient(IngredientMovedWithLower));
         }
-        
+    } 
+    private IEnumerator CheckForScore()
+    {
+        Steps = lowerMove;
+        yield return StartCoroutine(SetCPUVariables(false));
+        var ing = CookIngredient(TeamIngredients) ?? HelpScore(AllIngredients,false);
+        IngredientMovedWithLower = ing;
+        if (ing != null)
+        {
+            yield return RollSelected(false, false);
+            yield return StartCoroutine(MoveCPUIngredient(IngredientMovedWithLower));
+        }
+        else
+        {
+            Steps = higherMove;
+            yield return StartCoroutine(SetCPUVariables(true));
+            var ing2 = CookIngredient(TeamIngredients) ?? HelpScore(TeamIngredients, true);
+            IngredientMovedWithHigher = ing2;
+            if (ing2 != null)
+            {
+                yield return RollSelected(true, false);
+                yield return StartCoroutine(MoveCPUIngredient(IngredientMovedWithHigher));
+            }
+        }
     }
     private IEnumerator MoveCPUIngredient(Ingredient ingredientToMove)
     {
@@ -820,15 +895,30 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
     private Ingredient MoveNotPastPrep(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => x.endPosition < 26 
-        && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endPosition % 26));
+        return teamToMove.FirstOrDefault(x => x.endPosition < 26
+        && !x.fullRoute[x.endPosition % 26].hasSpatula
+        && !x.fullRoute[x.endPosition % 26].hasSpoon
+        && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
+    }
+    
+    private Ingredient MoveIntoScoring(List<Ingredient> teamToMove)
+    {
+        if (teamToMove.Count == 0) return null;
+        return teamToMove.FirstOrDefault(x => x.endPosition < 23
+        && x.endPosition > 16
+        && !x.isCooked
+        && x.routePosition < 17
+        && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null)
+        && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
     }
 
     private Ingredient MoveCookedIngredient(List<Ingredient> teamToMove)
     {
-        if (teamToMove.Count == 0 || !Settings.Experimental) return null;
-        return teamToMove.FirstOrDefault(x => x.isCooked 
-        && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endPosition % 26));
+        if (teamToMove.Count == 0 || !Settings.LoggedInPlayer.Experimental) return null;
+        return teamToMove.FirstOrDefault(x => x.isCooked
+        && !x.fullRoute[x.endPosition % 26].hasSpatula
+        && !x.fullRoute[x.endPosition % 26].hasSpoon
+        && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
     }
 
     private Ingredient MoveFrontMostIngredient(List<Ingredient> teamToMove)
@@ -837,7 +927,7 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
 
         var smartMoves = teamToMove.Where(x => x.endPosition < 23 //Dont move past prep
         && x.routePosition < 17 //Dont move from scoring position
-        && !TeamIngredients.Any(y => (!Settings.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //Dont stomp yourself, unless cooked and advanced
+        && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //Dont stomp yourself, unless cooked and advanced
         && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null) //Dont stomp on safe area
         && !x.fullRoute[x.endPosition % 26].hasSpatula //weve already checked if sliding was a good idea
         && !x.fullRoute[x.endPosition % 26].hasSpoon).ToList(); //weve already checked if sliding was a good idea
@@ -857,50 +947,104 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
         if (teamToMove.Count == 0) return null;
         return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
         && x.routePosition < 17 //Dont move from scoring position
-        && ((x.fullRoute[x.endPosition % 26].hasSpatula && (Steps < 4 || Steps > 7) && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps - 6) % 26))
-        || (x.fullRoute[x.endPosition % 26].hasSpoon && !TeamIngredients.Any(y => y.routePosition == (x.routePosition + Steps + 6) % 26))));
+        && ((x.fullRoute[x.endPosition % 26].hasSpatula && (Steps < 4 || Steps > 7) && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == (x.endPosition - 6) % 26))
+        || (x.fullRoute[x.endPosition % 26].hasSpoon && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == (x.endPosition + 6) % 26))));
     } 
     
     private Ingredient SlideOnEnemy(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
         return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
-        && ((x.fullRoute[x.endPosition % 26].hasSpatula && EnemyIngredients.Any(y => y.routePosition == (x.routePosition + Steps - 6) % 26))
-        || (x.fullRoute[x.endPosition % 26].hasSpoon && EnemyIngredients.Any(y => y.routePosition == (x.routePosition + Steps + 6) % 26))));
+        && ((x.fullRoute[x.endPosition % 26].hasSpatula && EnemyIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == (x.endPosition - 6) % 26))
+        || (x.fullRoute[x.endPosition % 26].hasSpoon && EnemyIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == (x.endPosition + 6) % 26))));
 
     }
     private Ingredient GoToTrash(List<Ingredient> teamToMove)
     {
-        if (teamToMove.Count == 0 || Settings.Experimental) return null;
-        return teamToMove.FirstOrDefault(x => ( Steps < 6 && (x.routePosition + Steps % 26) == 10) || (x.routePosition + Steps % 26) == 18); //Check for trash cans
+        if (teamToMove.Count == 0) return null;
+        return teamToMove.FirstOrDefault(x => (!Settings.LoggedInPlayer.Experimental || !x.isCooked) && (Steps < 6 && (x.endPosition % 26) == 10) || (x.endPosition % 26) == 18); //Check for trash cans
     }
 
     private Ingredient StompEnemy(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
         return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
-        && EnemyIngredients.Any(y => (!Settings.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //Stomp Enemy
+        && (x.routePosition != 0 || x.TeamYellow == GetActivePlayer().TeamYellow ) // if not your piece then dont move from prep
+        && EnemyIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //Stomp Enemy
+        && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26)
         && !x.fullRoute[x.endPosition % 26].isSafe); //Dont stomp safe area if someone is there
     } 
-    private Ingredient StompSafeZone(List<Ingredient> teamToMove)
+    private Ingredient StompSafeZone(List<Ingredient> teamToMove)   
     {
         if (teamToMove.Count == 0) return null;
         return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
         && x.routePosition != 0 //dont move them from prep
-        && AllIngredients.Any(y => (!Settings.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //anyone there?
+        && AllIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //anyone there?
         && x.fullRoute[x.endPosition % 26].isSafe); //Stomp self if safe
     }
 
     private Ingredient CookIngredient(List<Ingredient> teamToMove)
     {
-        if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => x.endPosition == 26 && (!Settings.Experimental || !x.isCooked)); //Move into pot
+        return teamToMove.FirstOrDefault(x => x.endPosition == 26 && (!Settings.LoggedInPlayer.Experimental || !x.isCooked)); //Move into pot
+    } 
+    private Ingredient HelpScore(List<Ingredient> teamToMove, bool isHigher)
+    {
+        if (!Settings.LoggedInPlayer.Experimental) return null;
+        Ingredient ScoreableIng = null;
+        if (isHigher)
+        {
+            ScoreableIng = TeamIngredients.FirstOrDefault(x => !x.isCooked && x.endLowerPosition == 25);
+            if (ScoreableIng != null)
+            {
+                var ing = teamToMove.FirstOrDefault(x => x != ScoreableIng 
+                && x.isCooked 
+                && x.routePosition < ScoreableIng.routePosition 
+                && x.endPosition > ScoreableIng.routePosition
+                && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null)
+                && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
+                if(ing != null)
+                    return ing;
+            }
+
+            ScoreableIng = TeamIngredients.FirstOrDefault(x => !x.isCooked && x.endLowerPosition == 27);
+            if (ScoreableIng != null)
+            {
+                var ing = teamToMove.FirstOrDefault(x => x != ScoreableIng && x.isCooked && x.routePosition > ScoreableIng.routePosition && x.endHigherPosition % 26 < ScoreableIng.routePosition
+                && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null)
+                && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
+                if (ing != null)
+                    return ing;
+            }
+        }
+        else
+        {
+            ScoreableIng = TeamIngredients.FirstOrDefault(x => !x.isCooked && x.endHigherPosition == 25);
+            if (ScoreableIng != null)
+            {
+                var ing = teamToMove.FirstOrDefault(x => x != ScoreableIng && x.isCooked && x.routePosition < ScoreableIng.routePosition && x.endLowerPosition > ScoreableIng.routePosition
+                && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null)
+                && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
+                if (ing != null)
+                    return ing;
+            }
+
+            ScoreableIng = TeamIngredients.FirstOrDefault(x => !x.isCooked && x.endHigherPosition == 27);
+            if (ScoreableIng != null)
+            {
+                var ing = teamToMove.FirstOrDefault(x => x != ScoreableIng && x.isCooked && x.routePosition > ScoreableIng.routePosition && x.endLowerPosition % 26 < ScoreableIng.routePosition
+                && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null)
+                && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
+                if (ing != null)
+                    return ing;
+            }
+        }
+        return null;
     }
 
     private Ingredient MovePastPrep(List<Ingredient> teamToMove)
     {
         if (teamToMove.Count == 0) return null;
-        return teamToMove.OrderBy(x=>x.routePosition).FirstOrDefault(x => x.endPosition >= 26 && (!Settings.Experimental || !x.isCooked)); //Move past pot
+        return teamToMove.OrderBy(x=>x.routePosition).FirstOrDefault(x => x.endPosition >= 26 && (!Settings.LoggedInPlayer.Experimental || !x.isCooked)); //Move past pot
     }
     private Ingredient BeDumb(List<Ingredient> teamToMove)
     {
@@ -917,10 +1061,15 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
     }
     #endregion
 
-    public IEnumerator setTileNull(string ingName)
+    public void setTileNull(string ingName)
     {
         var tileToNull = tiles.FirstOrDefault(x => x.ingredient?.name == ingName);
-        yield return tileToNull.ingredient = null;
+        if (tileToNull != null)
+            tileToNull.ingredient = null;
+        else
+        {
+            //this should never happen! But sometimes does....
+        }
     }
 
     public IEnumerator MoveToNextEmptySpace(Ingredient ingredientToMove)
@@ -929,7 +1078,7 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
         ingredientToMove.currentTile = ingredientToMove.fullRoute[0];
         Tile nextTile;
         if (tiles.Any(x => x.ingredient?.name == ingredientToMove.name))
-        {
+        { //happens when scoring
             nextTile = tiles.FirstOrDefault(x => x.ingredient?.name == ingredientToMove.name);
         }
         else

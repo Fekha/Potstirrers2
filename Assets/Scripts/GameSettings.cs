@@ -6,7 +6,7 @@ public static class Settings
     public static Player LoggedInPlayer = new Player();
     public static Player SecondPlayer = new Player();
     public static bool IsDebug = false;
-    public static bool Experimental = false;
+    
     public static bool EnteredGame = false;
     public static Player[] PlayingPlayers = new Player[2] {
         new Player() { Username = "Joe", playerType = PlayerTypes.CPU },
@@ -43,6 +43,7 @@ public class Player
     public bool UseD8s = false;
     public bool DisableDoubles = false;
     public bool PlayAsPurple = false;
+    public bool Experimental = true;
 }
 
 public enum PlayerTypes

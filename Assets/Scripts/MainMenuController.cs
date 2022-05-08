@@ -66,7 +66,7 @@ public class MainMenuController : MonoBehaviour
     {
         wineToggle.isOn = global::Settings.LoggedInPlayer.WineMenu;
         d8Toggle.isOn = global::Settings.LoggedInPlayer.UseD8s;
-        ExperimentalToggle.isOn = global::Settings.Experimental;
+        ExperimentalToggle.isOn = global::Settings.LoggedInPlayer.Experimental;
         doubleToggle.isOn = global::Settings.LoggedInPlayer.DisableDoubles;
         playAsPurple.isOn = global::Settings.LoggedInPlayer.PlayAsPurple;
     }
@@ -80,7 +80,7 @@ public class MainMenuController : MonoBehaviour
         settings.SetActive(false);
         if (!Settings.LoggedInPlayer.IsGuest && toggleActivated)
         {
-            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(global::Settings.LoggedInPlayer.UserId)}&WineMenu={(global::Settings.LoggedInPlayer.WineMenu)}&UseD8s={(global::Settings.LoggedInPlayer.UseD8s)}&DisableDoubles={(global::Settings.LoggedInPlayer.DisableDoubles)}&PlayAsPurple={(global::Settings.LoggedInPlayer.PlayAsPurple)}&Experimental={(global::Settings.Experimental)}"));
+            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(global::Settings.LoggedInPlayer.UserId)}&WineMenu={(global::Settings.LoggedInPlayer.WineMenu)}&UseD8s={(global::Settings.LoggedInPlayer.UseD8s)}&DisableDoubles={(global::Settings.LoggedInPlayer.DisableDoubles)}&PlayAsPurple={(global::Settings.LoggedInPlayer.PlayAsPurple)}&Experimental={(global::Settings.LoggedInPlayer.Experimental)}"));
         }
         toggleActivated = false;
     }
@@ -184,7 +184,7 @@ public class MainMenuController : MonoBehaviour
             } 
             else if(toggle == "exp")
             {
-                global::Settings.Experimental = !global::Settings.Experimental;
+                global::Settings.LoggedInPlayer.Experimental = !global::Settings.LoggedInPlayer.Experimental;
             }
         }
     }
