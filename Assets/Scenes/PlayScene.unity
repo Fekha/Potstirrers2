@@ -875,7 +875,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.07387464, y: 0.1362896}
   m_AnchorMax: {x: 0.48741755, y: 0.376208}
-  m_AnchoredPosition: {x: 0, y: -0.000030517578}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -0.000002861023, y: -0.000037670135}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &250866047
@@ -1725,7 +1725,7 @@ RectTransform:
   m_AnchorMin: {x: 0.03061873, y: 0.82637864}
   m_AnchorMax: {x: 0.18098973, y: 0.90748006}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0.000025749207, y: -0.000058174162}
+  m_SizeDelta: {x: 0, y: -0.0001}
   m_Pivot: {x: 0.5, y: 0.5000002}
 --- !u!114 &453054210
 MonoBehaviour:
@@ -2764,6 +2764,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -1504981713932161579, guid: 76384da6a685c274d830ec472b829b34,
         type: 3}
+      propertyPath: m_DynamicOccludee
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -1504981713932161579, guid: 76384da6a685c274d830ec472b829b34,
+        type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: aa347fa0db5f67443b8057494178c1b9, type: 2}
@@ -3453,12 +3458,8 @@ MonoBehaviour:
   currentTile: {fileID: 1710968528}
   anim: {fileID: 1626452413}
   ingredientName: Chic-in
-  routePosition: 0
-  endPosition: 0
-  endLowerPosition: 0
-  endHigherPosition: 0
-  TeamYellow: 1
   isCooked: 0
+  TeamYellow: 1
   selector: {fileID: 166890932}
   Material: {fileID: 1626452411}
   NormalQuad: {fileID: 1531995643}
@@ -6541,12 +6542,8 @@ MonoBehaviour:
   currentTile: {fileID: 235278117}
   anim: {fileID: 2028457857}
   ingredientName: Baconator
-  routePosition: 0
-  endPosition: 0
-  endLowerPosition: 0
-  endHigherPosition: 0
-  TeamYellow: 0
   isCooked: 0
+  TeamYellow: 0
   selector: {fileID: 737335617}
   Material: {fileID: 2028457855}
   NormalQuad: {fileID: 1087621890}
@@ -7001,12 +6998,8 @@ MonoBehaviour:
   currentTile: {fileID: 1952031190}
   anim: {fileID: 1564979651}
   ingredientName: ZoomShroom
-  routePosition: 0
-  endPosition: 0
-  endLowerPosition: 0
-  endHigherPosition: 0
-  TeamYellow: 1
   isCooked: 0
+  TeamYellow: 1
   selector: {fileID: 1442584786}
   Material: {fileID: 1564979649}
   NormalQuad: {fileID: 2065703240}
@@ -7318,8 +7311,8 @@ RectTransform:
   m_Father: {fileID: 1699642549}
   m_RootOrder: 11
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.052371193, y: 0.03402099}
-  m_AnchorMax: {x: 0.9452795, y: 0.76693004}
+  m_AnchorMin: {x: 0.016498523, y: 0.022059027}
+  m_AnchorMax: {x: 0.9799271, y: 0.76693}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -7379,12 +7372,8 @@ MonoBehaviour:
   currentTile: {fileID: 1364525083}
   anim: {fileID: 306416937}
   ingredientName: The King
-  routePosition: 0
-  endPosition: 0
-  endLowerPosition: 0
-  endHigherPosition: 0
-  TeamYellow: 1
   isCooked: 0
+  TeamYellow: 1
   selector: {fileID: 954349139}
   Material: {fileID: 306416935}
   NormalQuad: {fileID: 1940937253}
@@ -8794,12 +8783,8 @@ MonoBehaviour:
   currentTile: {fileID: 621426899}
   anim: {fileID: 1121361315}
   ingredientName: Mr. Tomato
-  routePosition: 0
-  endPosition: 0
-  endLowerPosition: 0
-  endHigherPosition: 0
-  TeamYellow: 0
   isCooked: 0
+  TeamYellow: 0
   selector: {fileID: 1356943527}
   Material: {fileID: 1121361313}
   NormalQuad: {fileID: 791602322}
@@ -9033,15 +9018,16 @@ MonoBehaviour:
   ShouldTrashPopup: {fileID: 1514026507}
   HelpCanvas: {fileID: 1297812665}
   RollButton: {fileID: 941800444}
-  HigherRoll: {fileID: 1645951314}
-  LowerRoll: {fileID: 913330395}
-  HigherRollButton: {fileID: 690175011}
-  LowerRollButton: {fileID: 1515154435}
   RolledPanel: {fileID: 1672298971}
   TrashCan2: {fileID: 267061369}
   TrashCan3: {fileID: 949210741}
   exitPanel: {fileID: 1105668190}
   undoPanel: {fileID: 561932786}
+  FullBoard: {fileID: 1644491044}
+  HigherRoll: {fileID: 1645951314}
+  LowerRoll: {fileID: 913330395}
+  HigherRollButton: {fileID: 690175011}
+  LowerRollButton: {fileID: 1515154435}
   undoButton: {fileID: 1812948359}
   higherRollText: {fileID: 645165677}
   lowerRollText: {fileID: 551021267}
@@ -9067,7 +9053,6 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 94bd0752e4a13544b97ccbe39561e2f3, type: 3}
   - {fileID: 21300000, guid: b7b5ebeefe43fd141a71b0519188ad15, type: 3}
   - {fileID: 21300000, guid: 384ddccf5d551984680ff62feb572800, type: 3}
-  FullBoard: {fileID: 1644491044}
   AdvancedBoard: {fileID: 2100000, guid: c677740304f8dab41840b53fe6fa3610, type: 2}
   allMeatMaterials:
   - {fileID: 2100000, guid: 3eee82121705dc742a9170e9873ee80a, type: 2}
@@ -9090,14 +9075,6 @@ MonoBehaviour:
   - {fileID: 2100000, guid: ebc5a2b00434a9c42832397c74c70c05, type: 2}
   - {fileID: 2100000, guid: 048264a48c75cfe47a1dc9b228ca0125, type: 2}
   - {fileID: 2100000, guid: 162364465b850bb43b334aeb24926598, type: 2}
-  isMoving: 0
-  higherMove: 0
-  lowerMove: 0
-  firstMoveTaken: 0
-  higherMoveSelected: 0
-  state: 0
-  activePlayer: 0
-  Steps: 0
 --- !u!4 &1621647981
 Transform:
   m_ObjectHideFlags: 0
@@ -9178,14 +9155,10 @@ MonoBehaviour:
   currentTile: {fileID: 1004681584}
   anim: {fileID: 267374289}
   ingredientName: Miss. Potato
-  routePosition: 0
-  endPosition: 0
-  endLowerPosition: 0
-  endHigherPosition: 0
-  TeamYellow: 0
   isCooked: 0
+  TeamYellow: 0
   selector: {fileID: 1368169035}
-  Material: {fileID: 0}
+  Material: {fileID: 267374287}
   NormalQuad: {fileID: 457344044}
   CookedQuad: {fileID: 339113410}
 --- !u!4 &1626873286
@@ -9262,12 +9235,12 @@ MeshRenderer:
   m_GameObject: {fileID: 1644491044}
   m_Enabled: 1
   m_CastShadows: 0
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 0
   m_StaticShadowCaster: 0
   m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
   m_RenderingLayerMask: 1

@@ -17,30 +17,26 @@ public class Ingredient : MonoBehaviour
     //public Tile startTurnTile;
 
     public Animator anim;
-    public string ingredientName;
-    public int routePosition;
-    public int endPosition;
-    public int endLowerPosition;
-    public int endHigherPosition;
-    public bool TeamYellow;
+
+    internal int routePosition;
+    internal int endPosition;
+    internal int endLowerPosition;
+    internal int endHigherPosition;
     private int startNodeIndex;
     
     [Header("Bools")]
-    bool isMoving;
-    bool isAnimating;
-    bool hasTurn; //human input
-    public bool isCooked;
+    private bool hasTurn; //human input
+    internal bool isCooked;
+    public bool TeamYellow;
 
     [Header("Selector")]
     public GameObject selector;
-
     public GameObject Material;
     public GameObject NormalQuad;
     public GameObject CookedQuad;
-    Plane plane;
     private void Start()
     {
-        plane = new Plane(this.transform.up, Vector3.zero);
+        //plane = new Plane(this.transform.up, Vector3.zero);
         startNodeIndex = 0;
         CreateFullRoute();
         SetSelector(false);
@@ -87,10 +83,6 @@ public class Ingredient : MonoBehaviour
             currentTile = fullRoute[routePosition];
             currentTile.ingredient = null;
         }
-        else
-        {
-            GameManager.instance.setTileNull(this.name);
-        }
         yield return new WaitForSeconds(.5f);
     }
 
@@ -98,7 +90,7 @@ public class Ingredient : MonoBehaviour
     {
         while (GameManager.instance.Steps > 0)
         {
-            while (GameManager.instance.state == GameManager.States.READING)
+            while (GameManager.instance.IsReading)
             {
                 yield return new WaitForSeconds(0.5f);
             }
