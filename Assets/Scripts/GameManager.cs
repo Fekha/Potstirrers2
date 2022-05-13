@@ -12,8 +12,11 @@ public class GameManager : MonoBehaviour
     private int lowerMove = 0;
     private bool higherMoveSelected;
     private List<Ingredient> AllIngredients;
+    private List<Ingredient> UseableIngredients;
     private List<Ingredient> TeamIngredients;
+    private List<Ingredient> UseableTeamIngredients;
     private List<Ingredient> EnemyIngredients;
+    private List<Ingredient> UseableEnemyIngredients;
     private Ingredient lastMovedIngredient;
     private Ingredient IngredientMovedWithLower;
     private Ingredient IngredientMovedWithHigher;
@@ -225,7 +228,7 @@ public class GameManager : MonoBehaviour
     }
     private IEnumerator TakeTurn()
     {
-        turnText.text = GetActivePlayer().player.Username + "'s Turn";
+        turnText.text = GetActivePlayer().player.Username.Trim() + "'s Turn";
         if (GetActivePlayer().TeamYellow)
         {
             turnText.color = new Color32(255, 202, 24, 255);
@@ -248,7 +251,7 @@ public class GameManager : MonoBehaviour
     {
         if (isMoving || (IsCPUTurn() && HUMAN))
         {
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(0.5f);
         }
         else
         {
@@ -435,6 +438,8 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
             }
             else
             {
+                if (!doublesText.text.Contains("rolled doubles"))
+                    doublesText.text = "";
                 firstMoveTaken = true;
                 if (!IsCPUTurn())
                 {
@@ -643,9 +648,12 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
             else
             {
                 DoublesRolled = true;
-                doublesText.text = "You rolled doubles so you get an extra turn!" + (!Settings.LoggedInPlayer.DisableDoubles ? "" : " Unless you roll doubles again...");
+                doublesText.text = GetActivePlayer().player.Username.Trim() + " rolled doubles so they get an extra turn!" + (!Settings.LoggedInPlayer.DisableDoubles ? "" : " Unless you roll doubles again...");
             }
         }
+
+        RolledPanel.SetActive(true);
+
         if (DoubleDoubles && Settings.LoggedInPlayer.DisableDoubles)
         {
             actionText.text = "Lost your turn :(";
@@ -661,7 +669,7 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
                 StartCoroutine(MoveCPUIngredient());
             }
         }
-        RolledPanel.SetActive(true);
+        
     }
     public void RollSelected(bool isHigher)
     {
@@ -689,7 +697,6 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
     private IEnumerator CPUTurn()
     {
         yield return new WaitForSeconds(.5f);
-        RollButton.SetActive(false);
         RollDice(false);
     }
 
@@ -700,320 +707,562 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
         if (!DoubleDoubles || !Settings.LoggedInPlayer.DisableDoubles)
         {
             if (IsCPUTurn())
-                yield return StartCoroutine(CheckForScore());
+                yield return StartCoroutine(FindBestMove());
 
-            if (lowerMove != 0 && IngredientMovedWithLower == null && IsCPUTurn() && (Settings.IsDebug || Settings.LoggedInPlayer.Wins > 0))
-                yield return StartCoroutine(MoveWithLowerFirst());
+            if (!GameOver && IsCPUTurn() && lowerMove != 0 && (IngredientMovedWithLower == null || IngredientMovedWithHigher == null))
+                yield return StartCoroutine(FindBestMove());
 
-            if (IngredientMovedWithLower != null)
-            {
-                if (!GameOver && IngredientMovedWithHigher == null && IsCPUTurn())
-                    yield return StartCoroutine(GetBestIngredientToMoveWithHigher());
-            }
-            else
-            {
-                if (!GameOver && IngredientMovedWithHigher == null && IsCPUTurn())
-                    yield return StartCoroutine(GetBestIngredientToMoveWithHigher());
-
-                if (lowerMove != 0 && !GameOver && IngredientMovedWithLower == null && IsCPUTurn())
-                    yield return StartCoroutine(GetBestIngredientToMoveWithLower());
-            }
+            IngredientMovedWithLower = null;
+            IngredientMovedWithHigher = null;
         }
     }
     
-    private IEnumerator SetCPUVariables(bool higher)
+    private IEnumerator SetCPUVariables()
     {
-        AllIngredients = playerList.SelectMany(y => y.myIngredients.Where(x => x != lastMovedIngredient)).OrderBy(x=>x.isCooked).ThenByDescending(x => x.routePosition).ToList();
+        AllIngredients = playerList.SelectMany(y => y.myIngredients).ToList();
+        UseableIngredients = AllIngredients.Where(x => x != lastMovedIngredient).ToList();
         foreach (var ing in AllIngredients)
         {
-            ing.endHigherPosition = ing.routePosition+higherMove;
-            ing.endLowerPosition = ing.routePosition+lowerMove;
-            for (int i = ing.routePosition+1; i <= ing.endHigherPosition; i++)
+            //find what ingredients actual end will be accounting for cooked ingredients
+            ing.endHigherPositionWithoutSlide = ing.routePosition+higherMove;
+            ing.endLowerPositionWithoutSlide = ing.routePosition+lowerMove;
+            ing.distanceFromScore = 0;
+            for (int i = ing.routePosition+1; i <= ing.endHigherPositionWithoutSlide; i++)
             {
                 if (ing.fullRoute[i%26].ingredient != null && ing.fullRoute[i % 26].ingredient.isCooked) {
-                    ing.endHigherPosition++;
+                    ing.endHigherPositionWithoutSlide++;
                 }
             }
-            for (int i = ing.routePosition+1; i <= ing.endLowerPosition; i++)
+            for (int i = ing.routePosition+1; i <= ing.endLowerPositionWithoutSlide; i++)
             {
                 if (ing.fullRoute[i%26].ingredient != null && ing.fullRoute[i % 26].ingredient.isCooked) {
-                    ing.endLowerPosition++;
+                    ing.endLowerPositionWithoutSlide++;
                 }
             }
-            if (higher)
+
+            for (int i = ing.routePosition+1; i <= 26; i++)
             {
-                ing.endPosition = ing.endHigherPosition;
+                if (ing.fullRoute[i%26].ingredient == null || !ing.fullRoute[i%26].ingredient.isCooked) {
+                    ing.distanceFromScore++;
+                }
+            }
+
+            //account for slides
+            if (ing.fullRoute[ing.endLowerPositionWithoutSlide % 26].hasSpoon)
+            {
+                ing.endLowerPosition = ing.endLowerPositionWithoutSlide + 6;
+            }
+            else if (ing.fullRoute[ing.endLowerPositionWithoutSlide % 26].hasSpatula)
+            {
+                ing.endLowerPosition = ing.endLowerPositionWithoutSlide - 6;
             }
             else
             {
-                ing.endPosition = ing.endLowerPosition;
+                ing.endLowerPosition = ing.endLowerPositionWithoutSlide;
+            }
+
+            if (ing.fullRoute[ing.endHigherPositionWithoutSlide % 26].hasSpoon)
+            {
+                ing.endHigherPosition = ing.endHigherPositionWithoutSlide + 6;
+            }
+            if (ing.fullRoute[ing.endHigherPositionWithoutSlide % 26].hasSpatula)
+            {
+                ing.endHigherPosition = ing.endHigherPositionWithoutSlide - 6;
+            }
+            else
+            {
+                ing.endHigherPosition = ing.endHigherPositionWithoutSlide;
             }
         }
-        TeamIngredients = AllIngredients.Where(x => x.TeamYellow == GetActivePlayer().TeamYellow).OrderByDescending(x => x.routePosition).ToList();
-        EnemyIngredients = AllIngredients.Where(x => x.TeamYellow != GetActivePlayer().TeamYellow).OrderByDescending(x => x.routePosition).ToList();
+        //create subsets based on new info
+        TeamIngredients = AllIngredients.Where(x => x.TeamYellow == GetActivePlayer().TeamYellow).ToList();
+        EnemyIngredients = AllIngredients.Where(x => x.TeamYellow != GetActivePlayer().TeamYellow).ToList();
+
+        UseableIngredients = UseableIngredients.OrderBy(x => x.isCooked).ThenBy(x => x.distanceFromScore).ToList();
+        UseableTeamIngredients = UseableIngredients.Where(x => x.TeamYellow == GetActivePlayer().TeamYellow).ToList();
+        UseableEnemyIngredients = UseableIngredients.Where(x => x.TeamYellow != GetActivePlayer().TeamYellow).ToList();
+
+        //If reading wait
         while (IsReading)
         {
             yield return new WaitForSeconds(0.5f);
         }
     }
-    private IEnumerator GetBestIngredientToMoveWithHigher()
-    {
-        yield return RollSelected(true, false);
-        yield return StartCoroutine(SetCPUVariables(true));
-        yield return StartCoroutine(MoveCPUIngredient(CookIngredient(TeamIngredients)
-            ?? BeDumb(TeamIngredients)
-            ?? SlideOnEnemy(TeamIngredients)
-            ?? StompEnemy(TeamIngredients)
-            ?? SlideOnThermometor(TeamIngredients)
-            ?? MoveFrontMostIngredient(TeamIngredients.Where(x => !x.isCooked).ToList())
-            ?? MoveFrontMostIngredient(TeamIngredients)
-            ?? MoveNotPastPrep(TeamIngredients)
-            ?? MoveCookedIngredient(TeamIngredients)
-            ?? MoveRandomly(TeamIngredients)));
-    }
 
-    private IEnumerator GetBestIngredientToMoveWithLower()
+    private IEnumerator FindBestMove()
     {
-        yield return RollSelected(false, false);
-        yield return StartCoroutine(SetCPUVariables(false));
-        yield return StartCoroutine(MoveCPUIngredient(CookIngredient(TeamIngredients)
-            ?? BeDumb(AllIngredients)
-            ?? MovePastPrep(EnemyIngredients)
-            ?? SlideOnEnemy(TeamIngredients)
-            ?? StompEnemy(TeamIngredients)
-            ?? StompSafeZone(EnemyIngredients)
-            ?? GoToTrash(EnemyIngredients)
-            ?? StompEnemy(EnemyIngredients)
-            ?? SlideOnThermometor(TeamIngredients)
-            ?? MoveIntoScoring(TeamIngredients)
-            ?? MoveFrontMostIngredient(TeamIngredients.Where(x=>!x.isCooked).ToList())
-            ?? MoveFrontMostIngredient(TeamIngredients)
-            ?? MoveCookedIngredient(TeamIngredients)
-            ?? MoveNotPastPrep(TeamIngredients)
-            ?? MoveRandomly(EnemyIngredients)
-            ?? MoveRandomly(TeamIngredients)));
-    }
-    private IEnumerator MoveWithLowerFirst()
-    {
-        Steps = lowerMove;
-        yield return StartCoroutine(SetCPUVariables(false));
-        var ing = CookIngredient(TeamIngredients)
-            ?? MovePastPrep(EnemyIngredients)
-            ?? SlideOnEnemy(TeamIngredients)
-            ?? StompEnemy(TeamIngredients)
-            ?? StompSafeZone(EnemyIngredients)
-            ?? GoToTrash(EnemyIngredients)
-            ?? StompEnemy(EnemyIngredients)
-            ?? SlideOnThermometor(TeamIngredients)
-            ?? MoveIntoScoring(TeamIngredients);
-        IngredientMovedWithLower = ing;
-        if (ing != null)
-        {
-            yield return RollSelected(false, false);
-            yield return StartCoroutine(MoveCPUIngredient(IngredientMovedWithLower));
-        }
-    } 
-    private IEnumerator CheckForScore()
-    {
-        Steps = lowerMove;
-        yield return StartCoroutine(SetCPUVariables(false));
-        var ing = CookIngredient(TeamIngredients) ?? HelpScore(AllIngredients,false);
-        IngredientMovedWithLower = ing;
-        if (ing != null)
-        {
-            yield return RollSelected(false, false);
-            yield return StartCoroutine(MoveCPUIngredient(IngredientMovedWithLower));
-        }
-        else
-        {
-            Steps = higherMove;
-            yield return StartCoroutine(SetCPUVariables(true));
-            var ing2 = CookIngredient(TeamIngredients) ?? HelpScore(TeamIngredients, true);
-            IngredientMovedWithHigher = ing2;
-            if (ing2 != null)
-            {
-                yield return RollSelected(true, false);
-                yield return StartCoroutine(MoveCPUIngredient(IngredientMovedWithHigher));
-            }
-        }
+        yield return StartCoroutine(SetCPUVariables());
+        var ingredientToMove = CookIngredient()
+            ?? HelpScore()
+            ?? BeDumb()
+            ?? MovePastPrep()
+            ?? StompEnemy(TeamIngredients, true)
+            ?? StompSafeZone()
+            ?? GoToTrash()
+            ?? StompEnemy(EnemyIngredients, false)
+            ?? MoveIntoScoring()
+            ?? Slide()
+            ?? MoveFrontMostEnemy()
+            ?? MoveOffSpoon()
+            ?? MoveFromSpawn()
+            ?? MoveFrontMostIngredient()
+            ?? MoveCookedIngredient()
+            ?? MoveNotPastPrep()
+            ?? MoveRandomly();
+        yield return StartCoroutine(MoveCPUIngredient(ingredientToMove));
     }
     private IEnumerator MoveCPUIngredient(Ingredient ingredientToMove)
     {
+        yield return StartCoroutine(RollSelected(ingredientToMove == IngredientMovedWithHigher, false));
         yield return new WaitForSeconds(.5f);
         yield return StartCoroutine(DeactivateAllSelectors());
         yield return StartCoroutine(ingredientToMove.Move());
     }
 
-    private Ingredient MoveRandomly(List<Ingredient> teamToMove)
+    private Ingredient MoveRandomly()
     {
-        if (teamToMove.Count == 0 || teamToMove == null) return null;
-        return teamToMove[Random.Range(0, teamToMove.Count())];
-    }
-    
-    private Ingredient MoveNotPastPrep(List<Ingredient> teamToMove)
-    {
-        if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => x.endPosition < 26
-        && !x.fullRoute[x.endPosition % 26].hasSpatula
-        && !x.fullRoute[x.endPosition % 26].hasSpoon
-        && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
-    }
-    
-    private Ingredient MoveIntoScoring(List<Ingredient> teamToMove)
-    {
-        if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => x.endPosition < 23
-        && x.endPosition > 16
-        && !x.isCooked
-        && x.routePosition < 17
-        && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null)
-        && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
-    }
-
-    private Ingredient MoveCookedIngredient(List<Ingredient> teamToMove)
-    {
-        if (teamToMove.Count == 0 || !Settings.LoggedInPlayer.Experimental) return null;
-        return teamToMove.FirstOrDefault(x => x.isCooked
-        && !x.fullRoute[x.endPosition % 26].hasSpatula
-        && !x.fullRoute[x.endPosition % 26].hasSpoon
-        && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
-    }
-
-    private Ingredient MoveFrontMostIngredient(List<Ingredient> teamToMove)
-    {
-        if (teamToMove.Count == 0) return null;
-
-        var smartMoves = teamToMove.Where(x => x.endPosition < 23 //Dont move past prep
-        && x.routePosition < 17 //Dont move from scoring position
-        && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //Dont stomp yourself, unless cooked and advanced
-        && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null) //Dont stomp on safe area
-        && !x.fullRoute[x.endPosition % 26].hasSpatula //weve already checked if sliding was a good idea
-        && !x.fullRoute[x.endPosition % 26].hasSpoon).ToList(); //weve already checked if sliding was a good idea
-
-        if (smartMoves.Count() > 0)
+        if (IngredientMovedWithHigher == null)
         {
-            return smartMoves.OrderByDescending(x=>x.routePosition).FirstOrDefault();
-        }
-        else
-        {
-            return null;
-        }
-    }
-
-    private Ingredient SlideOnThermometor(List<Ingredient> teamToMove)
-    {
-        if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
-        && x.routePosition < 17 //Dont move from scoring position
-        && ((x.fullRoute[x.endPosition % 26].hasSpatula && (Steps < 4 || Steps > 7) && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == (x.endPosition - 6) % 26))
-        || (x.fullRoute[x.endPosition % 26].hasSpoon && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == (x.endPosition + 6) % 26))));
-    } 
-    
-    private Ingredient SlideOnEnemy(List<Ingredient> teamToMove)
-    {
-        if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
-        && ((x.fullRoute[x.endPosition % 26].hasSpatula && EnemyIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == (x.endPosition - 6) % 26))
-        || (x.fullRoute[x.endPosition % 26].hasSpoon && EnemyIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == (x.endPosition + 6) % 26))));
-
-    }
-    private Ingredient GoToTrash(List<Ingredient> teamToMove)
-    {
-        if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => (!Settings.LoggedInPlayer.Experimental || !x.isCooked) && (Steps < 6 && (x.endPosition % 26) == 10) || (x.endPosition % 26) == 18); //Check for trash cans
-    }
-
-    private Ingredient StompEnemy(List<Ingredient> teamToMove)
-    {
-        if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
-        && (x.routePosition != 0 || x.TeamYellow == GetActivePlayer().TeamYellow ) // if not your piece then dont move from prep
-        && EnemyIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //Stomp Enemy
-        && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26)
-        && !x.fullRoute[x.endPosition % 26].isSafe); //Dont stomp safe area if someone is there
-    } 
-    private Ingredient StompSafeZone(List<Ingredient> teamToMove)   
-    {
-        if (teamToMove.Count == 0) return null;
-        return teamToMove.FirstOrDefault(x => x.endPosition < 26 //Dont move past preparation
-        && x.routePosition != 0 //dont move them from prep
-        && AllIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26) //anyone there?
-        && x.fullRoute[x.endPosition % 26].isSafe); //Stomp self if safe
-    }
-
-    private Ingredient CookIngredient(List<Ingredient> teamToMove)
-    {
-        return teamToMove.FirstOrDefault(x => x.endPosition == 26 && (!Settings.LoggedInPlayer.Experimental || !x.isCooked)); //Move into pot
-    } 
-    private Ingredient HelpScore(List<Ingredient> teamToMove, bool isHigher)
-    {
-        if (!Settings.LoggedInPlayer.Experimental) return null;
-        Ingredient ScoreableIng = null;
-        if (isHigher)
-        {
-            ScoreableIng = TeamIngredients.FirstOrDefault(x => !x.isCooked && x.endLowerPosition == 25);
-            if (ScoreableIng != null)
+            IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x =>x.isCooked).FirstOrDefault();
+            if (IngredientMovedWithHigher != null)
             {
-                var ing = teamToMove.FirstOrDefault(x => x != ScoreableIng 
-                && x.isCooked 
-                && x.routePosition < ScoreableIng.routePosition 
-                && x.endPosition > ScoreableIng.routePosition
-                && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null)
-                && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
-                if(ing != null)
-                    return ing;
-            }
-
-            ScoreableIng = TeamIngredients.FirstOrDefault(x => !x.isCooked && x.endLowerPosition == 27);
-            if (ScoreableIng != null)
-            {
-                var ing = teamToMove.FirstOrDefault(x => x != ScoreableIng && x.isCooked && x.routePosition > ScoreableIng.routePosition && x.endHigherPosition % 26 < ScoreableIng.routePosition
-                && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null)
-                && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
-                if (ing != null)
-                    return ing;
+                var user = GetActivePlayer().player.Username;
+                if (!doublesText.text.Contains("rolled doubles"))
+                    doublesText.text = user == "Zach" ? "From Zach: Hmm, I'm Stumped!" : user == "Joe" ? "From Joe: Well I guess it doesn't really matter..." : user == "Jenn" ? "From Jenn: #OutOfOptions" : "From Chrissy: Wow you did't leave me any good options!";
+                return IngredientMovedWithHigher;
             }
         }
-        else
+
+        if (IngredientMovedWithLower == null && lowerMove != 0)
         {
-            ScoreableIng = TeamIngredients.FirstOrDefault(x => !x.isCooked && x.endHigherPosition == 25);
-            if (ScoreableIng != null)
+            IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.isCooked).FirstOrDefault();
+            if (IngredientMovedWithLower != null)
             {
-                var ing = teamToMove.FirstOrDefault(x => x != ScoreableIng && x.isCooked && x.routePosition < ScoreableIng.routePosition && x.endLowerPosition > ScoreableIng.routePosition
-                && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null)
-                && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
-                if (ing != null)
-                    return ing;
+                var user = GetActivePlayer().player.Username;
+                if (!doublesText.text.Contains("rolled doubles"))
+                    doublesText.text = user == "Zach" ? "From Zach: Hmm, I'm Stumped!" : user == "Joe" ? "From Joe: Well I guess it doesn't really matter..." : user == "Jenn" ? "From Jenn: #OutOfOptions" : "From Chrissy: Wow you did't leave me any good options!";
+                return IngredientMovedWithLower;
+            }
+        }
+        return null;
+    }
+    
+    private Ingredient MoveNotPastPrep()
+    {
+        if (IngredientMovedWithHigher == null)
+        {
+            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 26
+            && !x.isCooked
+            && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26));
+            if (IngredientMovedWithHigher != null) 
+                return IngredientMovedWithHigher;
+        }
+
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 26
+            && !x.isCooked
+            && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26));
+            if (IngredientMovedWithLower != null) 
+                return IngredientMovedWithLower;
+        }
+        return null;
+    }
+    
+    private Ingredient MoveIntoScoring()
+    {
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 23
+            && x.endLowerPosition > 16
+            && !x.isCooked
+            && x.distanceFromScore > 9
+            && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26));
+            if (IngredientMovedWithLower != null) 
+                return IngredientMovedWithLower;
+        }
+        if (IngredientMovedWithHigher == null)
+        {
+            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 23
+            && x.endHigherPosition > 16
+            && !x.isCooked
+            && x.distanceFromScore > 9
+            && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26));
+            if (IngredientMovedWithHigher != null) 
+                return IngredientMovedWithHigher;
+        }
+        return null;
+    }
+
+    private Ingredient MoveCookedIngredient()
+    {
+        if (IngredientMovedWithHigher == null)
+        {
+            IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x=>x.distanceFromScore).FirstOrDefault(x => x.isCooked
+            && x.endHigherPosition < 26
+            && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26));
+            if (IngredientMovedWithHigher != null) 
+                return IngredientMovedWithHigher;
+        }
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
+            && x.endHigherPosition < 26
+            && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26));
+            if (IngredientMovedWithLower != null) 
+                return IngredientMovedWithLower;
+        }
+        return null;
+    }
+
+    private Ingredient MoveFrontMostIngredient()
+    {
+        if (IngredientMovedWithHigher == null)
+        {
+            IngredientMovedWithHigher = UseableTeamIngredients.OrderByDescending(x => x.endHigherPosition).FirstOrDefault(x => x.endHigherPosition < 23 //Dont move past prep
+            && x.distanceFromScore > 9 //Dont move from scoring position
+            && !x.isCooked
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26) //Dont stomp yourself, unless cooked and advanced
+            && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)); //Dont stomp on safe area
+            if (IngredientMovedWithHigher != null) 
+                return IngredientMovedWithHigher;
+        }
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.endLowerPosition).FirstOrDefault(x => x.endLowerPosition < 23 //Dont move past prep
+            && x.distanceFromScore > 9 //Dont move from scoring position
+            && !x.isCooked
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26) //Dont stomp yourself, unless cooked and advanced
+            && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)); //Dont stomp on safe area
+            if (IngredientMovedWithLower != null) 
+                return IngredientMovedWithLower;
+        }
+        return null;
+    } 
+    private Ingredient MoveOffSpoon()
+    {
+        if (IngredientMovedWithHigher == null)
+        {
+            IngredientMovedWithHigher = UseableTeamIngredients.OrderByDescending(x=>x.distanceFromScore)
+                .FirstOrDefault(x => (x.routePosition == 8 || x.routePosition == 16) //on a spoon
+            && !x.isCooked
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26) //Dont stomp yourself, unless cooked and advanced
+            && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)); //Dont stomp on safe area
+            if (IngredientMovedWithHigher != null) 
+                return IngredientMovedWithHigher;
+        }
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.distanceFromScore)
+                .FirstOrDefault(x => (x.routePosition == 8 || x.routePosition == 16) //on a spoon
+              && !x.isCooked
+              && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26) //Dont stomp yourself, unless cooked and advanced
+              && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)); //Dont stomp on safe area
+            if (IngredientMovedWithLower != null) 
+                return IngredientMovedWithLower;
+        }
+        return null;
+    }
+    private Ingredient MoveFromSpawn()
+    {
+        if (UseableTeamIngredients.All(x => x.routePosition == 0))
+        {
+            //bm
+            if (lowerMove == higherMove && TeamIngredients.Count(x => x.isCooked) == 0 && lowerMove != 4 && lowerMove != 5 && lowerMove != 6)
+            {
+                if (IngredientMovedWithLower == null && AllIngredients.All(x => x.routePosition == 0))
+                {
+                    IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault();
+                    if (IngredientMovedWithLower != null)
+                        return IngredientMovedWithLower;
+                }
+                //stomp covers the second half of this
             }
 
-            ScoreableIng = TeamIngredients.FirstOrDefault(x => !x.isCooked && x.endHigherPosition == 27);
-            if (ScoreableIng != null)
+            if (lowerMove == higherMove && TeamIngredients.Count(x => x.isCooked) == 0 && (lowerMove == 4 || lowerMove == 5 || lowerMove == 6))
             {
-                var ing = teamToMove.FirstOrDefault(x => x != ScoreableIng && x.isCooked && x.routePosition > ScoreableIng.routePosition && x.endLowerPosition % 26 < ScoreableIng.routePosition
-                && !(x.fullRoute[x.endPosition % 26].isSafe && x.fullRoute[x.endPosition % 26].ingredient != null)
-                && !TeamIngredients.Any(y => (!Settings.LoggedInPlayer.Experimental || !y.isCooked) && y.routePosition == x.endPosition % 26));
-                if (ing != null)
-                    return ing;
+                if (IngredientMovedWithHigher == null && AllIngredients.All(x => x.routePosition == 0))
+                {
+                    IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault();
+                    if (IngredientMovedWithHigher != null)
+                        return IngredientMovedWithHigher;
+                }
+
+                if (IngredientMovedWithLower == null && AllIngredients.Count(x => x.routePosition == 0) == 5 && AllIngredients.FirstOrDefault(x => x.routePosition == lowerMove))
+                {
+                    IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault();
+                    if (IngredientMovedWithLower != null)
+                        return IngredientMovedWithLower;
+                }
+            }
+
+            if (IngredientMovedWithLower == null && lowerMove != 0)
+            {
+                IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.isCooked).FirstOrDefault();
+                if (IngredientMovedWithLower != null)
+                    return IngredientMovedWithLower;
+            }
+        }
+        return null;
+    }
+    private Ingredient MoveFrontMostEnemy()
+    {
+        if (IngredientMovedWithLower == null && lowerMove != 0 && EnemyIngredients.Count(x=>!x.isCooked) == 1)
+        {
+            IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.distanceFromScore < 10 //move from scoring position
+            && !x.isCooked
+            && !x.fullRoute[x.endLowerPositionWithoutSlide % 26].hasSpatula
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26)); //Dont stomp yourself, unless cooked and advanced
+            if (IngredientMovedWithLower != null) 
+                return IngredientMovedWithLower;
+        }
+        return null;
+    }
+
+    private Ingredient Slide()
+    {
+        if (IngredientMovedWithHigher == null)
+        {
+            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 26 //Dont move past preparation
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26)
+            && ((x.fullRoute[x.endHigherPositionWithoutSlide % 26].hasSpatula && !x.isCooked)
+            || x.fullRoute[x.endHigherPositionWithoutSlide % 26].hasSpoon));
+            if (IngredientMovedWithHigher != null) 
+                return IngredientMovedWithHigher;
+        }
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
+            && (x.distanceFromScore > 9 || x.distanceFromScore < 6)  //Dont move from scoring position
+            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26)
+            && ((x.fullRoute[x.endLowerPositionWithoutSlide % 26].hasSpatula && !x.isCooked)
+            || x.fullRoute[x.endLowerPositionWithoutSlide % 26].hasSpoon));
+            if (IngredientMovedWithLower != null) 
+                return IngredientMovedWithLower;
+        }
+        return null;
+    }
+    private Ingredient GoToTrash()
+    {
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.routePosition!= 0 && !x.isCooked && (Steps < 6 && (x.endLowerPositionWithoutSlide % 26) == 10) || (x.endLowerPositionWithoutSlide % 26) == 18);
+            if (IngredientMovedWithLower != null)
+            {
+                var user = GetActivePlayer().player.Username;
+                if (!doublesText.text.Contains("rolled doubles"))
+                    doublesText.text = user == "Zach" ? "From Zach: This is what my pa paw taught me." : user == "Joe" ? "From Joe: Go back where you belong!" : user == "Jenn" ? "From Jenn: #EwwTrashed" : "From Chrissy: Watch out for those trash cans!";
+                return IngredientMovedWithLower;
             }
         }
         return null;
     }
 
-    private Ingredient MovePastPrep(List<Ingredient> teamToMove)
+    private Ingredient StompEnemy(List<Ingredient> teamToMove, bool useEither = true)
     {
-        if (teamToMove.Count == 0) return null;
-        return teamToMove.OrderBy(x=>x.routePosition).FirstOrDefault(x => x.endPosition >= 26 && (!Settings.LoggedInPlayer.Experimental || !x.isCooked)); //Move past pot
-    }
-    private Ingredient BeDumb(List<Ingredient> teamToMove)
-    {
-        //var dumbRange = Settings.currentPlayer.Wins + GetActivePlayer().playerName == "Zach" ? 1 : 0;
-        if (!Settings.IsDebug && (Settings.LoggedInPlayer.Wins == 0 || (Random.Range(0, Settings.LoggedInPlayer.Wins) == 0 && !hasBeenDumb))) {
-            hasBeenDumb = true;
-            var toMove = teamToMove[Random.Range(0, teamToMove.Count)];
-            if (toMove.routePosition < 17)
+        if (useEither && IngredientMovedWithHigher == null)
+        {
+            IngredientMovedWithHigher = teamToMove.FirstOrDefault(x => x.endHigherPosition < 26 //Dont move past preparation
+            && (x.routePosition != 0 || x.TeamYellow == GetActivePlayer().TeamYellow) // if not your piece then dont move from prep
+            && EnemyIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition) //Stomp Enemy
+            && !x.fullRoute[x.endHigherPosition % 26].isSafe); //Dont stomp safe area if someone is there
+            if (IngredientMovedWithHigher != null)
             {
-                return toMove;
+                var user = GetActivePlayer().player.Username; 
+                if (!doublesText.text.Contains("rolled doubles"))
+                    doublesText.text = user == "Zach" ? "From Zach: E.Z.P.Z." : user == "Joe" ? "From Joe: Have fun in Prep..." : user == "Jenn" ? "From Jenn: #SorryNotSorry" : "From Chrissy: Oops didn't see you there!";
+                return IngredientMovedWithHigher;
             }
+        }
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = teamToMove.FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
+             && (x.routePosition != 0 || x.TeamYellow == GetActivePlayer().TeamYellow) // if not your piece then dont move from prep
+             && EnemyIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition) //Stomp Enemy
+             && !x.fullRoute[x.endLowerPosition % 26].isSafe); //Dont stomp safe area if someone is there
+            if (IngredientMovedWithLower != null)
+            {
+                var user = GetActivePlayer().player.Username;
+                if (!doublesText.text.Contains("rolled doubles"))
+                    doublesText.text = user == "Zach" ? "From Zach: E.Z.P.Z." : user == "Joe" ? "From Joe: Have fun in Prep..." : user == "Jenn" ? "From Jenn: #SorryNotSorry" : "From Chrissy: Oops didn't see you there!";
+                return IngredientMovedWithLower;
+            }
+        }
+        return null;
+        
+    } 
+    private Ingredient StompSafeZone()   
+    {
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
+            && x.routePosition != 0 //dont move them from prep
+            && AllIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26) //anyone there?
+            && x.fullRoute[x.endLowerPosition % 26].isSafe);
+            if (IngredientMovedWithLower != null)
+            {
+                var user = GetActivePlayer().player.Username;
+                if (!doublesText.text.Contains("rolled doubles"))
+                    doublesText.text = user == "Zach" ? "From Zach: Safe for me, not you!" : user == "Joe" ? "From Joe: You owe me for moving you this time.." : user == "Jenn" ? "From Jenn: #LOLBYE" : "From Chrissy: I'm just teaching you how the safe zone works";
+                return IngredientMovedWithLower;
+            }
+        }
+        return null;
+    }
+    private Ingredient CookIngredient()
+    {
+        if (IngredientMovedWithHigher == null)
+        {
+            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition == 26 && !x.isCooked);
+            if (IngredientMovedWithHigher != null)
+            {
+                var user = GetActivePlayer().player.Username;
+                if (!doublesText.text.Contains("rolled doubles"))
+                    doublesText.text = user == "Zach" ? "From Zach: This is what my me maw taught me." : user == "Joe" ? "From Joe: Watch and learn!" : user == "Jenn" ? "From Jenn: #Winning" : "From Chrissy: This is fun!";
+                return IngredientMovedWithHigher;
+            }
+        }
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition == 26 && !x.isCooked); //Move into pot if not cooked
+            if (IngredientMovedWithLower != null)
+            {
+                var user = GetActivePlayer().player.Username;
+                if (!doublesText.text.Contains("rolled doubles"))
+                    doublesText.text = user == "Zach" ? "From Zach: This is what my memaw taught me." : user == "Joe" ? "From Joe: Watch and learn!" : user == "Jenn" ? "From Jenn: #Winning" : "From Chrissy: This is fun!";
+                return IngredientMovedWithLower;
+            }
+        }
+        return null;
+    } 
+    private Ingredient HelpScore()
+    {
+        Ingredient ScoreableIng = null;
+        if (IngredientMovedWithLower == null && IngredientMovedWithHigher == null && lowerMove != 0)
+        {
+            ScoreableIng = UseableTeamIngredients.FirstOrDefault(x => !x.isCooked && x.endLowerPosition == 25);
+            if (ScoreableIng != null)
+            {
+                IngredientMovedWithHigher = UseableIngredients.FirstOrDefault(x => x != ScoreableIng 
+                && x.isCooked 
+                && x.routePosition < ScoreableIng.routePosition 
+                && x.endHigherPosition > ScoreableIng.routePosition
+                && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)
+                && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26));
+                if (IngredientMovedWithHigher != null)
+                {
+                    var user = GetActivePlayer().player.Username;
+                    if (!doublesText.text.Contains("rolled doubles"))
+                        doublesText.text = user == "Zach" ? "From Zach: Alley Oop!" : user == "Joe" ? "From Joe: This is my final form!" : user == "Jenn" ? "From Jenn: #2Good4u" : "From Chrissy: Teamwork makes the dreamwork!";
+                    return IngredientMovedWithHigher;
+                }
+            }
+
+            ScoreableIng = UseableTeamIngredients.FirstOrDefault(x => !x.isCooked && x.endHigherPosition == 25);
+
+            if (ScoreableIng != null)
+            {
+                IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => x != ScoreableIng 
+                && x.isCooked 
+                && x.routePosition < ScoreableIng.routePosition 
+                && x.endLowerPosition > ScoreableIng.routePosition
+                && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)
+                && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26));
+                if (IngredientMovedWithLower != null)
+                {
+                    var user = GetActivePlayer().player.Username;
+                    if (!doublesText.text.Contains("rolled doubles"))
+                        doublesText.text = user == "Zach" ? "From Zach: Alley Oop!" : user == "Joe" ? "From Joe: This is my final form!" : user == "Jenn" ? "From Jenn: #2Good4u" : "From Chrissy: Teamwork makes the dreamwork!";
+                    return IngredientMovedWithLower;
+                }
+            }
+
+            ScoreableIng = UseableTeamIngredients.FirstOrDefault(x => !x.isCooked && x.endLowerPosition == 27);
+            if (ScoreableIng != null)
+            {
+                IngredientMovedWithHigher = UseableIngredients.FirstOrDefault(x => x != ScoreableIng 
+                && x.isCooked 
+                && x.routePosition > ScoreableIng.routePosition 
+                && x.endHigherPosition % 26 < ScoreableIng.routePosition
+                && !(x.fullRoute[x.endHigherPosition % 26].isSafe 
+                && x.fullRoute[x.endHigherPosition % 26].ingredient != null)
+                && !TeamIngredients.Any(y =>!y.isCooked && y.routePosition == x.endHigherPosition % 26));
+                if (IngredientMovedWithHigher != null)
+                {
+                    var user = GetActivePlayer().player.Username;
+                    if (!doublesText.text.Contains("rolled doubles"))
+                        doublesText.text = user == "Zach" ? "From Zach: Alley Oop!" : user == "Joe" ? "From Joe: This is my final form!" : user == "Jenn" ? "From Jenn: #2Good4u" : "From Chrissy: Teamwork makes the dreamwork!";
+                    return IngredientMovedWithHigher;
+                }
+            }
+
+            ScoreableIng = UseableTeamIngredients.FirstOrDefault(x => !x.isCooked && x.endHigherPosition == 27);
+            if (ScoreableIng != null)
+            {
+                IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => x != ScoreableIng 
+                && x.isCooked 
+                && x.routePosition > ScoreableIng.routePosition 
+                && x.endLowerPosition % 26 < ScoreableIng.routePosition
+                && !(x.fullRoute[x.endLowerPosition % 26].isSafe 
+                && x.fullRoute[x.endLowerPosition % 26].ingredient != null)
+                && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26));
+                if (IngredientMovedWithLower != null)
+                {
+                    var user = GetActivePlayer().player.Username;
+                    if (!doublesText.text.Contains("rolled doubles"))
+                        doublesText.text = user == "Zach" ? "From Zach: Alley Oop!" : user == "Joe" ? "From Joe: This is my final form!" : user == "Jenn" ? "From Jenn: #2Good4u" : "From Chrissy: Teamwork makes the dreamwork!";
+                    return IngredientMovedWithLower;
+                }
+            }
+        }
+        return null;
+    }
+
+    private Ingredient MovePastPrep()
+    {
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableEnemyIngredients.OrderByDescending(x => x.distanceFromScore).FirstOrDefault(x => x.endLowerPosition >= 26 && !x.isCooked); //Move enemy past pot if uncooked
+            if (IngredientMovedWithLower != null)
+            {
+                var user = GetActivePlayer().player.Username;
+                if (!doublesText.text.Contains("rolled doubles"))
+                    doublesText.text = user == "Zach" ? "From Zach: You know what they say..." : user == "Joe" ? "From Joe: HAHA you got too close to the end!" : user == "Jenn" ? "From Jenn: #PastThePointOfNoReturn" : "From Chrissy: I'm sorry, I had to!";
+                return IngredientMovedWithLower;
+            }
+        }
+        return null;
+    }
+    private Ingredient BeDumb()
+    {
+        if (!Settings.IsDebug && (Settings.LoggedInPlayer.Wins == 0 || (Random.Range(0, Settings.LoggedInPlayer.Wins) == 0 && !hasBeenDumb)))
+        {
+            hasBeenDumb = true;
+            if (IngredientMovedWithHigher == null)
+            {
+                var toMove = UseableTeamIngredients[Random.Range(0, UseableTeamIngredients.Count)];
+                if (toMove.distanceFromScore > 9)
+                {
+                    IngredientMovedWithHigher = toMove;
+                    return IngredientMovedWithHigher;
+                }
+            }
+
+            if (IngredientMovedWithLower == null && lowerMove != 0)
+            {
+                var toMove = UseableIngredients[Random.Range(0, UseableIngredients.Count)];
+                if (toMove.distanceFromScore > 9)
+                {
+                    IngredientMovedWithLower = toMove;
+                    return IngredientMovedWithLower;
+                }
+            } 
         }
         return null;
     }

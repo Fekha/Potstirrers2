@@ -19,9 +19,11 @@ public class Ingredient : MonoBehaviour
     public Animator anim;
 
     internal int routePosition;
-    internal int endPosition;
     internal int endLowerPosition;
     internal int endHigherPosition;
+    internal int endHigherPositionWithoutSlide;
+    internal int endLowerPositionWithoutSlide;
+    internal int distanceFromScore;
     private int startNodeIndex;
     
     [Header("Bools")]
@@ -98,25 +100,29 @@ public class Ingredient : MonoBehaviour
             GameManager.instance.UpdateMoveText(GameManager.instance.Steps);
             var didMove = false;
 
-            if (GameManager.instance.Steps == 1 && TeamYellow != GameManager.instance.GetActivePlayer().TeamYellow && (routePosition == 9 || routePosition == 17))
+          
+
+            if (GameManager.instance.Steps == 1 && (routePosition == 9 || routePosition == 17))
             {
                 if (!GameManager.instance.IsCPUTurn() && isCooked)
                     yield return StartCoroutine(GameManager.instance.AskShouldTrash());
 
-                if (!isCooked || GameManager.instance.ShouldTrash == true || GameManager.instance.IsCPUTurn())
-                {
-                    if (routePosition == 9)
+                if (TeamYellow != GameManager.instance.GetActivePlayer().TeamYellow || GameManager.instance.ShouldTrash == true) {
+                    if (!isCooked || GameManager.instance.ShouldTrash == true || GameManager.instance.IsCPUTurn())
                     {
-                        didMove = true;
-                        yield return StartCoroutine(MoveToNextTile(GameManager.instance.TrashCan2.transform.position));
+                        if (routePosition == 9)
+                        {
+                            didMove = true;
+                            yield return StartCoroutine(MoveToNextTile(GameManager.instance.TrashCan2.transform.position));
+                        }
+                        else if (routePosition == 17)
+                        {
+                            didMove = true;
+                            yield return StartCoroutine(MoveToNextTile(GameManager.instance.TrashCan3.transform.position));
+                        }
+                        yield return new WaitForSeconds(0.2f);
+                        routePosition = 0;
                     }
-                    else if (routePosition == 17)
-                    {
-                        didMove = true;
-                        yield return StartCoroutine(MoveToNextTile(GameManager.instance.TrashCan3.transform.position));
-                    }
-                    yield return new WaitForSeconds(0.2f);
-                    routePosition = 0;
                 }
                 
             }
@@ -233,7 +239,7 @@ public class Ingredient : MonoBehaviour
         yield return new WaitForSeconds(.1f);
     }
 
-    public IEnumerator MoveToNextTile(Vector3? nextPos = null, float speed = 8.5f)
+    public IEnumerator MoveToNextTile(Vector3? nextPos = null, float speed = 9f)
     {
         var yValue = .12f;
 

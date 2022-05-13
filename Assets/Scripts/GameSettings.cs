@@ -21,7 +21,7 @@ public static class Settings
 }
 public static class Library
 {
-    public static List<string> helpTextList = new List<string>() { @"Welcome, " + Settings.LoggedInPlayer.Username +"!"+
+    public static List<string> helpTextList = new List<string>() { @"Welcome, " + Settings.LoggedInPlayer.Username.Trim() +"!"+
 @"
 
 The following pages will explain the rules of Pot Stirrers.

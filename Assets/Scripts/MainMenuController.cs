@@ -210,7 +210,7 @@ public class MainMenuController : MonoBehaviour
         if (cpu)
         {
             global::Settings.PlayingPlayers[0] = global::Settings.LoggedInPlayer;
-            global::Settings.PlayingPlayers[1] = global::Settings.CPUPlayers[UnityEngine.Random.Range(0, global::Settings.CPUPlayers.Count)];
+            global::Settings.PlayingPlayers[1] = Settings.LoggedInPlayer.Wins == 0 ? Settings.CPUPlayers[3] : global::Settings.CPUPlayers[UnityEngine.Random.Range(0, global::Settings.CPUPlayers.Count)];
         }
         else
         {
