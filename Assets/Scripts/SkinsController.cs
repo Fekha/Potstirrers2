@@ -119,17 +119,17 @@ public class SkinsController : MonoBehaviour
     {
         if (Settings.LoggedInPlayer.IsGuest)
         {
-            playerWins.text = @"Guests do not earn Stars.";
+            playerWins.text = @"Guests do not earn Calories.";
         }
         else
         {
             if (Settings.LoggedInPlayer.Stars == 0)
             {
-                playerWins.text = @"Wow, how embarassing, you're out of Stars!";
+                playerWins.text = @"Wow, how embarassing, you're out of Calories!";
             }
             else
             {
-                playerWins.text = "You have " + Settings.LoggedInPlayer.Stars.ToString() + @" Stars!";
+                playerWins.text = "You have " + Settings.LoggedInPlayer.Stars.ToString() + @" Calories!";
             }
         }
     }
@@ -213,7 +213,7 @@ public class SkinsController : MonoBehaviour
     }
     public void SaveAndExit()
     {
-        StartCoroutine(sql.RequestRoutine($"player/UpdateSkins?UserId={Settings.LoggedInPlayer.UserId}&SelectedMeat={Settings.LoggedInPlayer.SelectedMeat}&SelectedVeggie={Settings.LoggedInPlayer.SelectedVeggie}&SelectedFruit={Settings.LoggedInPlayer.SelectedFruit}&SelectedD10={Settings.LoggedInPlayer.SelectedDie}&SelectedD102={Settings.LoggedInPlayer.SelectedDie2}"));
+        StartCoroutine(sql.RequestRoutine($"purchase/UpdateSkins?UserId={Settings.LoggedInPlayer.UserId}&SelectedMeat={Settings.LoggedInPlayer.SelectedMeat}&SelectedVeggie={Settings.LoggedInPlayer.SelectedVeggie}&SelectedFruit={Settings.LoggedInPlayer.SelectedFruit}&SelectedD10={Settings.LoggedInPlayer.SelectedDie}&SelectedD102={Settings.LoggedInPlayer.SelectedDie2}"));
         SceneManager.LoadScene("MainMenu");
     }
 
@@ -372,7 +372,7 @@ public class SkinsController : MonoBehaviour
                     meatRequiredText.text = $"You unlocked {requiredIng.PurchaseName} \n";
                 }
                 meatRequiredText.text += $"You are above level {SelectedMeatData.LevelMinimum} \n";
-                meatRequiredText.text += $"You paid {SelectedMeatData.PurchaseCost} Stars";
+                meatRequiredText.text += $"You burned {SelectedMeatData.PurchaseCost} Calories";
             }
             lockedMeat.SetActive(false);
             Settings.LoggedInPlayer.SelectedMeat = currentMeat;
@@ -394,12 +394,12 @@ public class SkinsController : MonoBehaviour
 
             if (Settings.LoggedInPlayer.Stars < SelectedMeatData.PurchaseCost)
             {
-                meatRequiredText.text += $"{SelectedMeatData.PurchaseCost} Stars Required";
+                meatRequiredText.text += $"{SelectedMeatData.PurchaseCost} Calories Required";
             }
 
             if (meatRequiredText.text == "")
             {
-                meatButtonText.text = "Spend " + SelectedMeatData.PurchaseCost + " Stars to Unlock";
+                meatButtonText.text = "Burn " + SelectedMeatData.PurchaseCost + " Calories to Unlock";
                 meatPurchaseButton.SetActive(true);
             }
         }
@@ -428,7 +428,7 @@ public class SkinsController : MonoBehaviour
                     veggieRequiredText.text = $"You unlocked {requiredIng.PurchaseName} \n";
                 }
                 veggieRequiredText.text += $"You are above level {SelectedVeggieData.LevelMinimum} \n";
-                veggieRequiredText.text += $"You paid {SelectedVeggieData.PurchaseCost} Stars";
+                veggieRequiredText.text += $"You burned {SelectedVeggieData.PurchaseCost} Calories";
             }
             lockedVeggie.SetActive(false);
             Settings.LoggedInPlayer.SelectedVeggie = currentVeggie;
@@ -450,12 +450,12 @@ public class SkinsController : MonoBehaviour
 
             if (Settings.LoggedInPlayer.Stars < SelectedVeggieData.PurchaseCost)
             {
-                veggieRequiredText.text += $"{SelectedVeggieData.PurchaseCost} Stars Required";
+                veggieRequiredText.text += $"{SelectedVeggieData.PurchaseCost} Calories Required";
             }
 
             if (veggieRequiredText.text == "")
             {
-                veggieButtonText.text = "Spend " + SelectedVeggieData.PurchaseCost + " Stars to Unlock";
+                veggieButtonText.text = "Burn " + SelectedVeggieData.PurchaseCost + " Calories to Unlock";
                 veggiePurchaseButton.SetActive(true);
             }
         }
@@ -485,7 +485,7 @@ public class SkinsController : MonoBehaviour
                     fruitRequiredText.text = $"You unlocked {requiredIng.PurchaseName} \n";
                 }
                 fruitRequiredText.text += $"You are above level {SelectedFruitData.LevelMinimum} \n";
-                fruitRequiredText.text += $"You paid {SelectedFruitData.PurchaseCost} Stars";
+                fruitRequiredText.text += $"You burned {SelectedFruitData.PurchaseCost} Calories";
             }
             lockedFruit.SetActive(false);
             Settings.LoggedInPlayer.SelectedFruit = currentFruit;
@@ -507,12 +507,12 @@ public class SkinsController : MonoBehaviour
 
             if (Settings.LoggedInPlayer.Stars < SelectedFruitData.PurchaseCost)
             {
-                fruitRequiredText.text += $"{SelectedFruitData.PurchaseCost} Stars Required";
+                fruitRequiredText.text += $"{SelectedFruitData.PurchaseCost} Calories Required";
             }
 
             if (fruitRequiredText.text == "")
             {
-                fruitButtonText.text = "Spend " + SelectedFruitData.PurchaseCost + " Stars to Unlock";
+                fruitButtonText.text = "Burn " + SelectedFruitData.PurchaseCost + " Calories to Unlock";
                 fruitPurchaseButton.SetActive(true);
             }
         }
@@ -541,7 +541,7 @@ public class SkinsController : MonoBehaviour
                     dieRequiredText.text = $"You unlocked {requiredIng.PurchaseName} \n";
                 }
                 dieRequiredText.text += $"You are above level {SelectedDieData.LevelMinimum} \n";
-                dieRequiredText.text += $"You paid {SelectedDieData.PurchaseCost} Stars";
+                dieRequiredText.text += $"You burned {SelectedDieData.PurchaseCost} Calories";
             }
             lockedDie.SetActive(false);
             Settings.LoggedInPlayer.SelectedDie = currentDie;
@@ -563,12 +563,12 @@ public class SkinsController : MonoBehaviour
 
             if (Settings.LoggedInPlayer.Stars < SelectedDieData.PurchaseCost)
             {
-                dieRequiredText.text += $"{SelectedDieData.PurchaseCost} Stars Required";
+                dieRequiredText.text += $"{SelectedDieData.PurchaseCost} Calories Required";
             }
 
             if (dieRequiredText.text == "")
             {
-                dieButtonText.text = "Spend " + SelectedDieData.PurchaseCost + " Stars to Unlock";
+                dieButtonText.text = "Burn " + SelectedDieData.PurchaseCost + " Calories to Unlock";
                 diePurchaseButton.SetActive(true);
             }
         }
@@ -596,7 +596,7 @@ public class SkinsController : MonoBehaviour
                     die2RequiredText.text = $"You unlocked {requiredIng.PurchaseName} \n";
                 }
                 die2RequiredText.text += $"You are above level {SelectedDie2Data.LevelMinimum} \n";
-                die2RequiredText.text += $"You paid {SelectedDie2Data.PurchaseCost} Stars";
+                die2RequiredText.text += $"You burned {SelectedDie2Data.PurchaseCost} Calories";
             }
             lockedDie2.SetActive(false);
             Settings.LoggedInPlayer.SelectedDie2 = currentDie2;
@@ -618,12 +618,12 @@ public class SkinsController : MonoBehaviour
 
             if (Settings.LoggedInPlayer.Stars < SelectedDie2Data.PurchaseCost)
             {
-                die2RequiredText.text += $"{SelectedDie2Data.PurchaseCost} Stars Required";
+                die2RequiredText.text += $"{SelectedDie2Data.PurchaseCost} Calories Required";
             }
 
             if (die2RequiredText.text == "")
             {
-                die2ButtonText.text = "Spend " + SelectedDie2Data.PurchaseCost + " Stars to Unlock";
+                die2ButtonText.text = "Burn " + SelectedDie2Data.PurchaseCost + " Calories to Unlock";
                 die2PurchaseButton.SetActive(true);
             }
         }

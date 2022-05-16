@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public class GameManager : MonoBehaviour
 {
     #region GameManger Variables
+    private int TurnNumber = 0;
     private int higherMove = 0;
     private int lowerMove = 0;
     private bool higherMoveSelected;
@@ -29,6 +30,7 @@ public class GameManager : MonoBehaviour
     private bool GameOver = false;
     private bool DoublesRolled = false;
     private bool DoubleDoubles = false;
+    private int GameId = 0;
     #endregion
 
     #region Ingredient Variables
@@ -172,7 +174,6 @@ public class GameManager : MonoBehaviour
                 fruit2Quads.materials = fruit2Mats;
             }
         }
-        StartCoroutine(TakeTurn());
     }
     private void Awake()
     {
@@ -185,7 +186,7 @@ public class GameManager : MonoBehaviour
         sql = new SqlController();
         activePlayer = Random.Range(0, 2);
         
-        if ((Settings.LoggedInPlayer.Wins == 0 || Settings.LoggedInPlayer.Experimental) && !Settings.IsDebug)
+        if (Settings.LoggedInPlayer.Wins == 0 && !Settings.IsDebug)
         {
             getHelp();
         }
@@ -203,7 +204,17 @@ public class GameManager : MonoBehaviour
 
         playerList[0].TeamYellow = true;
         playerList[1].TeamYellow = false;
+
+        var url = $"analytic/GameStart?Player1={playerList[0].player.UserId}&Player2={playerList[1].player.UserId}&WineMenu={Settings.LoggedInPlayer.WineMenu}";
+        StartCoroutine(sql.RequestRoutine(url, GetNewGameCallback, true));
     }
+
+    private void GetNewGameCallback(string data)
+    {
+        GameId = sql.jsonConvert<int>(data);
+        StartCoroutine(TakeTurn());
+    }
+
     private void Update()
     {
         if (Settings.IsDebug && IsReading == true && IsCPUTurn())
@@ -228,7 +239,8 @@ public class GameManager : MonoBehaviour
     }
     private IEnumerator TakeTurn()
     {
-        turnText.text = GetActivePlayer().player.Username.Trim() + "'s Turn";
+        TurnNumber++;
+        turnText.text = GetActivePlayer().player.Username.Trim() + $"'s Turn";
         if (GetActivePlayer().TeamYellow)
         {
             turnText.color = new Color32(255, 202, 24, 255);
@@ -328,6 +340,9 @@ public class GameManager : MonoBehaviour
     private void GameIsOver(bool debug = false)
     {
         GameOver = true;
+        var url = $"analytic/GameEnd?GameId={GameId}&Player1Cooked={playerList[0].myIngredients.Count(x => x.isCooked)}&Player2Cooked={playerList[1].myIngredients.Count(x => x.isCooked)}&TotalTurns={TurnNumber}";
+        StartCoroutine(sql.RequestRoutine(url,null,true));
+
         playerWhoWon = playerList.FirstOrDefault(x => x.myIngredients.All(y => y.isCooked));
         if (debug)
         {
@@ -336,53 +351,30 @@ public class GameManager : MonoBehaviour
         var playerwhoLost = playerList.FirstOrDefault(x => x.player.Username != playerWhoWon.player.Username);
         var lostCount = playerwhoLost.myIngredients.Count(x => x.isCooked);
         eventText.text = @"GAME OVER! " + playerWhoWon.player.Username + " won.";
-        var wasVsCPU = false;
         var wonXp = 300 + ((3 - lostCount) * 50);
         var lostXp = 150 + (lostCount * 50);
         if (playerList.Any(x => x.player.playerType == PlayerTypes.CPU) && playerList.Any(x => x.player.playerType == PlayerTypes.HUMAN))
         {
-            wasVsCPU = true;
             if (playerWhoWon.player.playerType == PlayerTypes.HUMAN)
             {
                 eventText.text += @"
-You gained 150 Stars and " + wonXp + " Xp!";
+You gained 150 Calories and " + wonXp + " Xp!";
             }
             else
             {
                 eventText.text += @"
-You gained " + lostCount * 50 + " Stars and " + lostXp + " Xp!";
+You gained " + lostCount * 50 + " Calories and " + lostXp + " Xp!";
             }
         }
         else
         {
             eventText.text += @"
-You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.player.Username + " gained " + wonXp + " XP and " + playerwhoLost.player.Username + " gained " + lostXp + " xp!";
-        }
-
-        foreach (var gamePlayer in playerList.Where(x => x.player.playerType == PlayerTypes.HUMAN && !x.player.IsGuest))
-        {
-            var cookedIngs = gamePlayer.myIngredients.Count(x => x.isCooked);
-            var starsToEarn = cookedIngs * 50;
-            gamePlayer.player.Stars += starsToEarn;
-            gamePlayer.player.Cooked += cookedIngs;
-            StartCoroutine(sql.RequestRoutine("player/UpdateStars?userId=" + gamePlayer.player.UserId + "&stars=" + starsToEarn));
-            StartCoroutine(sql.RequestRoutine("player/UpdateCooked?userId=" + gamePlayer.player.UserId + "&cooked=" + cookedIngs));
-            if (playerWhoWon.player.Username == gamePlayer.player.Username)
-            {
-                gamePlayer.player.Wins += 1;
-                StartCoroutine(sql.RequestRoutine($"player/UpdateWins?userId={gamePlayer.player.UserId}&cpu={wasVsCPU}&lostCount={lostCount}"));
-            }
-            else
-            {
-                StartCoroutine(sql.RequestRoutine($"player/LoserXP?userId={gamePlayer.player.UserId}&lostCount={lostCount}"));
-            }
+You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWon.player.Username + " gained " + wonXp + " XP and " + playerwhoLost.player.Username + " gained " + lostXp + " xp!";
         }
 
         if (Settings.LoggedInPlayer.WineMenu)
-            eventText.text += (playerWhoWon.TeamYellow ? "Purple" : "Yellow") + " Team finish your drinks!";
+            eventText.text += (playerWhoWon.TeamYellow ? " Purple" : " Yellow") + " Team finish your drinks!";
 
-
-        UpdateMoveText(Steps);
         EventCanvas.SetActive(true);
     }
     #endregion
@@ -796,10 +788,10 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
             ?? HelpScore()
             ?? BeDumb()
             ?? MovePastPrep()
-            ?? StompEnemy(TeamIngredients, true)
+            ?? StompEnemy(UseableTeamIngredients, true)
             ?? StompSafeZone()
             ?? GoToTrash()
-            ?? StompEnemy(EnemyIngredients, false)
+            ?? StompEnemy(UseableEnemyIngredients, false)
             ?? MoveIntoScoring()
             ?? Slide()
             ?? MoveFrontMostEnemy()
@@ -1052,7 +1044,7 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
     {
         if (IngredientMovedWithLower == null && lowerMove != 0)
         {
-            IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.routePosition!= 0 && !x.isCooked && (Steps < 6 && (x.endLowerPositionWithoutSlide % 26) == 10) || (x.endLowerPositionWithoutSlide % 26) == 18);
+            IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.routePosition!= 0 && !x.isCooked && (lowerMove < 6 && (x.endLowerPositionWithoutSlide % 26) == 10) || (x.endLowerPositionWithoutSlide % 26) == 18);
             if (IngredientMovedWithLower != null)
             {
                 var user = GetActivePlayer().player.Username;
@@ -1149,7 +1141,7 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
             ScoreableIng = UseableTeamIngredients.FirstOrDefault(x => !x.isCooked && x.endLowerPosition == 25);
             if (ScoreableIng != null)
             {
-                IngredientMovedWithHigher = UseableIngredients.FirstOrDefault(x => x != ScoreableIng 
+                IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x != ScoreableIng 
                 && x.isCooked 
                 && x.routePosition < ScoreableIng.routePosition 
                 && x.endHigherPosition > ScoreableIng.routePosition
@@ -1186,7 +1178,7 @@ You each gained 50 Stars for each of your cooked ingredients! " + playerWhoWon.p
             ScoreableIng = UseableTeamIngredients.FirstOrDefault(x => !x.isCooked && x.endLowerPosition == 27);
             if (ScoreableIng != null)
             {
-                IngredientMovedWithHigher = UseableIngredients.FirstOrDefault(x => x != ScoreableIng 
+                IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x != ScoreableIng 
                 && x.isCooked 
                 && x.routePosition > ScoreableIng.routePosition 
                 && x.endHigherPosition % 26 < ScoreableIng.routePosition

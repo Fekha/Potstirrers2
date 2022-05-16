@@ -29,12 +29,6 @@ public class LoginController : MonoBehaviour
             PlayerPrefs.SetString("UniqueIdentifier", Guid.NewGuid().ToString());
         deviceId = Guid.Parse(PlayerPrefs.GetString("UniqueIdentifier"));
         var url = "player/GetDevice?deviceId=" + deviceId;
-//        if (Settings.LoggedInPlayer.UserId == 0)
-//        {
-//            alertText.text = @"Latest Updates:
-//The game is played in portrait mode now!";
-//            alert.SetActive(true);
-//        }
         StartCoroutine(sql.RequestRoutine(url, GetDeviceCallback, true));
     }
     public void RememberMe()
@@ -105,50 +99,12 @@ public class LoginController : MonoBehaviour
         yield return StartCoroutine(sql.RequestRoutine(url, GetPlayerCallback, true));  
     }
 
-    private void GetPlayerRegisterCallback(string data)
+    private void RegisterButton()
     {
-        Player = sql.jsonConvert<Player>(data);
         Settings.LoggedInPlayer = Player;
-        if (Player == null)
-        {  
-            StartCoroutine(sql.RequestRoutine($"player/RegisterUser?username={username.GetComponent<InputField>().text.Trim()}&password={Encrypt(password.GetComponent<InputField>().text)}&rememberMe={rememberMe}&deviceId={deviceId}", RegisterCallback, true));
-        }
-        else
-        {
-            if (Player.Username.Trim().ToLower() == "feca")
-            {
-                alertText.text = "Bruh, you really thought you could steal my name!?";
-                alert.SetActive(true);
-            }
-            else
-            {
-                alertText.text = "Username already taken. Be unique, geez.";
-                alert.SetActive(true);
-            }
-        }
-    }
-
-    private void RegisterCallback(string data)
-    {
-        Player = sql.jsonConvert<Player>(data);
-        Settings.LoggedInPlayer = Player;
-        if (Player != null)
-        {
-            Settings.LoggedInPlayer.IsGuest = false;
-            SceneManager.LoadScene("MainMenu");
-        }
-        else
-        {
-            alertText.text = "Username already taken. Be unique, geez.";
-            alert.SetActive(true);
-        }
-    }
-
-    public void RegisterButton()
-    {
         if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
         {
-            StartCoroutine(sql.RequestRoutine("player/GetUserByName?username=" + username.GetComponent<InputField>().text, GetPlayerRegisterCallback,true));
+            StartCoroutine(sql.RequestRoutine($"player/RegisterUser?username={username.GetComponent<InputField>().text.Trim()}&password={Encrypt(password.GetComponent<InputField>().text)}&rememberMe={rememberMe}&deviceId={deviceId}", RegisterCallback, true));
         }
         else
         {
@@ -160,6 +116,22 @@ public class LoginController : MonoBehaviour
             {
                 alertText.text = "Password may not be blank.";
             }
+            alert.SetActive(true);
+        }
+    }
+
+    private void RegisterCallback(string data)
+    {
+        Player = sql.jsonConvert<Player>(data);
+        if (Player != null)
+        {
+            Settings.LoggedInPlayer = Player;
+            Settings.LoggedInPlayer.IsGuest = false;
+            SceneManager.LoadScene("MainMenu");
+        }
+        else
+        {
+            alertText.text = "Username already taken. Be unique, geez.";
             alert.SetActive(true);
         }
     }

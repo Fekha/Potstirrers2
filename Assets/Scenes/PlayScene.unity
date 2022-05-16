@@ -1258,7 +1258,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 304579759}
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0.711, y: -0.58000004, z: 0.011785507}
+  m_LocalPosition: {x: 0.771, y: -0.58000004, z: 0.011785507}
   m_LocalScale: {x: 1, y: 0.1, z: 1}
   m_Children: []
   m_Father: {fileID: 2010322574}
@@ -3457,8 +3457,6 @@ MonoBehaviour:
   fullRoute: []
   currentTile: {fileID: 1710968528}
   anim: {fileID: 1626452413}
-  ingredientName: Chic-in
-  isCooked: 0
   TeamYellow: 1
   selector: {fileID: 166890932}
   Material: {fileID: 1626452411}
@@ -4109,8 +4107,8 @@ RectTransform:
   m_Father: {fileID: 1699642549}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.00000046967347, y: 0.7320058}
-  m_AnchorMax: {x: 0.99999315, y: 0.77555966}
+  m_AnchorMin: {x: 0.050211947, y: 0.7320058}
+  m_AnchorMax: {x: 0.9474361, y: 0.77555966}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -6541,8 +6539,6 @@ MonoBehaviour:
   fullRoute: []
   currentTile: {fileID: 235278117}
   anim: {fileID: 2028457857}
-  ingredientName: Baconator
-  isCooked: 0
   TeamYellow: 0
   selector: {fileID: 737335617}
   Material: {fileID: 2028457855}
@@ -6997,8 +6993,6 @@ MonoBehaviour:
   fullRoute: []
   currentTile: {fileID: 1952031190}
   anim: {fileID: 1564979651}
-  ingredientName: ZoomShroom
-  isCooked: 0
   TeamYellow: 1
   selector: {fileID: 1442584786}
   Material: {fileID: 1564979649}
@@ -7371,8 +7365,6 @@ MonoBehaviour:
   fullRoute: []
   currentTile: {fileID: 1364525083}
   anim: {fileID: 306416937}
-  ingredientName: The King
-  isCooked: 0
   TeamYellow: 1
   selector: {fileID: 954349139}
   Material: {fileID: 306416935}
@@ -8782,8 +8774,6 @@ MonoBehaviour:
   fullRoute: []
   currentTile: {fileID: 621426899}
   anim: {fileID: 1121361315}
-  ingredientName: Mr. Tomato
-  isCooked: 0
   TeamYellow: 0
   selector: {fileID: 1356943527}
   Material: {fileID: 1121361313}
@@ -9154,8 +9144,6 @@ MonoBehaviour:
   fullRoute: []
   currentTile: {fileID: 1004681584}
   anim: {fileID: 267374289}
-  ingredientName: Miss. Potato
-  isCooked: 0
   TeamYellow: 0
   selector: {fileID: 1368169035}
   Material: {fileID: 267374287}

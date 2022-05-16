@@ -51,10 +51,9 @@ public class MainMenuController : MonoBehaviour
     private void GetPlayerCallback(string data)
     {
         var player = sql.jsonConvert<Player>(data);      
-        if (player.Xp != Settings.LoggedInPlayer.Xp && player.Level != Settings.LoggedInPlayer.Level)
+        if (player.Level != Settings.LoggedInPlayer.Level)
         {
-            var starsGained = player.Stars - Settings.LoggedInPlayer.Stars;
-            alertText.text = $"Congrats you hit level {player.Level}! You gained {starsGained} Stars!";
+            alertText.text = $"Congrats you hit level {player.Level}! You gained {(Settings.LoggedInPlayer.Level * 5) + 100} Stars!";
             alert.SetActive(true);
         }
         Settings.LoggedInPlayer.Stars = player.Stars;
@@ -210,12 +209,12 @@ public class MainMenuController : MonoBehaviour
         if (cpu)
         {
             global::Settings.PlayingPlayers[0] = global::Settings.LoggedInPlayer;
-            global::Settings.PlayingPlayers[1] = Settings.LoggedInPlayer.Wins == 0 ? Settings.CPUPlayers[3] : global::Settings.CPUPlayers[UnityEngine.Random.Range(0, global::Settings.CPUPlayers.Count)];
+            global::Settings.PlayingPlayers[1] = global::Settings.CPUPlayers[UnityEngine.Random.Range(0, global::Settings.CPUPlayers.Count)];
         }
         else
         {
             global::Settings.PlayingPlayers[0] = global::Settings.LoggedInPlayer;
-            global::Settings.PlayingPlayers[1] = global::Settings.SecondPlayer.UserId != 0 ? global::Settings.SecondPlayer : new Player() { Username = global::Settings.LoggedInPlayer.Username+"(2)", playerType = PlayerTypes.HUMAN};
+            global::Settings.PlayingPlayers[1] = !global::Settings.SecondPlayer.IsGuest ? global::Settings.SecondPlayer : new Player() { Username = global::Settings.LoggedInPlayer.Username+"(2)", playerType = PlayerTypes.HUMAN};
         }
 
         SceneManager.LoadScene("PlayScene");

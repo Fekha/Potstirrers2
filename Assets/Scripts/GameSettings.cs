@@ -9,14 +9,14 @@ public static class Settings
     
     public static bool EnteredGame = false;
     public static Player[] PlayingPlayers = new Player[2] {
-        new Player() { Username = "Joe", playerType = PlayerTypes.CPU },
-        new Player() { Username = "Zach", playerType = PlayerTypes.CPU },
+        new Player() { Username = "Joe", playerType = PlayerTypes.CPU, UserId = 43 },
+        new Player() { Username = "Zach", playerType = PlayerTypes.CPU, UserId = 42 },
     };
     public static List<Player> CPUPlayers = new List<Player>() { 
-        new Player() { Username = "Joe", playerType = PlayerTypes.CPU },
-        new Player() { Username = "Zach", playerType = PlayerTypes.CPU },
-        new Player() { Username = "Jenn", playerType = PlayerTypes.CPU },
-        new Player() { Username = "Chrissy", playerType = PlayerTypes.CPU } 
+        new Player() { Username = "Joe", playerType = PlayerTypes.CPU, UserId = 43 },
+        new Player() { Username = "Zach", playerType = PlayerTypes.CPU, UserId = 42  },
+        new Player() { Username = "Jenn", playerType = PlayerTypes.CPU, UserId = 41  },
+        new Player() { Username = "Chrissy", playerType = PlayerTypes.CPU, UserId = 44  } 
     };
 }
 public static class Library
@@ -99,7 +99,7 @@ Without you there is no game, so please let me know about any feedback you have!
 [System.Serializable]
 public class Player
 {
-    public int UserId = 0;
+    public int UserId = 40;
     public string Username = "Guest";
     public string Password = "";
     public PlayerTypes playerType = PlayerTypes.HUMAN;
