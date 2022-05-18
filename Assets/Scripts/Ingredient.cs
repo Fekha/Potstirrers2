@@ -6,15 +6,14 @@ using UnityEngine;
 
 public class Ingredient : MonoBehaviour
 {
+    public int IngredientId;
+
     [Header("Routes")]
     public Route route;
 
     [Header("Tiles")]
     public List<Tile> fullRoute = new List<Tile>();
     public Tile currentTile;
-
-    //public int startTurnPos;
-    //public Tile startTurnTile;
 
     public Animator anim;
 
@@ -33,7 +32,6 @@ public class Ingredient : MonoBehaviour
 
     [Header("Selector")]
     public GameObject selector;
-    public GameObject Material;
     public GameObject NormalQuad;
     public GameObject CookedQuad;
     private void Start()
@@ -78,12 +76,14 @@ public class Ingredient : MonoBehaviour
     private IEnumerator BeforeMoving()
     {
         GameManager.instance.SetLastMovedIngredient(this);
-        //startTurnPos = routePosition;
-        //startTurnTile = currentTile;
         if (routePosition != 0)
         {
             currentTile = fullRoute[routePosition];
             currentTile.ingredient = null;
+        }
+        else
+        {
+            GameManager.instance.setTileNull(this.name);
         }
         yield return new WaitForSeconds(.5f);
     }

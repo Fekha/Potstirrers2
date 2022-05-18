@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using Assets.Models;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -205,8 +206,15 @@ public class GameManager : MonoBehaviour
         playerList[0].TeamYellow = true;
         playerList[1].TeamYellow = false;
 
-        var url = $"analytic/GameStart?Player1={playerList[0].player.UserId}&Player2={playerList[1].player.UserId}&WineMenu={Settings.LoggedInPlayer.WineMenu}";
-        StartCoroutine(sql.RequestRoutine(url, GetNewGameCallback, true));
+        if (!Settings.IsDebug)
+        {
+            var url = $"analytic/GameStart?Player1={playerList[0].player.UserId}&Player2={playerList[1].player.UserId}&WineMenu={Settings.LoggedInPlayer.WineMenu}";
+            StartCoroutine(sql.RequestRoutine(url, GetNewGameCallback, true));
+        }
+        else
+        {
+            StartCoroutine(TakeTurn());
+        }
     }
 
     private void GetNewGameCallback(string data)
@@ -340,8 +348,11 @@ public class GameManager : MonoBehaviour
     private void GameIsOver(bool debug = false)
     {
         GameOver = true;
-        var url = $"analytic/GameEnd?GameId={GameId}&Player1Cooked={playerList[0].myIngredients.Count(x => x.isCooked)}&Player2Cooked={playerList[1].myIngredients.Count(x => x.isCooked)}&TotalTurns={TurnNumber}";
-        StartCoroutine(sql.RequestRoutine(url,null,true));
+        if (!Settings.IsDebug)
+        {
+            var url = $"analytic/GameEnd?GameId={GameId}&Player1Cooked={playerList[0].myIngredients.Count(x => x.isCooked)}&Player2Cooked={playerList[1].myIngredients.Count(x => x.isCooked)}&TotalTurns={TurnNumber}";
+            StartCoroutine(sql.RequestRoutine(url, null, true));
+        }
 
         playerWhoWon = playerList.FirstOrDefault(x => x.myIngredients.All(y => y.isCooked));
         if (debug)
@@ -450,7 +461,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             tileToNull.ingredient = null;
         else
         {
-            //this should never happen! But sometimes does....
+            //I just double call this method for the wine menu, so this often double calls
         }
     }
     internal IEnumerator MoveToNextEmptySpace(Ingredient ingredientToMove)
@@ -481,7 +492,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     }
     internal void setWineMenuText(bool teamYellow, int v)
     {
-        helpText.text = (teamYellow ? "Yellow" : "Purple") + " team drinks for " + v + (v == 1 ? " second" : " seconds") + ". \n \n (1 second for each ingredient in Prep)";
+        helpText.text = (teamYellow ? "Yellow" : "Purple") + " team drinks for " + v + (v == 1 ? " second" : " seconds") + ". \n \n Math: 1 second for each ingredient in Prep, other team drinks if cooked.";
         StartReading();
     }
     internal void UpdateMoveText(int? moveAmount = null)

@@ -6,7 +6,6 @@ using UnityEngine.UI;
 
 public class SkinsController : MonoBehaviour
 {
-
     public Text meatButtonText;
     public Text meatNameText;
     public Text meatRequiredText;
@@ -22,6 +21,8 @@ public class SkinsController : MonoBehaviour
     public Text die2ButtonText;
     public Text die2NameText;
     public Text die2RequiredText;
+    public Text helpCurrnetTree;
+    public GameObject HelpPanel;
     public GameObject DiePanel;
     public GameObject IngPanel;
     public GameObject loading;
@@ -31,6 +32,7 @@ public class SkinsController : MonoBehaviour
     public GameObject diePurchaseButton;
     public GameObject die2PurchaseButton;
     public Text playerWins;
+    public Image currentUnlockImage;
     public Image currentMeatImage;
     public Image currentVeggieImage;
     public Image currentFruitImage;
@@ -43,6 +45,7 @@ public class SkinsController : MonoBehaviour
     public GameObject lockedFruit;
     public GameObject lockedDie;
     public GameObject lockedDie2;
+    public List<Sprite> allUnlockPanels;
     public List<ItemImage> allMeatIngredients;
     public List<ItemImage> allVeggieIngredients;
     public List<ItemImage> allFruitIngredients;
@@ -61,12 +64,13 @@ public class SkinsController : MonoBehaviour
         public int PurchaseCost = 0;
         public string PurchaseName = "";
         public int LevelMinimum = 0;
-        public int RequiredPurchase = 0;
+        public List<int> RequiredPurchase = new List<int>();
     }
 
     private List<int> PlayerOwns;
     private List<ItemData> IngredientData;
     private SqlController sql;
+    private int currentHelp = 0;
     private int currentMeat = 0;
     private int currentVeggie = 0;
     private int currentFruit = 0;
@@ -94,6 +98,46 @@ public class SkinsController : MonoBehaviour
         SetStarsTotalText();
         StartCoroutine(sql.RequestRoutine($"purchase/GetAllPurchasables", GetAllPurchaseCallback, true));
         
+    }
+    public void ShowHelp(bool show) {
+        HelpPanel.SetActive(show);
+    }
+    public void nextHelp(bool forward)
+    {
+
+        if (forward)
+            if (currentHelp < allUnlockPanels.Count - 1)
+            {
+                currentHelp++;
+            }
+            else
+            {
+                currentHelp = 0;
+            }
+        else
+        {
+            if (currentHelp > 0)
+            {
+                currentHelp--;
+            }
+            else
+            {
+                currentHelp = allUnlockPanels.Count - 1;
+            }
+        }
+        if (currentHelp == 0)
+        {
+            helpCurrnetTree.text = "Meat Unlock Tree";
+        }
+        else if (currentHelp == 1)
+        {
+            helpCurrnetTree.text = "Veggie Unlock Tree";
+        }
+        else
+        {
+            helpCurrnetTree.text = "Fruit Unlock Tree";
+        }
+        currentUnlockImage.sprite = allUnlockPanels[currentHelp];
     }
 
     public void ChoosePanel(string panel)
@@ -207,9 +251,6 @@ public class SkinsController : MonoBehaviour
         var ingData = sql.jsonConvert<IEnumerable<ItemData>>(data);
         IngredientData = ingData.ToList();
         StartCoroutine(sql.RequestRoutine($"purchase/GetPlayerPurchasables?UserId={Settings.LoggedInPlayer.UserId}", GetPlayerPurchaseCallback));
-        //meatNameText.text = currentMeat == 0 ? "Chiken" : IngredientData.FirstOrDefault(x => x.PurchaseId == allMeatIngredients[currentMeat].purchaseId).PurchaseName;
-        //veggieNameText.text = currentVeggie == 0 ? "Potato" : IngredientData.FirstOrDefault(x => x.PurchaseId == allVeggieIngredients[currentVeggie].purchaseId).PurchaseName;
-        //fruitNameText.text = currentFruit == 0 ? "Eggplant" : IngredientData.FirstOrDefault(x => x.PurchaseId == allFruitIngredients[currentFruit].purchaseId).PurchaseName;
     }
     public void SaveAndExit()
     {
@@ -360,16 +401,18 @@ public class SkinsController : MonoBehaviour
             if (allMeatIngredients[currentMeat].purchaseId == 0)
             {
                 meatRequiredText.text = "You got this for free!";
-                meatNameText.text = "Chicken";
+                meatNameText.text = "Sausage";
             }
             else
             {
                 var SelectedMeatData = IngredientData.FirstOrDefault(x => x.PurchaseId == allMeatIngredients[currentMeat].purchaseId);
                 meatNameText.text = SelectedMeatData.PurchaseName;
-                if (SelectedMeatData.RequiredPurchase != 0)
-                {
-                    var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == SelectedMeatData.RequiredPurchase);
-                    meatRequiredText.text = $"You unlocked {requiredIng.PurchaseName} \n";
+                foreach (var pId in SelectedMeatData.RequiredPurchase) {
+                    if (pId != 0)
+                    {
+                        var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == pId);
+                        meatRequiredText.text += $"You unlocked {requiredIng.PurchaseName} \n";
+                    }
                 }
                 meatRequiredText.text += $"You are above level {SelectedMeatData.LevelMinimum} \n";
                 meatRequiredText.text += $"You burned {SelectedMeatData.PurchaseCost} Calories";
@@ -382,11 +425,15 @@ public class SkinsController : MonoBehaviour
             var SelectedMeatData = IngredientData.FirstOrDefault(x => x.PurchaseId == allMeatIngredients[currentMeat].purchaseId);
             meatNameText.text = SelectedMeatData.PurchaseName;
             lockedMeat.SetActive(true);
-            if (SelectedMeatData.RequiredPurchase != 0 && !PlayerOwns.Contains(SelectedMeatData.RequiredPurchase))
+            foreach (var pId in SelectedMeatData.RequiredPurchase)
             {
-                var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == SelectedMeatData.RequiredPurchase);
-                meatRequiredText.text = $"{requiredIng.PurchaseName} Unlock Required \n";
+                if (pId != 0 && !PlayerOwns.Contains(pId))
+                {
+                    var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == pId);
+                    meatRequiredText.text += $"{requiredIng.PurchaseName} Unlock Required \n";
+                }
             }
+            
             if (Settings.LoggedInPlayer.Level < SelectedMeatData.LevelMinimum)
             {
                 meatRequiredText.text += $"Level {SelectedMeatData.LevelMinimum} Required \n";
@@ -416,17 +463,21 @@ public class SkinsController : MonoBehaviour
             if (allVeggieIngredients[currentVeggie].purchaseId == 0)
             {
                 veggieRequiredText.text = "You got this for free!";
-                veggieNameText.text = "Potato1";
+                veggieNameText.text = "Corn";
             }
             else
             {
                 var SelectedVeggieData = IngredientData.FirstOrDefault(x => x.PurchaseId == allVeggieIngredients[currentVeggie].purchaseId);
                 veggieNameText.text = SelectedVeggieData.PurchaseName;
-                if (SelectedVeggieData.RequiredPurchase != 0)
+                foreach (var pId in SelectedVeggieData.RequiredPurchase)
                 {
-                    var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == SelectedVeggieData.RequiredPurchase);
-                    veggieRequiredText.text = $"You unlocked {requiredIng.PurchaseName} \n";
+                    if (pId != 0)
+                    {
+                        var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == pId);
+                        veggieRequiredText.text += $"You unlocked {requiredIng.PurchaseName} \n";
+                    }
                 }
+                
                 veggieRequiredText.text += $"You are above level {SelectedVeggieData.LevelMinimum} \n";
                 veggieRequiredText.text += $"You burned {SelectedVeggieData.PurchaseCost} Calories";
             }
@@ -438,11 +489,15 @@ public class SkinsController : MonoBehaviour
             var SelectedVeggieData = IngredientData.FirstOrDefault(x => x.PurchaseId == allVeggieIngredients[currentVeggie].purchaseId);
             veggieNameText.text = SelectedVeggieData.PurchaseName;
             lockedVeggie.SetActive(true);
-            if (SelectedVeggieData.RequiredPurchase != 0 && !PlayerOwns.Contains(SelectedVeggieData.RequiredPurchase))
+            foreach (var pId in SelectedVeggieData.RequiredPurchase)
             {
-                var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == SelectedVeggieData.RequiredPurchase);
-                veggieRequiredText.text = $"{requiredIng.PurchaseName} Unlock Required \n";
+                if (pId != 0 && !PlayerOwns.Contains(pId))
+                {
+                    var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == pId);
+                    veggieRequiredText.text += $"{requiredIng.PurchaseName} Unlock Required \n";
+                }
             }
+           
             if (Settings.LoggedInPlayer.Level < SelectedVeggieData.LevelMinimum)
             {
                 veggieRequiredText.text += $"Level {SelectedVeggieData.LevelMinimum} Required \n";
@@ -472,18 +527,22 @@ public class SkinsController : MonoBehaviour
         {
             if (allFruitIngredients[currentFruit].purchaseId == 0)
             {
-                fruitNameText.text = "Eggplant1";
+                fruitNameText.text = "Pineapple";
                 fruitRequiredText.text = "You got this for free!";
             }
             else
             {
                 var SelectedFruitData = IngredientData.FirstOrDefault(x => x.PurchaseId == allFruitIngredients[currentFruit].purchaseId);
                 fruitNameText.text = SelectedFruitData.PurchaseName;
-                if (SelectedFruitData.RequiredPurchase != 0)
+                foreach (var pId in SelectedFruitData.RequiredPurchase)
                 {
-                    var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == SelectedFruitData.RequiredPurchase);
-                    fruitRequiredText.text = $"You unlocked {requiredIng.PurchaseName} \n";
+                    if (pId != 0)
+                    {
+                        var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == pId);
+                        fruitRequiredText.text += $"You unlocked {requiredIng.PurchaseName} \n";
+                    }
                 }
+                
                 fruitRequiredText.text += $"You are above level {SelectedFruitData.LevelMinimum} \n";
                 fruitRequiredText.text += $"You burned {SelectedFruitData.PurchaseCost} Calories";
             }
@@ -495,11 +554,16 @@ public class SkinsController : MonoBehaviour
             var SelectedFruitData = IngredientData.FirstOrDefault(x => x.PurchaseId == allFruitIngredients[currentFruit].purchaseId);
             fruitNameText.text = SelectedFruitData.PurchaseName;
             lockedFruit.SetActive(true);
-            if (SelectedFruitData.RequiredPurchase != 0 && !PlayerOwns.Contains(SelectedFruitData.RequiredPurchase))
+
+            foreach (var pId in SelectedFruitData.RequiredPurchase)
             {
-                var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == SelectedFruitData.RequiredPurchase);
-                fruitRequiredText.text = $"{requiredIng.PurchaseName} Unlock Required \n";
+                if (pId != 0 && !PlayerOwns.Contains(pId))
+                {
+                    var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == pId);
+                    fruitRequiredText.text += $"{requiredIng.PurchaseName} Unlock Required \n";
+                }
             }
+           
             if (Settings.LoggedInPlayer.Level < SelectedFruitData.LevelMinimum)
             {
                 fruitRequiredText.text += $"Level {SelectedFruitData.LevelMinimum} Required \n";
@@ -535,11 +599,15 @@ public class SkinsController : MonoBehaviour
             {
                 var SelectedDieData = IngredientData.FirstOrDefault(x => x.PurchaseId == allD10s[currentDie].purchaseId);
                 dieNameText.text = SelectedDieData.PurchaseName;
-                if (SelectedDieData.RequiredPurchase != 0)
+                foreach (var pId in SelectedDieData.RequiredPurchase)
                 {
-                    var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == SelectedDieData.RequiredPurchase);
-                    dieRequiredText.text = $"You unlocked {requiredIng.PurchaseName} \n";
+                    if (pId != 0)
+                    {
+                        var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == pId);
+                        dieRequiredText.text += $"You unlocked {requiredIng.PurchaseName} \n";
+                    }
                 }
+                
                 dieRequiredText.text += $"You are above level {SelectedDieData.LevelMinimum} \n";
                 dieRequiredText.text += $"You burned {SelectedDieData.PurchaseCost} Calories";
             }
@@ -551,11 +619,15 @@ public class SkinsController : MonoBehaviour
             var SelectedDieData = IngredientData.FirstOrDefault(x => x.PurchaseId == allD10s[currentDie].purchaseId);
             dieNameText.text = SelectedDieData.PurchaseName;
             lockedDie.SetActive(true);
-            if (SelectedDieData.RequiredPurchase != 0 && !PlayerOwns.Contains(SelectedDieData.RequiredPurchase))
+            foreach (var pId in SelectedDieData.RequiredPurchase)
             {
-                var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == SelectedDieData.RequiredPurchase);
-                dieRequiredText.text = $"{requiredIng.PurchaseName} Unlock Required \n";
+                if (pId != 0 && !PlayerOwns.Contains(pId))
+                {
+                    var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == pId);
+                    dieRequiredText.text += $"{requiredIng.PurchaseName} Unlock Required \n";
+                }
             }
+            
             if (Settings.LoggedInPlayer.Level < SelectedDieData.LevelMinimum)
             {
                 dieRequiredText.text += $"Level {SelectedDieData.LevelMinimum} Required \n";
@@ -590,11 +662,15 @@ public class SkinsController : MonoBehaviour
             {
                 var SelectedDie2Data = IngredientData.FirstOrDefault(x => x.PurchaseId == allD10s[currentDie2].purchaseId);
                 die2NameText.text = SelectedDie2Data.PurchaseName;
-                if (SelectedDie2Data.RequiredPurchase != 0)
+                foreach (var pId in SelectedDie2Data.RequiredPurchase)
                 {
-                    var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == SelectedDie2Data.RequiredPurchase);
-                    die2RequiredText.text = $"You unlocked {requiredIng.PurchaseName} \n";
+                    if (pId != 0)
+                    {
+                        var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == pId);
+                        die2RequiredText.text += $"You unlocked {requiredIng.PurchaseName} \n";
+                    }
                 }
+               
                 die2RequiredText.text += $"You are above level {SelectedDie2Data.LevelMinimum} \n";
                 die2RequiredText.text += $"You burned {SelectedDie2Data.PurchaseCost} Calories";
             }
@@ -606,11 +682,15 @@ public class SkinsController : MonoBehaviour
             var SelectedDie2Data = IngredientData.FirstOrDefault(x => x.PurchaseId == allD10s[currentDie2].purchaseId);
             die2NameText.text = SelectedDie2Data.PurchaseName;
             lockedDie2.SetActive(true);
-            if (SelectedDie2Data.RequiredPurchase != 0 && !PlayerOwns.Contains(SelectedDie2Data.RequiredPurchase))
+            foreach (var pId in SelectedDie2Data.RequiredPurchase)
             {
-                var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == SelectedDie2Data.RequiredPurchase);
-                die2RequiredText.text = $"{requiredIng.PurchaseName} Unlock Required \n";
+                if (pId != 0 && !PlayerOwns.Contains(pId))
+                {
+                    var requiredIng = IngredientData.FirstOrDefault(x => x.PurchaseId == pId);
+                    die2RequiredText.text += $"{requiredIng.PurchaseName} Unlock Required \n";
+                }
             }
+           
             if (Settings.LoggedInPlayer.Level < SelectedDie2Data.LevelMinimum)
             {
                 die2RequiredText.text += $"Level {SelectedDie2Data.LevelMinimum} Required \n";

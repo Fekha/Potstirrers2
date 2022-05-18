@@ -7,6 +7,7 @@ using UnityEngine.EventSystems;
 using System.Text;
 using System.Security.Cryptography;
 using System.IO;
+using Assets.Models;
 
 public class LoginController : MonoBehaviour
 {
