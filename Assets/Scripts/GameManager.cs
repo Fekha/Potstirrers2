@@ -26,16 +26,19 @@ public class GameManager : MonoBehaviour
     private GamePlayer playerWhoWon;
     private int pageNum = 0;
     private float readingTimeStart;
+    private float talkingTimeStart;
     private int activePlayer;
     private bool hasBeenDumb = false;
     private bool GameOver = false;
     private bool DoublesRolled = false;
     private bool DoubleDoubles = false;
     private int GameId = 0;
+    private int JennDie1;
+    private int JennDie2;
     #endregion
 
     #region Ingredient Variables
-    internal static GameManager instance;
+    internal static GameManager i;
     internal bool IsReading = false;
     internal int Steps;
     internal bool firstMoveTaken;
@@ -66,6 +69,7 @@ public class GameManager : MonoBehaviour
     public GameObject exitPanel;
     public GameObject undoPanel;
     public GameObject FullBoard;
+    public GameObject TalkShitPanel;
 
     [Header("Button")]
     public Button HigherRoll;
@@ -82,6 +86,7 @@ public class GameManager : MonoBehaviour
     public Text actionText;
     public Text turnText;
     public Text doublesText;
+    public Text talkShitText;
 
     [Header("Sprite")]
     public Sprite yellowDie;
@@ -89,7 +94,7 @@ public class GameManager : MonoBehaviour
     public Sprite yellowD8;
     public Sprite purpleD8;
     public List<Sprite> allD10s;
-
+    
     [Header("Material")]
     public Material AdvancedBoard;
     public List<Material> allMeatMaterials;
@@ -110,6 +115,7 @@ public class GameManager : MonoBehaviour
 
         if (!Settings.LoggedInPlayer.IsGuest)
         {
+            //Change first player to there skins
             AllIngredients = playerList.SelectMany(y => y.myIngredients).ToList();
             var HumanIngredients = AllIngredients.Where(x => x.TeamYellow != Settings.LoggedInPlayer.PlayAsPurple).ToList();
 
@@ -130,6 +136,7 @@ public class GameManager : MonoBehaviour
 
             if (Settings.SecondPlayer.IsGuest)
             {
+                //Change second player to random skins
                 var CPUIngredients = AllIngredients.Where(x => x.TeamYellow == Settings.LoggedInPlayer.PlayAsPurple).ToList();
 
                 allMeatMaterials.RemoveAt(Settings.LoggedInPlayer.SelectedMeat);
@@ -141,21 +148,22 @@ public class GameManager : MonoBehaviour
 
                 var CPUmeatQuads = CPUIngredients[0].NormalQuad.GetComponent<MeshRenderer>();
                 var CPUmeatMats = CPUmeatQuads.materials;
-                CPUmeatMats[0] = allMeatMaterials[randMeat];
+                CPUmeatMats[0] = allMeatMaterials[Settings.SecondPlayer.Username == "Jenn" ? allMeatMaterials.Count()-1 : randMeat];
                 CPUmeatQuads.materials = CPUmeatMats;
 
                 var CPUveggieQuads = CPUIngredients[1].NormalQuad.GetComponent<MeshRenderer>();
                 var CPUveggieMats = CPUveggieQuads.materials;
-                CPUveggieMats[0] = allVeggieMaterials[randVeggie];
+                CPUveggieMats[0] = allVeggieMaterials[Settings.SecondPlayer.Username == "Jenn" ? allVeggieMaterials.Count() - 1 : randVeggie];
                 CPUveggieQuads.materials = CPUveggieMats;
 
                 var CPUfruitQuads = CPUIngredients[2].NormalQuad.GetComponent<MeshRenderer>();
                 var CPUfruitMats = CPUfruitQuads.materials;
-                CPUfruitMats[0] = allFruitMaterials[randFruit];
+                CPUfruitMats[0] = allFruitMaterials[Settings.SecondPlayer.Username == "Jenn" ? allFruitMaterials.Count() - 1 : randFruit];
                 CPUfruitQuads.materials = CPUfruitMats;
             }
             else
             {
+                //Change second player to there skins
                 AllIngredients = playerList.SelectMany(y => y.myIngredients).ToList();
                 var Human2Ingredients = AllIngredients.Where(x => x.TeamYellow == Settings.LoggedInPlayer.PlayAsPurple).ToList();
 
@@ -175,32 +183,51 @@ public class GameManager : MonoBehaviour
                 fruit2Quads.materials = fruit2Mats;
             }
         }
+
+        if (Settings.HardMode)
+        {
+            JennDie1 = Random.Range(allD10s.Count()-3, allD10s.Count());
+            JennDie2 = Random.Range(allD10s.Count()-3, allD10s.Count());
+            while (Settings.LoggedInPlayer.SelectedDie == JennDie1 || Settings.LoggedInPlayer.SelectedDie2 == JennDie2)
+            {
+                JennDie1 = Random.Range(allD10s.Count() - 3, allD10s.Count());
+                JennDie2 = Random.Range(allD10s.Count() - 3, allD10s.Count());
+            } 
+        }
     }
     private void Awake()
     {
-        instance = this;
+        i = this;
         Application.targetFrameRate = 30;
-#if UNITY_EDITOR
-        Settings.IsDebug = true;
-        Settings.LoggedInPlayer.Experimental = true;
-#endif
         sql = new SqlController();
         activePlayer = Random.Range(0, 2);
-        
+#if UNITY_EDITOR
+        //Settings.IsDebug = true;
+        //Settings.LoggedInPlayer.Experimental = true;
+#endif
+
+        if (Settings.IsDebug)
+        {
+            Settings.LoggedInPlayer = global::Settings.CPUPlayers[0];
+            Settings.SecondPlayer = global::Settings.CPUPlayers[1]; 
+            activePlayer = 0;
+        }
+
         if (Settings.LoggedInPlayer.Wins == 0 && !Settings.IsDebug)
         {
+            activePlayer = 0;
             getHelp();
         }
         
         if (Settings.LoggedInPlayer.PlayAsPurple)
         {
-            playerList[0].player = Settings.PlayingPlayers[1];
-            playerList[1].player = Settings.PlayingPlayers[0];
+            playerList[0].player = Settings.SecondPlayer;
+            playerList[1].player = Settings.LoggedInPlayer;
         }
         else
         {
-            playerList[0].player = Settings.PlayingPlayers[0];
-            playerList[1].player = Settings.PlayingPlayers[1];
+            playerList[0].player = Settings.LoggedInPlayer;
+            playerList[1].player = Settings.SecondPlayer;
         }
 
         playerList[0].TeamYellow = true;
@@ -231,6 +258,15 @@ public class GameManager : MonoBehaviour
             if (timeSince > 2.0) {
                 HelpCanvas.SetActive(false);
                 IsReading = false;
+            }
+        }
+        if (TalkShitPanel.activeInHierarchy)
+        {
+            var timeSince = Time.time - talkingTimeStart;
+            if (timeSince > 3.0)
+            {
+                talkShitText.text = "";
+                TalkShitPanel.SetActive(false);
             }
         }
     }
@@ -350,10 +386,11 @@ public class GameManager : MonoBehaviour
         GameOver = true;
         if (!Settings.IsDebug)
         {
-            var url = $"analytic/GameEnd?GameId={GameId}&Player1Cooked={playerList[0].myIngredients.Count(x => x.isCooked)}&Player2Cooked={playerList[1].myIngredients.Count(x => x.isCooked)}&TotalTurns={TurnNumber}";
+            var url = $"analytic/GameEnd?GameId={GameId}&Player1Cooked={playerList[0].myIngredients.Count(x => x.isCooked)}&Player2Cooked={playerList[1].myIngredients.Count(x => x.isCooked)}&TotalTurns={TurnNumber}&HardMode={Settings.HardMode}";
             StartCoroutine(sql.RequestRoutine(url, null, true));
         }
-
+        var BonusXP = Settings.HardMode ? 100 : 0;
+        var BonusStars = Settings.HardMode ? 50 : 0;
         playerWhoWon = playerList.FirstOrDefault(x => x.myIngredients.All(y => y.isCooked));
         if (debug)
         {
@@ -361,31 +398,32 @@ public class GameManager : MonoBehaviour
         }
         var playerwhoLost = playerList.FirstOrDefault(x => x.player.Username != playerWhoWon.player.Username);
         var lostCount = playerwhoLost.myIngredients.Count(x => x.isCooked);
-        eventText.text = @"GAME OVER! " + playerWhoWon.player.Username + " won.";
-        var wonXp = 300 + ((3 - lostCount) * 50);
-        var lostXp = 150 + (lostCount * 50);
+        eventText.text = @"GAME OVER! " + playerWhoWon.player.Username + " won. \n \n";
+        var wonXp = BonusXP + 300 + ((3 - lostCount) * 50);
+        var lostXp = BonusXP + 150 + (lostCount * 50);
         if (playerList.Any(x => x.player.playerType == PlayerTypes.CPU) && playerList.Any(x => x.player.playerType == PlayerTypes.HUMAN))
         {
             if (playerWhoWon.player.playerType == PlayerTypes.HUMAN)
             {
-                eventText.text += @"
-You gained 150 Calories and " + wonXp + " Xp!";
+                eventText.text += $" You earned: \n \n {150+BonusStars} Calories \n \n {wonXp} Xp";
             }
             else
             {
-                eventText.text += @"
-You gained " + lostCount * 50 + " Calories and " + lostXp + " Xp!";
+                eventText.text += $" You earned: \n \n { BonusStars + (lostCount * 50)} Calories \n \n " + lostXp + " Xp";
             }
         }
         else
         {
-            eventText.text += @"
-You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWon.player.Username + " gained " + wonXp + " XP and " + playerwhoLost.player.Username + " gained " + lostXp + " xp!";
+            eventText.text += "You each gained 50 Calories for each of your cooked ingredients! \n \n" + playerWhoWon.player.Username + " earned " + wonXp + " XP \n \n " + playerwhoLost.player.Username + " earned " + lostXp + " xp!";
         }
 
         if (Settings.LoggedInPlayer.WineMenu)
-            eventText.text += (playerWhoWon.TeamYellow ? " Purple" : " Yellow") + " Team finish your drinks!";
+            eventText.text += "\n \n" + (playerWhoWon.TeamYellow ? " Purple" : " Yellow") + " Team finish your drinks!";
 
+        if (playerWhoWon.player.Username == Settings.LoggedInPlayer.Username)
+            Settings.LoggedInPlayer.Wins++;
+
+        Settings.HardMode = false;
         EventCanvas.SetActive(true);
     }
     #endregion
@@ -399,12 +437,21 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     {
         return playerList[activePlayer];
     }
+    internal void ActivateShitTalk()
+    {
+        if (!string.IsNullOrEmpty(talkShitText.text) && !TalkShitPanel.activeInHierarchy)
+        {
+            talkingTimeStart = Time.time;
+            TalkShitPanel.SetActive(true);
+        }
+    }
     internal IEnumerator DoneMoving()
     {
         while (IsReading)
         {
             yield return new WaitForSeconds(0.5f);
         }
+     
         if (DoubleDoubles && Settings.LoggedInPlayer.DisableDoubles)
         {
             if (IsCPUTurn())
@@ -599,8 +646,12 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
         higherMove = roll1 > roll2 ? roll1 : roll2;
         lowerMove = roll1 > roll2 ? roll2 : roll1;
 
-
-        if (GetActivePlayer().player.Username == Settings.LoggedInPlayer.Username && !Settings.LoggedInPlayer.UseD8s )
+        if (GetActivePlayer().player.Username == "Jenn" && !Settings.LoggedInPlayer.UseD8s)
+        {
+            HigherRoll.gameObject.GetComponent<Image>().sprite = allD10s[JennDie1];
+            LowerRoll.gameObject.GetComponent<Image>().sprite = allD10s[JennDie2];
+        }
+        else if (GetActivePlayer().player.Username == Settings.LoggedInPlayer.Username && !Settings.LoggedInPlayer.UseD8s )
         {
             HigherRoll.gameObject.GetComponent<Image>().sprite = Settings.LoggedInPlayer.SelectedDie != 0 ? allD10s[Settings.LoggedInPlayer.SelectedDie] : GetActivePlayer().TeamYellow ? yellowDie : purpleDie;
             LowerRoll.gameObject.GetComponent<Image>().sprite = Settings.LoggedInPlayer.SelectedDie2 != 0 ? allD10s[Settings.LoggedInPlayer.SelectedDie2] : GetActivePlayer().TeamYellow ? yellowDie : purpleDie;
@@ -795,22 +846,25 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     private IEnumerator FindBestMove()
     {
         yield return StartCoroutine(SetCPUVariables());
+        //TODO add HelpStomp
         var ingredientToMove = CookIngredient()
             ?? HelpScore()
             ?? BeDumb()
             ?? MovePastPrep()
-            ?? StompEnemy(UseableTeamIngredients, true)
+            ?? StompEnemy(true)
             ?? StompSafeZone()
             ?? GoToTrash()
-            ?? StompEnemy(UseableEnemyIngredients, false)
+            ?? StompEnemy(false)
             ?? MoveIntoScoring()
-            ?? Slide()
+            ?? Slide(false)
+            ?? BoostWithCookedIngredient()
             ?? MoveFrontMostEnemy()
             ?? MoveOffSpoon()
-            ?? MoveFromSpawn()
-            ?? MoveFrontMostIngredient()
-            ?? MoveCookedIngredient()
+            ?? Slide(true)
+            ?? MoveFrontMostIngredient(false)
+            ?? MoveFrontMostIngredient(true)
             ?? MoveNotPastPrep()
+            ?? MoveCookedPastPrep()
             ?? MoveRandomly();
         yield return StartCoroutine(MoveCPUIngredient(ingredientToMove));
     }
@@ -821,7 +875,195 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
         yield return StartCoroutine(DeactivateAllSelectors());
         yield return StartCoroutine(ingredientToMove.Move());
     }
+    internal void PrepShitTalk(TalkType talk)
+    {
+        if (!string.IsNullOrEmpty(talkShitText.text))
+            return;
 
+        var username = GetActivePlayer().player.Username;
+        switch (talk)
+        {
+            case TalkType.MoveRandomly:
+                switch (username)
+                {
+                    case "Zach":
+                        talkShitText.text = "Hmm, you stumped me!";
+                        break;
+                    case "Joe":
+                        talkShitText.text = "It really didn't matter...";
+                        break;
+                    case "Jenn":
+                        talkShitText.text = "#ImNotEvenTrying";
+                        break;
+                    case "Chrissy":
+                        talkShitText.text = "You did't leave me any good moves!";
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case TalkType.Trash:
+                switch (username)
+                {
+                    case "Zach":
+                        talkShitText.text = "My pa paw taught me to take out the trash.";
+                        break;
+                    case "Joe":
+                        talkShitText.text = "Go back where you belong!";
+                        break;
+                    case "Jenn":
+                        talkShitText.text = "#YouAreTrash";
+                        break;
+                    case "Chrissy":
+                        talkShitText.text = "Watch out for the trash cans!";
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case TalkType.Stomped:
+                switch (username)
+                {
+                    case "Zach":
+                        talkShitText.text = "Stomped!";
+                        break;
+                    case "Joe":
+                        talkShitText.text = "Have fun in Prep...";
+                        break;
+                    case "Jenn":
+                        talkShitText.text = "#SorryNotSorry";
+                        break;
+                    case "Chrissy":
+                        talkShitText.text = "Oops, didn't see you there!";
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case TalkType.StompedBySelf:
+                switch (username)
+                {
+                    case "Zach":
+                        talkShitText.text = "Self Stomp!";
+                        break;
+                    case "Joe":
+                        talkShitText.text = "Stop hitting yourself.";
+                        break;
+                    case "Jenn":
+                        talkShitText.text = "#GetRekt";
+                        break;
+                    case "Chrissy":
+                        talkShitText.text = "Oh no, I was trying to help!";
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case TalkType.SafeZoned:
+                switch (username)
+                {
+                    case "Zach":
+                        talkShitText.text = "Safe for me, not you!";
+                        break;
+                    case "Joe":
+                        talkShitText.text = "You owe me one for moving you...";
+                        break;
+                    case "Jenn":
+                        talkShitText.text = "#SickBurn";
+                        break;
+                    case "Chrissy":
+                        talkShitText.text = "I'm just teaching you how the safe zone works";
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case TalkType.Cook:
+                switch (username)
+                {
+                    case "Zach":
+                        talkShitText.text = "My me maw taught me to cook like this.";
+                        break;
+                    case "Joe":
+                        talkShitText.text = "Watch and learn!";
+                        break;
+                    case "Jenn":
+                        talkShitText.text = "#Winning";
+                        break;
+                    case "Chrissy":
+                        talkShitText.text = "This is fun!";
+                        break;
+                    default:
+                        break;
+                }
+                break; 
+            case TalkType.HelpCook:
+                switch (username)
+                {
+                    case "Zach":
+                        talkShitText.text = "Alley Oop!";
+                        break;
+                    case "Joe":
+                        talkShitText.text = "This is my final form!";
+                        break;
+                    case "Jenn":
+                        talkShitText.text = "#StrategicAF";
+                        break;
+                    case "Chrissy":
+                        talkShitText.text = "Teamwork makes the dreamwork!";
+                        break;
+                    default:
+                        break;
+                }
+                break; 
+            case TalkType.MovePastPrep:
+                switch (username)
+                {
+                    case "Zach":
+                        talkShitText.text = "You know what they say...";
+                        break;
+                    case "Joe":
+                        talkShitText.text = "HAHA you got too close to the end!";
+                        break;
+                    case "Jenn":
+                        talkShitText.text = "#ByeFelicia";
+                        break;
+                    case "Chrissy":
+                        talkShitText.text = "I'm sorry, I just had to!";
+                        break;
+                    default:
+                        break;
+                }
+                break; 
+            case TalkType.SentBack:
+                username = playerList.FirstOrDefault(x=> x.player.playerType == PlayerTypes.CPU).player.Username;
+
+                var ZachOptions = new List<string>() { "", "Man it sucks to suck...", "Dag Nabbit!", "What do you think your doing!?" };
+                var JoeOptions = new List<string>() { "", "Wait, you can't do that to me!!", "Watch your back!", "I'll remember that!"};
+                var JennOptions = new List<string>() { "", "#Oooof", "#Toxic", "#OhNoYouDidnt" };
+                var ChrissyOptions = new List<string>() { "", "Well that wasn't very nice!", "Hey, quit doing that!", "Treat others how you want to be treated..." };
+                switch (username)
+                {
+                    case "Zach":
+                        talkShitText.text = ZachOptions[Random.Range(0, ZachOptions.Count())];
+                        break;
+                    case "Joe":
+                        talkShitText.text = JoeOptions[Random.Range(0, JoeOptions.Count())];
+                        break;
+                    case "Jenn":
+                        talkShitText.text = JennOptions[Random.Range(0, JennOptions.Count())];
+                        break;
+                    case "Chrissy":
+                        talkShitText.text = ChrissyOptions[Random.Range(0, ChrissyOptions.Count())];
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            default:
+                break;
+        }
+    }
     private Ingredient MoveRandomly()
     {
         if (IngredientMovedWithHigher == null)
@@ -829,9 +1071,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x =>x.isCooked).FirstOrDefault();
             if (IngredientMovedWithHigher != null)
             {
-                var user = GetActivePlayer().player.Username;
-                if (!doublesText.text.Contains("rolled doubles"))
-                    doublesText.text = user == "Zach" ? "From Zach: Hmm, I'm Stumped!" : user == "Joe" ? "From Joe: Well I guess it doesn't really matter..." : user == "Jenn" ? "From Jenn: #OutOfOptions" : "From Chrissy: Wow you did't leave me any good options!";
+                PrepShitTalk(TalkType.MoveRandomly); 
                 return IngredientMovedWithHigher;
             }
         }
@@ -841,23 +1081,18 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.isCooked).FirstOrDefault();
             if (IngredientMovedWithLower != null)
             {
-                var user = GetActivePlayer().player.Username;
-                if (!doublesText.text.Contains("rolled doubles"))
-                    doublesText.text = user == "Zach" ? "From Zach: Hmm, I'm Stumped!" : user == "Joe" ? "From Joe: Well I guess it doesn't really matter..." : user == "Jenn" ? "From Jenn: #OutOfOptions" : "From Chrissy: Wow you did't leave me any good options!";
+                PrepShitTalk(TalkType.MoveRandomly);
                 return IngredientMovedWithLower;
             }
         }
         return null;
     }
-    
     private Ingredient MoveNotPastPrep()
     {
         if (IngredientMovedWithHigher == null)
         {
             IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 26
-            && !x.isCooked
-            && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26));
+            && CanMoveSafely(x, x.endHigherPosition));
             if (IngredientMovedWithHigher != null) 
                 return IngredientMovedWithHigher;
         }
@@ -865,9 +1100,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
         if (IngredientMovedWithLower == null && lowerMove != 0)
         {
             IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 26
-            && !x.isCooked
-            && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26));
+            && CanMoveSafely(x, x.endLowerPosition));
             if (IngredientMovedWithLower != null) 
                 return IngredientMovedWithLower;
         }
@@ -882,8 +1115,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             && x.endLowerPosition > 16
             && !x.isCooked
             && x.distanceFromScore > 9
-            && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26));
+            && CanMoveSafely(x, x.endLowerPosition));
             if (IngredientMovedWithLower != null) 
                 return IngredientMovedWithLower;
         }
@@ -893,8 +1125,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             && x.endHigherPosition > 16
             && !x.isCooked
             && x.distanceFromScore > 9
-            && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26));
+            && CanMoveSafely(x, x.endHigherPosition));
             if (IngredientMovedWithHigher != null) 
                 return IngredientMovedWithHigher;
         }
@@ -907,42 +1138,99 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
         {
             IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x=>x.distanceFromScore).FirstOrDefault(x => x.isCooked
             && x.endHigherPosition < 26
-            && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26));
+            && CanMoveSafely(x, x.endHigherPosition));
             if (IngredientMovedWithHigher != null) 
                 return IngredientMovedWithHigher;
         }
         if (IngredientMovedWithLower == null && lowerMove != 0)
         {
             IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
-            && x.endHigherPosition < 26
-            && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26));
+            && x.endLowerPosition < 26
+            && CanMoveSafely(x, x.endLowerPosition));
+            if (IngredientMovedWithLower != null) 
+                return IngredientMovedWithLower;
+        }
+        return null;
+    }  
+    private Ingredient BoostWithCookedIngredient()
+    {
+        if (!UseableIngredients.Any(x => x.isCooked) || IngredientMovedWithHigher != null || IngredientMovedWithLower != null || lowerMove == 0)
+            return null;
+
+        if (IngredientMovedWithHigher == null)
+        {
+            var CookedIngredientsThatCanHelp = UseableTeamIngredients.Where(x => x.isCooked
+                && (UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y, y.endLowerPosition + 1)).Any(y => y.routePosition >= x.routePosition && y.routePosition < x.endHigherPosition && y.endLowerPosition >= x.endHigherPosition)
+                    || UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y, y.endLowerPosition - 1)).Any(y => y.routePosition < x.routePosition && y.endLowerPosition > x.routePosition && y.endLowerPosition < x.endHigherPosition))).ToList();
+
+            if (CookedIngredientsThatCanHelp.Count() > 0)
+            {
+                IngredientMovedWithHigher = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x,x.endHigherPosition));
+                if (IngredientMovedWithHigher != null)
+                    return IngredientMovedWithHigher;
+            }
+        }
+
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            var CookedIngredientsThatCanHelp = UseableIngredients.Where(x => x.isCooked 
+                && (UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y, y.endHigherPosition + 1)).Any(y => y.routePosition >= x.routePosition && y.routePosition < x.endLowerPosition && y.endHigherPosition >= x.endLowerPosition)
+                    || UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y, y.endHigherPosition - 1)).Any(y => y.routePosition < x.routePosition && y.endHigherPosition > x.routePosition && y.endHigherPosition < x.endLowerPosition))).ToList();
+            if (CookedIngredientsThatCanHelp.Count() > 0)
+            {
+                IngredientMovedWithLower = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x, x.endLowerPosition));
+                if (IngredientMovedWithLower != null)
+                    return IngredientMovedWithLower;
+            }
+        }
+        return null;
+    }
+
+    private bool CanMoveSafely(Ingredient x, int endPosition)
+    {
+        return !TeamIngredients.Any(y => y.routePosition == endPosition % 26) && (!x.fullRoute[endPosition % 26].isSafe || x.fullRoute[endPosition % 26].ingredient == null);
+    }
+
+    private Ingredient MoveCookedPastPrep()
+    {
+        if (!UseableIngredients.Any(x => x.isCooked))
+            return null;
+
+        if (IngredientMovedWithHigher == null)
+        {
+            IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x=>x.distanceFromScore).FirstOrDefault(x => x.isCooked
+            && CanMoveSafely(x, x.endHigherPosition));
+            if (IngredientMovedWithHigher != null) 
+                return IngredientMovedWithHigher;
+        }
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
+            && CanMoveSafely(x, x.endLowerPosition));
             if (IngredientMovedWithLower != null) 
                 return IngredientMovedWithLower;
         }
         return null;
     }
 
-    private Ingredient MoveFrontMostIngredient()
+    private Ingredient MoveFrontMostIngredient(bool withCooked)
     {
         if (IngredientMovedWithHigher == null)
         {
             IngredientMovedWithHigher = UseableTeamIngredients.OrderByDescending(x => x.endHigherPosition).FirstOrDefault(x => x.endHigherPosition < 23 //Dont move past prep
-            && x.distanceFromScore > 9 //Dont move from scoring position
-            && !x.isCooked
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26) //Dont stomp yourself, unless cooked and advanced
-            && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)); //Dont stomp on safe area
+            && (x.distanceFromScore > 9 || withCooked) //Dont move from scoring position unless cooked
+            && x.isCooked == withCooked
+            && CanMoveSafely(x, x.endHigherPosition)); //Dont stomp on safe area
             if (IngredientMovedWithHigher != null) 
                 return IngredientMovedWithHigher;
         }
+
         if (IngredientMovedWithLower == null && lowerMove != 0)
         {
             IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.endLowerPosition).FirstOrDefault(x => x.endLowerPosition < 23 //Dont move past prep
-            && x.distanceFromScore > 9 //Dont move from scoring position
-            && !x.isCooked
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26) //Dont stomp yourself, unless cooked and advanced
-            && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)); //Dont stomp on safe area
+            && (x.distanceFromScore > 9 || withCooked) //Dont move from scoring position unless cooked
+            && x.isCooked == withCooked
+            && CanMoveSafely(x, x.endLowerPosition)); //Dont stomp on safe area
             if (IngredientMovedWithLower != null) 
                 return IngredientMovedWithLower;
         }
@@ -952,21 +1240,19 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     {
         if (IngredientMovedWithHigher == null)
         {
-            IngredientMovedWithHigher = UseableTeamIngredients.OrderByDescending(x=>x.distanceFromScore)
-                .FirstOrDefault(x => (x.routePosition == 8 || x.routePosition == 16) //on a spoon
+            IngredientMovedWithHigher = UseableTeamIngredients.OrderByDescending(x=>x.distanceFromScore).FirstOrDefault(x => (x.routePosition == 8 || x.routePosition == 16) //on a spoon
+            && x.distanceFromScore > 9
             && !x.isCooked
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26) //Dont stomp yourself, unless cooked and advanced
-            && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)); //Dont stomp on safe area
+            && CanMoveSafely(x, x.endHigherPosition)); //Dont stomp on safe area
             if (IngredientMovedWithHigher != null) 
                 return IngredientMovedWithHigher;
         }
         if (IngredientMovedWithLower == null && lowerMove != 0)
         {
-            IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.distanceFromScore)
-                .FirstOrDefault(x => (x.routePosition == 8 || x.routePosition == 16) //on a spoon
+            IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.distanceFromScore).FirstOrDefault(x => (x.routePosition == 8 || x.routePosition == 16) //on a spoon
+              && x.distanceFromScore > 9
               && !x.isCooked
-              && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26) //Dont stomp yourself, unless cooked and advanced
-              && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)); //Dont stomp on safe area
+              && CanMoveSafely(x, x.endLowerPosition)); //Dont stomp on safe area
             if (IngredientMovedWithLower != null) 
                 return IngredientMovedWithLower;
         }
@@ -1021,19 +1307,21 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.distanceFromScore < 10 //move from scoring position
             && !x.isCooked
             && !x.fullRoute[x.endLowerPositionWithoutSlide % 26].hasSpatula
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26)); //Dont stomp yourself, unless cooked and advanced
+            && !TeamIngredients.Any(y => y.routePosition == x.endLowerPosition % 26)); //Dont stomp yourself
             if (IngredientMovedWithLower != null) 
                 return IngredientMovedWithLower;
         }
         return null;
     }
 
-    private Ingredient Slide()
+    private Ingredient Slide(bool WithCooked)
     {
         if (IngredientMovedWithHigher == null)
         {
             IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 26 //Dont move past preparation
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26)
+            && x.isCooked == WithCooked
+            && (x.distanceFromScore > 9 || x.distanceFromScore < 6)  //Dont move from scoring position
+            && CanMoveSafely(x, x.endHigherPosition)
             && ((x.fullRoute[x.endHigherPositionWithoutSlide % 26].hasSpatula && !x.isCooked)
             || x.fullRoute[x.endHigherPositionWithoutSlide % 26].hasSpoon));
             if (IngredientMovedWithHigher != null) 
@@ -1042,8 +1330,9 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
         if (IngredientMovedWithLower == null && lowerMove != 0)
         {
             IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
+            && x.isCooked == WithCooked
             && (x.distanceFromScore > 9 || x.distanceFromScore < 6)  //Dont move from scoring position
-            && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26)
+            && CanMoveSafely(x, x.endHigherPosition)
             && ((x.fullRoute[x.endLowerPositionWithoutSlide % 26].hasSpatula && !x.isCooked)
             || x.fullRoute[x.endLowerPositionWithoutSlide % 26].hasSpoon));
             if (IngredientMovedWithLower != null) 
@@ -1055,31 +1344,32 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     {
         if (IngredientMovedWithLower == null && lowerMove != 0)
         {
-            IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.routePosition!= 0 && !x.isCooked && (lowerMove < 6 && (x.endLowerPositionWithoutSlide % 26) == 10) || (x.endLowerPositionWithoutSlide % 26) == 18);
+            IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.routePosition != 0 
+            && !x.isCooked
+            && (lowerMove < 6 && (x.endLowerPositionWithoutSlide % 26) == 10) || (x.endLowerPositionWithoutSlide % 26) == 18);
             if (IngredientMovedWithLower != null)
             {
-                var user = GetActivePlayer().player.Username;
-                if (!doublesText.text.Contains("rolled doubles"))
-                    doublesText.text = user == "Zach" ? "From Zach: This is what my pa paw taught me." : user == "Joe" ? "From Joe: Go back where you belong!" : user == "Jenn" ? "From Jenn: #EwwTrashed" : "From Chrissy: Watch out for those trash cans!";
+                PrepShitTalk(TalkType.Trash);
                 return IngredientMovedWithLower;
             }
         }
         return null;
     }
 
-    private Ingredient StompEnemy(List<Ingredient> teamToMove, bool useEither = true)
+    private Ingredient StompEnemy(bool useEither = true)
     {
+        var teamToMove = useEither ? UseableTeamIngredients : UseableEnemyIngredients;
         if (useEither && IngredientMovedWithHigher == null)
         {
             IngredientMovedWithHigher = teamToMove.FirstOrDefault(x => x.endHigherPosition < 26 //Dont move past preparation
             && (x.routePosition != 0 || x.TeamYellow == GetActivePlayer().TeamYellow) // if not your piece then dont move from prep
+            && x.endHigherPosition != 0
+            && x.endHigherPosition != x.routePosition
             && EnemyIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition) //Stomp Enemy
             && !x.fullRoute[x.endHigherPosition % 26].isSafe); //Dont stomp safe area if someone is there
             if (IngredientMovedWithHigher != null)
             {
-                var user = GetActivePlayer().player.Username; 
-                if (!doublesText.text.Contains("rolled doubles"))
-                    doublesText.text = user == "Zach" ? "From Zach: E.Z.P.Z." : user == "Joe" ? "From Joe: Have fun in Prep..." : user == "Jenn" ? "From Jenn: #SorryNotSorry" : "From Chrissy: Oops didn't see you there!";
+                PrepShitTalk(useEither ? TalkType.Stomped : TalkType.StompedBySelf);
                 return IngredientMovedWithHigher;
             }
         }
@@ -1087,13 +1377,13 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
         {
             IngredientMovedWithLower = teamToMove.FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
              && (x.routePosition != 0 || x.TeamYellow == GetActivePlayer().TeamYellow) // if not your piece then dont move from prep
+             && x.endLowerPosition != 0
+             && x.endLowerPosition != x.routePosition
              && EnemyIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition) //Stomp Enemy
              && !x.fullRoute[x.endLowerPosition % 26].isSafe); //Dont stomp safe area if someone is there
             if (IngredientMovedWithLower != null)
             {
-                var user = GetActivePlayer().player.Username;
-                if (!doublesText.text.Contains("rolled doubles"))
-                    doublesText.text = user == "Zach" ? "From Zach: E.Z.P.Z." : user == "Joe" ? "From Joe: Have fun in Prep..." : user == "Jenn" ? "From Jenn: #SorryNotSorry" : "From Chrissy: Oops didn't see you there!";
+                PrepShitTalk(useEither ? TalkType.Stomped : TalkType.StompedBySelf);
                 return IngredientMovedWithLower;
             }
         }
@@ -1110,9 +1400,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             && x.fullRoute[x.endLowerPosition % 26].isSafe);
             if (IngredientMovedWithLower != null)
             {
-                var user = GetActivePlayer().player.Username;
-                if (!doublesText.text.Contains("rolled doubles"))
-                    doublesText.text = user == "Zach" ? "From Zach: Safe for me, not you!" : user == "Joe" ? "From Joe: You owe me for moving you this time.." : user == "Jenn" ? "From Jenn: #LOLBYE" : "From Chrissy: I'm just teaching you how the safe zone works";
+                PrepShitTalk(TalkType.SafeZoned);
                 return IngredientMovedWithLower;
             }
         }
@@ -1125,9 +1413,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition == 26 && !x.isCooked);
             if (IngredientMovedWithHigher != null)
             {
-                var user = GetActivePlayer().player.Username;
-                if (!doublesText.text.Contains("rolled doubles"))
-                    doublesText.text = user == "Zach" ? "From Zach: This is what my me maw taught me." : user == "Joe" ? "From Joe: Watch and learn!" : user == "Jenn" ? "From Jenn: #Winning" : "From Chrissy: This is fun!";
+                PrepShitTalk(TalkType.Cook);
                 return IngredientMovedWithHigher;
             }
         }
@@ -1136,9 +1422,7 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
             IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition == 26 && !x.isCooked); //Move into pot if not cooked
             if (IngredientMovedWithLower != null)
             {
-                var user = GetActivePlayer().player.Username;
-                if (!doublesText.text.Contains("rolled doubles"))
-                    doublesText.text = user == "Zach" ? "From Zach: This is what my memaw taught me." : user == "Joe" ? "From Joe: Watch and learn!" : user == "Jenn" ? "From Jenn: #Winning" : "From Chrissy: This is fun!";
+                PrepShitTalk(TalkType.Cook);
                 return IngredientMovedWithLower;
             }
         }
@@ -1146,6 +1430,9 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     } 
     private Ingredient HelpScore()
     {
+        if (!UseableIngredients.Any(x => x.isCooked))
+            return null;
+
         Ingredient ScoreableIng = null;
         if (IngredientMovedWithLower == null && IngredientMovedWithHigher == null && lowerMove != 0)
         {
@@ -1156,13 +1443,10 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
                 && x.isCooked 
                 && x.routePosition < ScoreableIng.routePosition 
                 && x.endHigherPosition > ScoreableIng.routePosition
-                && !(x.fullRoute[x.endHigherPosition % 26].isSafe && x.fullRoute[x.endHigherPosition % 26].ingredient != null)
-                && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition % 26));
+                && CanMoveSafely(x, x.endHigherPosition));
                 if (IngredientMovedWithHigher != null)
                 {
-                    var user = GetActivePlayer().player.Username;
-                    if (!doublesText.text.Contains("rolled doubles"))
-                        doublesText.text = user == "Zach" ? "From Zach: Alley Oop!" : user == "Joe" ? "From Joe: This is my final form!" : user == "Jenn" ? "From Jenn: #2Good4u" : "From Chrissy: Teamwork makes the dreamwork!";
+                    PrepShitTalk(TalkType.HelpCook);
                     return IngredientMovedWithHigher;
                 }
             }
@@ -1175,13 +1459,10 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
                 && x.isCooked 
                 && x.routePosition < ScoreableIng.routePosition 
                 && x.endLowerPosition > ScoreableIng.routePosition
-                && !(x.fullRoute[x.endLowerPosition % 26].isSafe && x.fullRoute[x.endLowerPosition % 26].ingredient != null)
-                && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26));
+                && CanMoveSafely(x, x.endLowerPosition));
                 if (IngredientMovedWithLower != null)
                 {
-                    var user = GetActivePlayer().player.Username;
-                    if (!doublesText.text.Contains("rolled doubles"))
-                        doublesText.text = user == "Zach" ? "From Zach: Alley Oop!" : user == "Joe" ? "From Joe: This is my final form!" : user == "Jenn" ? "From Jenn: #2Good4u" : "From Chrissy: Teamwork makes the dreamwork!";
+                    PrepShitTalk(TalkType.HelpCook);
                     return IngredientMovedWithLower;
                 }
             }
@@ -1193,14 +1474,10 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
                 && x.isCooked 
                 && x.routePosition > ScoreableIng.routePosition 
                 && x.endHigherPosition % 26 < ScoreableIng.routePosition
-                && !(x.fullRoute[x.endHigherPosition % 26].isSafe 
-                && x.fullRoute[x.endHigherPosition % 26].ingredient != null)
-                && !TeamIngredients.Any(y =>!y.isCooked && y.routePosition == x.endHigherPosition % 26));
+                && CanMoveSafely(x, x.endHigherPosition));
                 if (IngredientMovedWithHigher != null)
                 {
-                    var user = GetActivePlayer().player.Username;
-                    if (!doublesText.text.Contains("rolled doubles"))
-                        doublesText.text = user == "Zach" ? "From Zach: Alley Oop!" : user == "Joe" ? "From Joe: This is my final form!" : user == "Jenn" ? "From Jenn: #2Good4u" : "From Chrissy: Teamwork makes the dreamwork!";
+                    PrepShitTalk(TalkType.HelpCook);
                     return IngredientMovedWithHigher;
                 }
             }
@@ -1212,14 +1489,10 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
                 && x.isCooked 
                 && x.routePosition > ScoreableIng.routePosition 
                 && x.endLowerPosition % 26 < ScoreableIng.routePosition
-                && !(x.fullRoute[x.endLowerPosition % 26].isSafe 
-                && x.fullRoute[x.endLowerPosition % 26].ingredient != null)
-                && !TeamIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26));
+                && CanMoveSafely(x, x.endLowerPosition));
                 if (IngredientMovedWithLower != null)
                 {
-                    var user = GetActivePlayer().player.Username;
-                    if (!doublesText.text.Contains("rolled doubles"))
-                        doublesText.text = user == "Zach" ? "From Zach: Alley Oop!" : user == "Joe" ? "From Joe: This is my final form!" : user == "Jenn" ? "From Jenn: #2Good4u" : "From Chrissy: Teamwork makes the dreamwork!";
+                    PrepShitTalk(TalkType.HelpCook);
                     return IngredientMovedWithLower;
                 }
             }
@@ -1231,12 +1504,11 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     {
         if (IngredientMovedWithLower == null && lowerMove != 0)
         {
-            IngredientMovedWithLower = UseableEnemyIngredients.OrderByDescending(x => x.distanceFromScore).FirstOrDefault(x => x.endLowerPosition >= 26 && !x.isCooked); //Move enemy past pot if uncooked
+            IngredientMovedWithLower = UseableEnemyIngredients.OrderByDescending(x => x.distanceFromScore).FirstOrDefault(x => x.endLowerPosition >= 26 
+            && !x.isCooked); //Move enemy past pot if uncooked
             if (IngredientMovedWithLower != null)
             {
-                var user = GetActivePlayer().player.Username;
-                if (!doublesText.text.Contains("rolled doubles"))
-                    doublesText.text = user == "Zach" ? "From Zach: You know what they say..." : user == "Joe" ? "From Joe: HAHA you got too close to the end!" : user == "Jenn" ? "From Jenn: #PastThePointOfNoReturn" : "From Chrissy: I'm sorry, I had to!";
+                PrepShitTalk(TalkType.MovePastPrep);
                 return IngredientMovedWithLower;
             }
         }
@@ -1244,14 +1516,15 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
     }
     private Ingredient BeDumb()
     {
-        if (!Settings.IsDebug && (Settings.LoggedInPlayer.Wins == 0 || (Random.Range(0, Settings.LoggedInPlayer.Wins) == 0 && !hasBeenDumb)))
+        if (!Settings.IsDebug && !Settings.HardMode && !hasBeenDumb && (Settings.LoggedInPlayer.Wins == 0 || (Random.Range(0, Mathf.Min(Settings.LoggedInPlayer.Wins,50)) == 0 )))
         {
-            hasBeenDumb = true;
             if (IngredientMovedWithHigher == null)
             {
-                var toMove = UseableTeamIngredients[Random.Range(0, UseableTeamIngredients.Count)];
-                if (toMove.distanceFromScore > 9)
+                var ingsToMove = UseableTeamIngredients.Where(x => x.distanceFromScore > 9).ToList();
+                if (ingsToMove.Count() > 0)
                 {
+                    var toMove = ingsToMove[Random.Range(0, ingsToMove.Count())];
+                    hasBeenDumb = true;
                     IngredientMovedWithHigher = toMove;
                     return IngredientMovedWithHigher;
                 }
@@ -1259,9 +1532,11 @@ You each gained 50 Calories for each of your cooked ingredients! " + playerWhoWo
 
             if (IngredientMovedWithLower == null && lowerMove != 0)
             {
-                var toMove = UseableIngredients[Random.Range(0, UseableIngredients.Count)];
-                if (toMove.distanceFromScore > 9)
+                var ingsToMove = UseableTeamIngredients.Where(x => x.distanceFromScore > 9).ToList();
+                if (ingsToMove.Count() > 0)
                 {
+                    var toMove = ingsToMove[Random.Range(0, ingsToMove.Count())];
+                    hasBeenDumb = true;
                     IngredientMovedWithLower = toMove;
                     return IngredientMovedWithLower;
                 }

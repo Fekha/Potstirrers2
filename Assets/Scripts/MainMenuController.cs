@@ -1,5 +1,6 @@
 using Assets.Models;
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -8,6 +9,7 @@ public class MainMenuController : MonoBehaviour
 {
     public GameObject LoginSecondPlayer;
     public GameObject ExitPrompt;
+    public GameObject DifficultyPrompt;
     public GameObject alert;
     public Slider xpSlider;
     public Text lvlText;
@@ -34,15 +36,22 @@ public class MainMenuController : MonoBehaviour
         toggleActivated = false;
         debugClicks = 0;
         Settings.SecondPlayer = new Player();
-        StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Settings.LoggedInPlayer.UserId}", GetPlayerCallback));
+        StartCoroutine(SetPlayer());
         if (Settings.LoggedInPlayer.IsGuest && Settings.EnteredGame)
         {
-            alertText.text = $"If you enjoyed the game make an account! You can unlock new pieces and dice to play with and compete on the leaderboard";
+            alertText.text = $"If you enjoyed the game make an account! You can unlock new pieces and dice to play with and compete on the leaderboard.";
             alert.SetActive(true);
             Settings.EnteredGame = false;
         }
-
     }
+
+    private IEnumerator SetPlayer()
+    {
+        yield return StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
+        yield return StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
+        yield return StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Settings.LoggedInPlayer.Username}", GetPlayerCallback));
+    }
+
     public void UpdateLvlText() {
         float xpNeeded = (300 + (Settings.LoggedInPlayer.Level * 25));
         lvlText.text = $"Current Level: {Settings.LoggedInPlayer.Level}";
@@ -51,28 +60,45 @@ public class MainMenuController : MonoBehaviour
     }
     private void GetPlayerCallback(string data)
     {
-        var player = sql.jsonConvert<Player>(data);      
-        if (player.Level != Settings.LoggedInPlayer.Level)
-        {
-            alertText.text = $"Congrats you hit level {player.Level}! You gained {(Settings.LoggedInPlayer.Level * 5) + 100} Stars!";
-            alert.SetActive(true);
-        }
+        var player = sql.jsonConvert<Player>(data);
         Settings.LoggedInPlayer.Stars = player.Stars;
         Settings.LoggedInPlayer.Level = player.Level;
         Settings.LoggedInPlayer.Xp = player.Xp;
         UpdateLvlText();
+       
+    } 
+    private void GetRewardCallback(string data)
+    {
+        var rewardText = sql.jsonConvert<string>(data);      
+        if (!String.IsNullOrEmpty(rewardText))
+        {
+            alertText.text = rewardText;
+            alert.SetActive(true);
+        }
     }
     void Awake()
     {
-        wineToggle.isOn = global::Settings.LoggedInPlayer.WineMenu;
-        d8Toggle.isOn = global::Settings.LoggedInPlayer.UseD8s;
-        ExperimentalToggle.isOn = global::Settings.LoggedInPlayer.Experimental;
-        doubleToggle.isOn = global::Settings.LoggedInPlayer.DisableDoubles;
-        playAsPurple.isOn = global::Settings.LoggedInPlayer.PlayAsPurple;
+        wineToggle.isOn = Settings.LoggedInPlayer.WineMenu;
+        d8Toggle.isOn = Settings.LoggedInPlayer.UseD8s;
+        ExperimentalToggle.isOn = Settings.LoggedInPlayer.Experimental;
+        doubleToggle.isOn = Settings.LoggedInPlayer.DisableDoubles;
+        playAsPurple.isOn = Settings.LoggedInPlayer.PlayAsPurple;
     }
     public void ExitMenu(bool open)
     {
         ExitPrompt.SetActive(open);
+    }
+    public void DifficultyMenu(bool open)
+    {
+        if (Settings.LoggedInPlayer.Wins > 0 || Settings.LoggedInPlayer.IsGuest)
+        {
+            DifficultyPrompt.SetActive(open);
+        }
+        else
+        {
+            Settings.HardMode = false;
+            StartTheGame(true);
+        }
     }
 
     public void ExitSettings()
@@ -80,12 +106,13 @@ public class MainMenuController : MonoBehaviour
         settings.SetActive(false);
         if (!Settings.LoggedInPlayer.IsGuest && toggleActivated)
         {
-            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(global::Settings.LoggedInPlayer.UserId)}&WineMenu={(global::Settings.LoggedInPlayer.WineMenu)}&UseD8s={(global::Settings.LoggedInPlayer.UseD8s)}&DisableDoubles={(global::Settings.LoggedInPlayer.DisableDoubles)}&PlayAsPurple={(global::Settings.LoggedInPlayer.PlayAsPurple)}&Experimental={(global::Settings.LoggedInPlayer.Experimental)}"));
+            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(Settings.LoggedInPlayer.UserId)}&WineMenu={(Settings.LoggedInPlayer.WineMenu)}&UseD8s={(Settings.LoggedInPlayer.UseD8s)}&DisableDoubles={(Settings.LoggedInPlayer.DisableDoubles)}&PlayAsPurple={(Settings.LoggedInPlayer.PlayAsPurple)}&Experimental={(Settings.LoggedInPlayer.Experimental)}"));
         }
         toggleActivated = false;
     }
     public void PlayerVsPlayer()
     {
+        Settings.HardMode = false;
         if (Settings.LoggedInPlayer.IsGuest)
         {
             StartTheGame(false);
@@ -104,7 +131,7 @@ public class MainMenuController : MonoBehaviour
     private void GetByUsernameCallback(string data)
     {
         var player = sql.jsonConvert<Player>(data);
-        global::Settings.SecondPlayer = player;
+        Settings.SecondPlayer = player;
         if (player == null)
         {
             alertText.text = "Username not found.";
@@ -127,7 +154,7 @@ public class MainMenuController : MonoBehaviour
             }
             alert.SetActive(true);
         }
-        else if (usernameText.GetComponent<InputField>().text == global::Settings.LoggedInPlayer.Username)
+        else if (usernameText.GetComponent<InputField>().text == Settings.LoggedInPlayer.Username)
         {
             if (string.IsNullOrEmpty(usernameText.GetComponent<InputField>().text))
             {
@@ -142,12 +169,12 @@ public class MainMenuController : MonoBehaviour
     }
     public void showSettings()
     {
-        if (global::Settings.LoggedInPlayer.IsGuest)
+        if (Settings.LoggedInPlayer.IsGuest)
         {
             alertText.text = "Log in to edit settings!";
             alert.SetActive(true);
         }
-        else if (global::Settings.LoggedInPlayer.Wins == 0)
+        else if (Settings.LoggedInPlayer.Wins == 0)
         {
             alertText.text = "Win a game to access additional settings!";
             alert.SetActive(true);
@@ -168,23 +195,23 @@ public class MainMenuController : MonoBehaviour
             toggleActivated = true;
             if (toggle == "wine")
             {
-                global::Settings.LoggedInPlayer.WineMenu = !global::Settings.LoggedInPlayer.WineMenu;
+                Settings.LoggedInPlayer.WineMenu = !Settings.LoggedInPlayer.WineMenu;
             }
             else if (toggle == "d8")
             {
-                global::Settings.LoggedInPlayer.UseD8s = !global::Settings.LoggedInPlayer.UseD8s;
+                Settings.LoggedInPlayer.UseD8s = !Settings.LoggedInPlayer.UseD8s;
             }
             else if(toggle == "double")
             {
-                global::Settings.LoggedInPlayer.DisableDoubles = !global::Settings.LoggedInPlayer.DisableDoubles;
+                Settings.LoggedInPlayer.DisableDoubles = !Settings.LoggedInPlayer.DisableDoubles;
             }
             else if(toggle == "purple")
             {
-                global::Settings.LoggedInPlayer.PlayAsPurple = !global::Settings.LoggedInPlayer.PlayAsPurple;
+                Settings.LoggedInPlayer.PlayAsPurple = !Settings.LoggedInPlayer.PlayAsPurple;
             } 
             else if(toggle == "exp")
             {
-                global::Settings.LoggedInPlayer.Experimental = !global::Settings.LoggedInPlayer.Experimental;
+                Settings.LoggedInPlayer.Experimental = !Settings.LoggedInPlayer.Experimental;
             }
         }
     }
@@ -195,12 +222,10 @@ public class MainMenuController : MonoBehaviour
     public void StartDebug()
     {
         debugClicks++;
-        global::Settings.PlayingPlayers[0] = global::Settings.CPUPlayers[0];
-        global::Settings.PlayingPlayers[1] = global::Settings.CPUPlayers[1];
-
+   
         if (debugClicks > 2)
         {
-            global::Settings.IsDebug = true;
+            Settings.IsDebug = true;
             SceneManager.LoadScene("PlayScene");
         }
     }
@@ -209,15 +234,24 @@ public class MainMenuController : MonoBehaviour
         Settings.EnteredGame = true;
         if (cpu)
         {
-            global::Settings.PlayingPlayers[0] = global::Settings.LoggedInPlayer;
-            global::Settings.PlayingPlayers[1] = global::Settings.CPUPlayers[UnityEngine.Random.Range(0, global::Settings.CPUPlayers.Count)];
+            if(Settings.HardMode)
+                Settings.SecondPlayer = Settings.CPUPlayers[Settings.CPUPlayers.Count-1];
+            else
+                Settings.SecondPlayer = Settings.CPUPlayers[UnityEngine.Random.Range(0, Settings.CPUPlayers.Count - 1)];
+
         }
         else
         {
-            global::Settings.PlayingPlayers[0] = global::Settings.LoggedInPlayer;
-            global::Settings.PlayingPlayers[1] = !global::Settings.SecondPlayer.IsGuest ? global::Settings.SecondPlayer : new Player() { Username = global::Settings.LoggedInPlayer.Username+"(2)", playerType = PlayerTypes.HUMAN};
+            Settings.HardMode = false;
+            Settings.SecondPlayer = !Settings.SecondPlayer.IsGuest ? Settings.SecondPlayer : new Player() { Username = Settings.LoggedInPlayer.Username+"(2)", playerType = PlayerTypes.HUMAN};
         }
 
         SceneManager.LoadScene("PlayScene");
+    }
+
+    public void StartCPUGame(bool hardMode)
+    {
+        Settings.HardMode = hardMode;
+        StartTheGame(true);
     }
 }

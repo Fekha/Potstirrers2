@@ -1,4 +1,5 @@
 using Assets.Models;
+using Assets.Scripts.Models;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +20,7 @@ public class LeaderboardController : MonoBehaviour
     public GameObject loading;
     public Text eventLogTextObject;
     public List<Message> eventLogList;
-    public List<Player> playerList;
+    public List<Leaderboard> leaderData;
     private SqlController sql;
     private int numLeaderboards = 4;
     private int currentShowing = 0;
@@ -31,8 +32,8 @@ public class LeaderboardController : MonoBehaviour
     }
     private void leaderboardCallback(string jdata)
     {
-        playerList = sql.jsonConvert<List<Player>>(jdata);
-        currentShowing = 1;// Random.Range(0, numLeaderboards);
+        leaderData = sql.jsonConvert<List<Leaderboard>>(jdata);
+        currentShowing = 0;// Random.Range(0, numLeaderboards);
         ShowLeaderboard();
         loading.SetActive(false);
     }
@@ -41,15 +42,15 @@ public class LeaderboardController : MonoBehaviour
     {
         if (currentShowing == 0)
         {
-            ShowStars();
+            ShowDailyWins();
         }
         else if (currentShowing == 1)
         {
-            ShowWins();
+            ShowWeeklyWins();
         } 
         else if (currentShowing == 2)
         {
-            ShowLevels();
+            ShowWins();
         }
         else
         {
@@ -61,24 +62,12 @@ public class LeaderboardController : MonoBehaviour
     {
         SceneManager.LoadScene(sceneName);
     }
-    private void ShowLevels()
-    {
-        headerText.text = "Highest Level Player";
-        ClearMessages();
-        var i = 0;
-        foreach (var d in playerList.Where(x => x.Level > 1).OrderByDescending(x => x.Level).ThenByDescending(x=>x.Xp))
-        {
-            var evenetDesc = (i + 1) + ") " + d.Username + " - Level: " + d.Level;
-            SendEventToLog(evenetDesc);
-            i++;
-        }
-    }
     private void ShowWins()
     {
-        headerText.text = "Most Wins vs CPU";
+        headerText.text = "All-Time Wins vs CPU";
         ClearMessages();
         var i = 0;
-        foreach (var d in playerList.Where(x => x.Wins > 0).OrderByDescending(x => x.Wins))
+        foreach (var d in leaderData.Where(x => x.Wins > 0).OrderByDescending(x => x.Wins))
         {
             var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.Wins;
             SendEventToLog(evenetDesc);
@@ -87,10 +76,10 @@ public class LeaderboardController : MonoBehaviour
     }  
     private void ShowLocalWins()
     {
-        headerText.text = "Most Wins vs Players";
+        headerText.text = "All-Time Wins vs Players";
         ClearMessages();
         var i = 0;
-        foreach (var d in playerList.Where(x => x.LocalWins > 0).OrderByDescending(x => x.LocalWins))
+        foreach (var d in leaderData.Where(x => x.LocalWins > 0).OrderByDescending(x => x.LocalWins))
         {
             var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.LocalWins;
             SendEventToLog(evenetDesc);
@@ -98,14 +87,27 @@ public class LeaderboardController : MonoBehaviour
         }
     }
 
-    private void ShowStars()
+    private void ShowDailyWins()
     {
-        headerText.text = "Most Cooked Ingredients";
+        headerText.text = "Daily Wins vs CPU";
         ClearMessages();
         var i = 0;
-        foreach (var d in playerList.Where(x => x.Cooked > 0).OrderByDescending(x => x.Cooked))
+        foreach (var d in leaderData.Where(x => x.WinsToday > 0).OrderByDescending(x => x.WinsToday))
         {
-            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.Cooked;
+            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.WinsToday;
+            SendEventToLog(evenetDesc);
+            i++;
+        }
+    }
+    
+    private void ShowWeeklyWins()
+    {
+        headerText.text = "Weekly Wins vs CPU";
+        ClearMessages();
+        var i = 0;
+        foreach (var d in leaderData.Where(x => x.WinsThisWeek > 0).OrderByDescending(x => x.WinsThisWeek))
+        {
+            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.WinsThisWeek;
             SendEventToLog(evenetDesc);
             i++;
         }

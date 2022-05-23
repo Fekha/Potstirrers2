@@ -5,19 +5,17 @@ using UnityEngine;
 public static class Settings
 {
     public static Player LoggedInPlayer = new Player();
-    public static Player SecondPlayer = new Player();
+    public static Player SecondPlayer = new Player() { Username = "Zach", playerType = PlayerTypes.CPU, UserId = 42 };
     public static bool IsDebug = false;
-    
+    public static bool HardMode = false;
     public static bool EnteredGame = false;
-    public static Player[] PlayingPlayers = new Player[2] {
-        new Player() { Username = "Joe", playerType = PlayerTypes.CPU, UserId = 43 },
-        new Player() { Username = "Zach", playerType = PlayerTypes.CPU, UserId = 42 },
-    };
+
     public static List<Player> CPUPlayers = new List<Player>() { 
         new Player() { Username = "Joe", playerType = PlayerTypes.CPU, UserId = 43 },
         new Player() { Username = "Zach", playerType = PlayerTypes.CPU, UserId = 42  },
-        new Player() { Username = "Jenn", playerType = PlayerTypes.CPU, UserId = 41  },
-        new Player() { Username = "Chrissy", playerType = PlayerTypes.CPU, UserId = 44  } 
+        new Player() { Username = "Chrissy", playerType = PlayerTypes.CPU, UserId = 44  },
+        new Player() { Username = "Jenn", playerType = PlayerTypes.CPU, UserId = 41  }
+
     };
 }
 public static class Library
@@ -27,8 +25,6 @@ public static class Library
 
 The following pages will explain the rules of Pot Stirrers.
 Click anywhere to view the next page.
-
-Note: The AI's skill gets better as you get more wins!
 
 For more in depth help join our discord! https://discord.gg/fab.",
 
@@ -103,4 +99,16 @@ public enum PlayerTypes
     HUMAN,
     CPU,
     NO_PLAYER
+}
+public enum TalkType
+{
+    MoveRandomly,
+    Stomped,
+    StompedBySelf,
+    SafeZoned,
+    Cook,
+    HelpCook,
+    Trash,
+    MovePastPrep,
+    SentBack
 }
