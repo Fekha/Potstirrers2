@@ -405,16 +405,16 @@ public class GameManager : MonoBehaviour
         {
             if (playerWhoWon.player.playerType == PlayerTypes.HUMAN)
             {
-                eventText.text += $" You earned: \n \n {150+BonusStars} Calories \n \n {wonXp} Xp";
+                eventText.text += $" You earned: \n {150+BonusStars} Calories \n {wonXp} Xp";
             }
             else
             {
-                eventText.text += $" You earned: \n \n { BonusStars + (lostCount * 50)} Calories \n \n " + lostXp + " Xp";
+                eventText.text += $" You earned: \n { BonusStars + (lostCount * 50)} Calories \n " + lostXp + " Xp";
             }
         }
         else
         {
-            eventText.text += "You each gained 50 Calories for each of your cooked ingredients! \n \n" + playerWhoWon.player.Username + " earned " + wonXp + " XP \n \n " + playerwhoLost.player.Username + " earned " + lostXp + " xp!";
+            eventText.text += "You each gained 50 Calories for each of your cooked ingredients! \n" + playerWhoWon.player.Username + " earned " + wonXp + " XP \n " + playerwhoLost.player.Username + " earned " + lostXp + " xp!";
         }
 
         if (Settings.LoggedInPlayer.WineMenu)
@@ -530,12 +530,9 @@ public class GameManager : MonoBehaviour
     }
     internal void FirstScoreHelp()
     {
-        if (Settings.LoggedInPlayer.Experimental)
-        {
             pageNum = Library.helpTextList.Count() - 1;
             helpText.text = "An Ingredient was cooked! \n \n Remember: Cooked ingredients can NOT be cooked again. \n \n Cooked ingredients can still be used to send ingredients back to prep and are always skipped over while moving to give you a further move distance!";
             StartReading();
-        }
     }
     internal void setWineMenuText(bool teamYellow, int v)
     {

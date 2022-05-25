@@ -26,11 +26,36 @@ public class LoginController : MonoBehaviour
     {
         sql = new SqlController();
         system = EventSystem.current;
-        if (!PlayerPrefs.HasKey("UniqueIdentifier"))
-            PlayerPrefs.SetString("UniqueIdentifier", Guid.NewGuid().ToString());
-        deviceId = Guid.Parse(PlayerPrefs.GetString("UniqueIdentifier"));
-        var url = "player/GetDevice?deviceId=" + deviceId;
-        StartCoroutine(sql.RequestRoutine(url, GetDeviceCallback, true));
+
+        try {
+            FileStream stream = File.Open("idbfs/PotstirrersDevice.json", FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            using (StreamReader sr = new StreamReader(stream))
+            {
+                string line = sr.ReadLine();
+                if (line != null)
+                {
+                    Guid.TryParse(line, out deviceId);
+                }
+            }
+            if (deviceId == new Guid()) {
+                stream = File.Open("idbfs/PotstirrersDevice.json", FileMode.OpenOrCreate, FileAccess.ReadWrite);
+                deviceId = Guid.NewGuid();
+                using (StreamWriter sw = new StreamWriter(stream))
+                {
+                    sw.Write(deviceId.ToString());
+                }
+            }
+        
+            var url = "player/GetDevice?deviceId=" + deviceId;
+            StartCoroutine(sql.RequestRoutine(url, GetDeviceCallback, true));
+        }
+        catch(Exception ex){}
+
+#if UNITY_EDITOR
+        username.GetComponent<InputField>().text = "feca";
+        password.GetComponent<InputField>().text = "1234";
+#endif
+
     }
     public void RememberMe()
     {

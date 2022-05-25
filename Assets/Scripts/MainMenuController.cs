@@ -80,7 +80,6 @@ public class MainMenuController : MonoBehaviour
     {
         wineToggle.isOn = Settings.LoggedInPlayer.WineMenu;
         d8Toggle.isOn = Settings.LoggedInPlayer.UseD8s;
-        ExperimentalToggle.isOn = Settings.LoggedInPlayer.Experimental;
         doubleToggle.isOn = Settings.LoggedInPlayer.DisableDoubles;
         playAsPurple.isOn = Settings.LoggedInPlayer.PlayAsPurple;
     }
@@ -106,7 +105,7 @@ public class MainMenuController : MonoBehaviour
         settings.SetActive(false);
         if (!Settings.LoggedInPlayer.IsGuest && toggleActivated)
         {
-            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(Settings.LoggedInPlayer.UserId)}&WineMenu={(Settings.LoggedInPlayer.WineMenu)}&UseD8s={(Settings.LoggedInPlayer.UseD8s)}&DisableDoubles={(Settings.LoggedInPlayer.DisableDoubles)}&PlayAsPurple={(Settings.LoggedInPlayer.PlayAsPurple)}&Experimental={(Settings.LoggedInPlayer.Experimental)}"));
+            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(Settings.LoggedInPlayer.UserId)}&WineMenu={(Settings.LoggedInPlayer.WineMenu)}&UseD8s={(Settings.LoggedInPlayer.UseD8s)}&DisableDoubles={(Settings.LoggedInPlayer.DisableDoubles)}&PlayAsPurple={(Settings.LoggedInPlayer.PlayAsPurple)}"));
         }
         toggleActivated = false;
     }
@@ -209,10 +208,6 @@ public class MainMenuController : MonoBehaviour
             {
                 Settings.LoggedInPlayer.PlayAsPurple = !Settings.LoggedInPlayer.PlayAsPurple;
             } 
-            else if(toggle == "exp")
-            {
-                Settings.LoggedInPlayer.Experimental = !Settings.LoggedInPlayer.Experimental;
-            }
         }
     }
     public void SceneChange(string sceneName)

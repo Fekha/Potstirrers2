@@ -20,7 +20,7 @@ public class LeaderboardController : MonoBehaviour
     public GameObject loading;
     public Text eventLogTextObject;
     public List<Message> eventLogList;
-    public List<Leaderboard> leaderData;
+    public List<PlayerProfile> leaderData;
     private SqlController sql;
     private int numLeaderboards = 4;
     private int currentShowing = 0;
@@ -32,7 +32,7 @@ public class LeaderboardController : MonoBehaviour
     }
     private void leaderboardCallback(string jdata)
     {
-        leaderData = sql.jsonConvert<List<Leaderboard>>(jdata);
+        leaderData = sql.jsonConvert<List<PlayerProfile>>(jdata);
         currentShowing = 0;// Random.Range(0, numLeaderboards);
         ShowLeaderboard();
         loading.SetActive(false);
@@ -67,9 +67,9 @@ public class LeaderboardController : MonoBehaviour
         headerText.text = "All-Time Wins vs CPU";
         ClearMessages();
         var i = 0;
-        foreach (var d in leaderData.Where(x => x.Wins > 0).OrderByDescending(x => x.Wins))
+        foreach (var d in leaderData.Where(x => x.AllWins > 0).OrderByDescending(x => x.AllWins))
         {
-            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.Wins;
+            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.AllWins;
             SendEventToLog(evenetDesc);
             i++;
         }
@@ -79,9 +79,9 @@ public class LeaderboardController : MonoBehaviour
         headerText.text = "All-Time Wins vs Players";
         ClearMessages();
         var i = 0;
-        foreach (var d in leaderData.Where(x => x.LocalWins > 0).OrderByDescending(x => x.LocalWins))
+        foreach (var d in leaderData.Where(x => x.AllPVPWins > 0).OrderByDescending(x => x.AllPVPWins))
         {
-            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.LocalWins;
+            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.AllPVPWins;
             SendEventToLog(evenetDesc);
             i++;
         }
@@ -92,9 +92,9 @@ public class LeaderboardController : MonoBehaviour
         headerText.text = "Daily Wins vs CPU";
         ClearMessages();
         var i = 0;
-        foreach (var d in leaderData.Where(x => x.WinsToday > 0).OrderByDescending(x => x.WinsToday))
+        foreach (var d in leaderData.Where(x => x.DailyWins > 0).OrderByDescending(x => x.DailyWins))
         {
-            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.WinsToday;
+            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.DailyWins;
             SendEventToLog(evenetDesc);
             i++;
         }
@@ -105,9 +105,9 @@ public class LeaderboardController : MonoBehaviour
         headerText.text = "Weekly Wins vs CPU";
         ClearMessages();
         var i = 0;
-        foreach (var d in leaderData.Where(x => x.WinsThisWeek > 0).OrderByDescending(x => x.WinsThisWeek))
+        foreach (var d in leaderData.Where(x => x.WeeklyWins > 0).OrderByDescending(x => x.WeeklyWins))
         {
-            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.WinsThisWeek;
+            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.WeeklyWins;
             SendEventToLog(evenetDesc);
             i++;
         }
