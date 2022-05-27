@@ -103,6 +103,55 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region GameManager Only
+    private void Awake()
+    {
+        i = this;
+        Application.targetFrameRate = 30;
+        sql = new SqlController();
+        activePlayer = Random.Range(0, 2);
+#if UNITY_EDITOR
+        //Settings.IsDebug = true;
+        //Settings.LoggedInPlayer.Experimental = true;
+#endif
+
+        if (Settings.IsDebug)
+        {
+            Settings.LoggedInPlayer = global::Settings.CPUPlayers[0];
+            Settings.SecondPlayer = global::Settings.CPUPlayers[1];
+            activePlayer = 0;
+        }
+
+        if (Settings.LoggedInPlayer.Wins == 0 && !Settings.IsDebug)
+        {
+            activePlayer = 0;
+            getHelp();
+        }
+
+        if (Settings.LoggedInPlayer.PlayAsPurple)
+        {
+            playerList[0].player = Settings.SecondPlayer;
+            playerList[1].player = Settings.LoggedInPlayer;
+        }
+        else
+        {
+            playerList[0].player = Settings.LoggedInPlayer;
+            playerList[1].player = Settings.SecondPlayer;
+        }
+
+        playerList[0].TeamYellow = true;
+        playerList[1].TeamYellow = false;
+
+        if (!Settings.IsDebug)
+        {
+            var url = $"analytic/GameStart?Player1={playerList[0].player.UserId}&Player2={playerList[1].player.UserId}&WineMenu={Settings.LoggedInPlayer.WineMenu}";
+            StartCoroutine(sql.RequestRoutine(url, GetNewGameCallback, true));
+        }
+        else
+        {
+            StartCoroutine(TakeTurn());
+        }
+    }
+
     private void Start()
     {
         //if (Settings.LoggedInPlayer.Experimental)
@@ -195,55 +244,7 @@ public class GameManager : MonoBehaviour
             } 
         }
     }
-    private void Awake()
-    {
-        i = this;
-        Application.targetFrameRate = 30;
-        sql = new SqlController();
-        activePlayer = Random.Range(0, 2);
-#if UNITY_EDITOR
-        //Settings.IsDebug = true;
-        //Settings.LoggedInPlayer.Experimental = true;
-#endif
-
-        if (Settings.IsDebug)
-        {
-            Settings.LoggedInPlayer = global::Settings.CPUPlayers[0];
-            Settings.SecondPlayer = global::Settings.CPUPlayers[1]; 
-            activePlayer = 0;
-        }
-
-        if (Settings.LoggedInPlayer.Wins == 0 && !Settings.IsDebug)
-        {
-            activePlayer = 0;
-            getHelp();
-        }
-        
-        if (Settings.LoggedInPlayer.PlayAsPurple)
-        {
-            playerList[0].player = Settings.SecondPlayer;
-            playerList[1].player = Settings.LoggedInPlayer;
-        }
-        else
-        {
-            playerList[0].player = Settings.LoggedInPlayer;
-            playerList[1].player = Settings.SecondPlayer;
-        }
-
-        playerList[0].TeamYellow = true;
-        playerList[1].TeamYellow = false;
-
-        if (!Settings.IsDebug)
-        {
-            var url = $"analytic/GameStart?Player1={playerList[0].player.UserId}&Player2={playerList[1].player.UserId}&WineMenu={Settings.LoggedInPlayer.WineMenu}";
-            StartCoroutine(sql.RequestRoutine(url, GetNewGameCallback, true));
-        }
-        else
-        {
-            StartCoroutine(TakeTurn());
-        }
-    }
-
+   
     private void GetNewGameCallback(string data)
     {
         GameId = sql.jsonConvert<int>(data);

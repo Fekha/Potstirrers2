@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Assets.Scripts.Models
 {
-    public class PlayerProfile
+    public class Profile
     {
         public string Username { get; set; }
         public Nullable<int> DailyWins { get; set; }

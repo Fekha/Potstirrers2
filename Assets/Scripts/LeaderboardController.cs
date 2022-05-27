@@ -10,7 +10,7 @@ using UnityEngine.UI;
 public class LeaderboardController : MonoBehaviour
 {
     [System.Serializable]
-    public class Message
+    public class LeaderboardMessage
     {
         public string text;
         public Text textObject;
@@ -19,8 +19,8 @@ public class LeaderboardController : MonoBehaviour
     public GameObject eventLogTextContent;
     public GameObject loading;
     public Text eventLogTextObject;
-    public List<Message> eventLogList;
-    public List<PlayerProfile> leaderData;
+    private List<LeaderboardMessage> eventLogList = new List<LeaderboardMessage>();
+    public List<Profile> leaderData;
     private SqlController sql;
     private int numLeaderboards = 4;
     private int currentShowing = 0;
@@ -32,7 +32,7 @@ public class LeaderboardController : MonoBehaviour
     }
     private void leaderboardCallback(string jdata)
     {
-        leaderData = sql.jsonConvert<List<PlayerProfile>>(jdata);
+        leaderData = sql.jsonConvert<List<Profile>>(jdata);
         currentShowing = 0;// Random.Range(0, numLeaderboards);
         ShowLeaderboard();
         loading.SetActive(false);
@@ -127,7 +127,6 @@ public class LeaderboardController : MonoBehaviour
             
         }
         ShowLeaderboard();
-
     }
     private void ClearMessages()
     {
@@ -140,11 +139,9 @@ public class LeaderboardController : MonoBehaviour
             }
         }
     }
-
-  
     private void SendEventToLog(string text)
     {
-        Message newMessage = new Message();
+        LeaderboardMessage newMessage = new LeaderboardMessage();
         newMessage.text = text;
         Text newText = Instantiate(eventLogTextObject, eventLogTextContent.transform);
         newMessage.textObject = newText.GetComponent<Text>();
