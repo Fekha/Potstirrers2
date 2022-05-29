@@ -78,7 +78,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: TEST
+  m_Text: Welcome to Potstirrers!
 --- !u!1 &6302040897356891502
 GameObject:
   m_ObjectHideFlags: 0

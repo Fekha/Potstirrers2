@@ -53,9 +53,14 @@ public class MainMenuController : MonoBehaviour
 
     [Header("Messages")]
     #region Messages
+    public GameObject hasMessage;
+    public GameObject sendMessagePanel;
     public GameObject messageAlert;
-    public GameObject SubjectTextObject;
-    public GameObject BodyTextObject;
+    public GameObject messageChoice;
+    public GameObject SubjectInput;
+    public GameObject BodyInput;
+    public Text ToInput;
+    public Dropdown ToDropdown;
     public Text SubjectText;
     public Text BodyText;
     public Text FromText;
@@ -83,6 +88,7 @@ public class MainMenuController : MonoBehaviour
     private bool loadingToggle = true; 
     private SqlController sql;
     private int debugClicks;
+    private Message CurrentMessage;
     #endregion
     void Awake()
     {
@@ -155,7 +161,7 @@ public class MainMenuController : MonoBehaviour
     {
         if (Settings.LoggedInPlayer.IsGuest)
         {
-            alertText.text = "Log in to receive messages!";
+            alertText.text = "Log in to send and receive messages!";
             alert.SetActive(true);
         }
         else
@@ -167,8 +173,17 @@ public class MainMenuController : MonoBehaviour
     public void ExitMenu(bool open)
     {
         ExitPrompt.SetActive(open);
+    } 
+    public void ShowSendMessage(bool open)
+    {
+        if (ToDropdown.options.Count > 0)
+            sendMessagePanel.SetActive(open);
+        else
+        {
+            alertText.text = "You must have friends that are friends with you to be able to send a message! Why did you remove poor feca :(";
+            alert.SetActive(true);
+        }
     }
-
     public void exitLogin()
     {
         LoginSecondPlayer.SetActive(false);
@@ -181,13 +196,33 @@ public class MainMenuController : MonoBehaviour
     {
         messageAlert.SetActive(false);
     } 
-    public void showMessage(Message message)
+    private void showMessageChoice(Message message)
     {
-        SubjectText.text = message.Subject;
-        BodyText.text = message.Body;
-        FromText.text = $"From: " + message.FromName;
+        CurrentMessage = message;
+        if (message.IsRead)
+        {
+            messageChoice.SetActive(true);
+        }
+        else
+        {
+            viewMessage();
+        }
+    }
+    public void viewMessage()
+    {
+        SubjectText.text = CurrentMessage.Subject;
+        BodyText.text = CurrentMessage.Body;
+        FromText.text = $"From: " + CurrentMessage.FromName;
         messageAlert.SetActive(true);
-        StartCoroutine(sql.RequestRoutine($"player/ReadMessage?MessageId={message.MessageId}", GetMessageCallback));
+        messageChoice.SetActive(false);
+        StartCoroutine(sql.RequestRoutine($"player/ReadMessage?MessageId={CurrentMessage.MessageId}", GetMessageCallback));
+    } 
+    public void deleteMessage()
+    {
+        messageChoice.SetActive(false);
+        alertText.text = "Message Deleted!";
+        alert.SetActive(true);
+        StartCoroutine(sql.RequestRoutine($"player/DeleteMessage?MessageId={CurrentMessage.MessageId}", GetMessageCallback));
     }
     private void SetPlayer()
     {
@@ -307,15 +342,22 @@ public class MainMenuController : MonoBehaviour
     private void GetFriendCallback(string data)
     {
         ClearFriends();
-        var friends = sql.jsonConvert<List<Player>>(data);
+        var friends = sql.jsonConvert<List<FriendDTO>>(data);
         foreach (var d in friends.OrderByDescending(x => x.Level))
         {
-            CreateFriend(d.Username);
+            CreateFriend(d.Username, d.RealFriend);
         }
     }
-    private void CreateFriend(string username)
+    private void CreateFriend(string username, bool realFriend)
     {
-        ButtonObject.transform.Find("Image").gameObject.SetActive(true);
+        if (realFriend)
+        {
+            ToDropdown.options.Add(new Dropdown.OptionData()
+            {
+                text = username
+            });
+        }
+        ButtonObject.transform.Find("Image").gameObject.SetActive(!realFriend);
         ButtonObject.GetComponentInChildren<Text>().text = username;
         Button newButton = Instantiate(ButtonObject, FriendButtonContent.transform);
         newButton.onClick.AddListener(() => StartCoroutine(sql.RequestRoutine($"player/GetProfile?username={username}", GetFriendProfileCallback)));
@@ -340,13 +382,14 @@ public class MainMenuController : MonoBehaviour
         {
             CreateMessage(d);
         }
+        hasMessage.SetActive(messages.Any(x => !x.IsRead));
     }
     private void CreateMessage(Message message)
     {
         ButtonObject.transform.Find("Image").gameObject.SetActive(!message.IsRead);
         ButtonObject.GetComponentInChildren<Text>().text = message.Subject;
         Button newButton = Instantiate(ButtonObject, MessageButtonContent.transform);
-        newButton.onClick.AddListener(() => showMessage(message));
+        newButton.onClick.AddListener(() => showMessageChoice(message));
         MessageButtonLog.Add(newButton);
     }
     private void ClearMessages()
@@ -361,10 +404,19 @@ public class MainMenuController : MonoBehaviour
         }
     }
 
-    public void SendMessage(int userId, string toName, string subject, string body)
+    public void SendMessage()
     {
-        StartCoroutine(sql.RequestRoutine("player/SendMessage?userId=" + SubjectTextObject.GetComponent<InputField>().text));
-
+        if (!String.IsNullOrEmpty(ToInput.text))
+        {
+            StartCoroutine(sql.RequestRoutine($"player/SendMessage?userId={Settings.LoggedInPlayer.UserId}&toName={ToInput.text}&subject={SubjectInput.GetComponent<InputField>().text}&body={BodyInput.GetComponent<InputField>().text}"));
+            sendMessagePanel.SetActive(false);
+            alertText.text = "Message sent to " + ToInput.text;
+        }
+        else
+        {
+            alertText.text = "Can not send a message without a friend selected!";
+        }
+        alert.SetActive(true);
     }
     private void GetRewardCallback(string data)
     {
@@ -543,5 +595,12 @@ public class MainMenuController : MonoBehaviour
     {
         Settings.HardMode = hardMode;
         StartTheGame(true);
+    }
+
+    private class FriendDTO
+    {
+        public string Username { get; set; }
+        public bool RealFriend { get; set; }
+        public int Level { get; set; }
     }
 }
