@@ -105,7 +105,7 @@ public class MainMenuController : MonoBehaviour
         toggleActivated = false;
         debugClicks = 0;
         Settings.SecondPlayer = new Player();
-        SetPlayer();
+        StartCoroutine(SetPlayer());
         if (Settings.LoggedInPlayer.IsGuest && Settings.EnteredGame)
         {
             alertText.text = $"If you enjoyed the game make an account! You can unlock new pieces and dice to play with and compete on the leaderboard.";
@@ -224,15 +224,16 @@ public class MainMenuController : MonoBehaviour
         alert.SetActive(true);
         StartCoroutine(sql.RequestRoutine($"player/DeleteMessage?MessageId={CurrentMessage.MessageId}", GetMessageCallback));
     }
-    private void SetPlayer()
+    private IEnumerator SetPlayer()
     {
-        StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
-        StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
+        yield return StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
+        yield return StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Settings.LoggedInPlayer.Username}", GetPlayerCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetProfile?username={Settings.LoggedInPlayer.Username}", GetProfileCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetMessages?userId={Settings.LoggedInPlayer.UserId}", GetMessageCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetFriends?userId={Settings.LoggedInPlayer.UserId}", GetFriendCallback));
     }
+
     public void UpdateLvlText() {
         float xpNeeded = (300 + (Settings.LoggedInPlayer.Level * 25));
         lvlText.text = $"Current Level: {Settings.LoggedInPlayer.Level}";

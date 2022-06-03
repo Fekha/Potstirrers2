@@ -863,6 +863,7 @@ public class GameManager : MonoBehaviour
             ?? MoveFrontMostIngredient(true)
             ?? MoveNotPastPrep()
             ?? MoveCookedPastPrep()
+            ?? MoveEnemyIngredient()
             ?? MoveRandomly();
         yield return StartCoroutine(MoveCPUIngredient(ingredientToMove));
     }
@@ -1066,7 +1067,7 @@ public class GameManager : MonoBehaviour
     {
         if (IngredientMovedWithHigher == null)
         {
-            IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x =>x.isCooked).FirstOrDefault();
+            IngredientMovedWithHigher = UseableTeamIngredients[Random.Range(0, UseableTeamIngredients.Count())];
             if (IngredientMovedWithHigher != null)
             {
                 PrepShitTalk(TalkType.MoveRandomly); 
@@ -1076,7 +1077,7 @@ public class GameManager : MonoBehaviour
 
         if (IngredientMovedWithLower == null && lowerMove != 0)
         {
-            IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.isCooked).FirstOrDefault();
+            IngredientMovedWithLower = UseableTeamIngredients[Random.Range(0, UseableTeamIngredients.Count())];
             if (IngredientMovedWithLower != null)
             {
                 PrepShitTalk(TalkType.MoveRandomly);
@@ -1233,6 +1234,18 @@ public class GameManager : MonoBehaviour
                 return IngredientMovedWithLower;
         }
         return null;
+    }  
+    private Ingredient MoveEnemyIngredient()
+    {
+
+        if (IngredientMovedWithLower == null && lowerMove != 0)
+        {
+            IngredientMovedWithLower = UseableEnemyIngredients.OrderBy(x => x.endLowerPosition).FirstOrDefault(x =>
+            !TeamIngredients.Any(y => y.routePosition == x.endLowerPosition % 26 && !x.fullRoute[x.endLowerPosition % 26].isSafe));
+            if (IngredientMovedWithLower != null) 
+                return IngredientMovedWithLower;
+        }
+        return null;
     } 
     private Ingredient MoveOffSpoon()
     {
@@ -1344,7 +1357,7 @@ public class GameManager : MonoBehaviour
         {
             IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.routePosition != 0 
             && !x.isCooked
-            && (lowerMove < 6 && (x.endLowerPositionWithoutSlide % 26) == 10) || (x.endLowerPositionWithoutSlide % 26) == 18);
+            && ((lowerMove < 6 && (x.endLowerPositionWithoutSlide % 26) == 10) || (x.endLowerPositionWithoutSlide % 26) == 18));
             if (IngredientMovedWithLower != null)
             {
                 PrepShitTalk(TalkType.Trash);
@@ -1514,7 +1527,7 @@ public class GameManager : MonoBehaviour
     }
     private Ingredient BeDumb()
     {
-        if (!Settings.IsDebug && !Settings.HardMode && !hasBeenDumb && (Settings.LoggedInPlayer.Wins == 0 || (Random.Range(0, Mathf.Min(Settings.LoggedInPlayer.Wins,50)) == 0 )))
+        if (!Settings.IsDebug && !Settings.HardMode && (Settings.LoggedInPlayer.Wins == 0 || (!hasBeenDumb && (Random.Range(0, Mathf.Min(Settings.LoggedInPlayer.Wins,50)) == 0 ))))
         {
             if (IngredientMovedWithHigher == null)
             {
@@ -1530,7 +1543,7 @@ public class GameManager : MonoBehaviour
 
             if (IngredientMovedWithLower == null && lowerMove != 0)
             {
-                var ingsToMove = UseableTeamIngredients.Where(x => x.distanceFromScore > 9).ToList();
+                var ingsToMove = UseableIngredients.Where(x => x.distanceFromScore > 9).ToList();
                 if (ingsToMove.Count() > 0)
                 {
                     var toMove = ingsToMove[Random.Range(0, ingsToMove.Count())];
