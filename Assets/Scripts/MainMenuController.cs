@@ -25,6 +25,7 @@ public class MainMenuController : MonoBehaviour
     public Toggle ExperimentalToggle;
     public Toggle doubleToggle;
     public Toggle playAsPurple;
+    public GameObject CodeText;
     #endregion
 
     [Header("FriendsList")]
@@ -465,6 +466,10 @@ public class MainMenuController : MonoBehaviour
             StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Settings.LoggedInPlayer.UserId}&username={YourFriend.Username}&add={add}", GetFriendCallback));
         }
     }
+    public void TryCode()
+    {
+       StartCoroutine(sql.RequestRoutine($"purchase/UseKey?key={CodeText.GetComponent<InputField>().text}&userId={Settings.LoggedInPlayer.UserId}", this.GetCodeCallback));
+    }
 
     public void PlayerVsPlayer()
     {
@@ -508,6 +513,21 @@ public class MainMenuController : MonoBehaviour
             alert.SetActive(true);
             FriendText.GetComponent<InputField>().text = "";
             StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Settings.LoggedInPlayer.UserId}&username={player.Username}&add={true}", GetFriendCallback));
+        }
+    }
+    private void GetCodeCallback(string data)
+    {
+        var reward = sql.jsonConvert<int>(data);
+        if (reward == 0)
+        {
+            alertText.text = "This code is invalid or already used!";
+            alert.SetActive(true);
+        }
+        else
+        {
+            alertText.text = $"Your code was valid! \n \n you have recieved {reward} Calories!";
+            alert.SetActive(true);
+            StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Settings.LoggedInPlayer.Username}", GetPlayerCallback));
         }
     }
     public void Login()

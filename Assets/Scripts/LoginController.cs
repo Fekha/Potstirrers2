@@ -26,7 +26,8 @@ public class LoginController : MonoBehaviour
     {
         sql = new SqlController();
         system = EventSystem.current;
-
+        alertText.text = "Sorry, I messed up.. \n \n Until July 1st only playing as guest will work..";
+        alert.SetActive(true);
         try {
             FileStream stream = File.Open("idbfs/PotstirrersDevice.json", FileMode.OpenOrCreate, FileAccess.ReadWrite);
             using (StreamReader sr = new StreamReader(stream))
@@ -127,7 +128,6 @@ public class LoginController : MonoBehaviour
 
     private void RegisterButton()
     {
-        Settings.LoggedInPlayer = Player;
         if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
         {
             StartCoroutine(sql.RequestRoutine($"player/RegisterUser?username={username.GetComponent<InputField>().text.Trim()}&password={Encrypt(password.GetComponent<InputField>().text)}&rememberMe={rememberMe}&deviceId={deviceId}", RegisterCallback, true));

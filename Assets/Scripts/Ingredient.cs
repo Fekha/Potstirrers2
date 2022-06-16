@@ -16,6 +16,9 @@ public class Ingredient : MonoBehaviour
     public Tile currentTile;
 
     public Animator anim;
+    public TrailRenderer trail;
+    public ParticleSystem fire;
+    public ParticleSystem stomp;
 
     internal int routePosition;
     internal int endLowerPosition;
@@ -24,7 +27,8 @@ public class Ingredient : MonoBehaviour
     internal int endLowerPositionWithoutSlide;
     internal int distanceFromScore;
     private int startNodeIndex;
-    
+    public string type;
+
     [Header("Bools")]
     private bool hasTurn; //human input
     public bool isCooked;
@@ -75,7 +79,7 @@ public class Ingredient : MonoBehaviour
 
     private IEnumerator BeforeMoving()
     {
-        GameManager.i.SetLastMovedIngredient(this);
+        GameManager.i.SetLastMovedIngredient(this.IngredientId);
         if (routePosition != 0)
         {
             currentTile = fullRoute[routePosition];
@@ -116,6 +120,7 @@ public class Ingredient : MonoBehaviour
                                 GameManager.i.PrepShitTalk(TalkType.SentBack);
                                 GameManager.i.ActivateShitTalk();
                             }
+                            trail.enabled = true;
                             yield return StartCoroutine(MoveToNextTile(GameManager.i.TrashCan2.transform.position));
                         }
                         else if (routePosition == 17)
@@ -126,6 +131,7 @@ public class Ingredient : MonoBehaviour
                                 GameManager.i.PrepShitTalk(TalkType.SentBack);
                                 GameManager.i.ActivateShitTalk();
                             }
+                            trail.enabled = true;
                             yield return StartCoroutine(MoveToNextTile(GameManager.i.TrashCan3.transform.position));
                         }
                         yield return new WaitForSeconds(0.2f);
@@ -138,6 +144,9 @@ public class Ingredient : MonoBehaviour
             {
                 if (GameManager.i.Steps == 1 && routePosition == fullRoute.Count - 2 && TeamYellow == GameManager.i.GetActivePlayer().TeamYellow && !isCooked) //go to pot only if its your team
                 {
+                    if (routePosition == fullRoute.Count - 2) {
+                        fire.Play();
+                    }
                     routePosition++;
                 }
                 else if (routePosition != fullRoute.Count - 2) //go forward one
@@ -152,6 +161,10 @@ public class Ingredient : MonoBehaviour
 
             if (GameManager.i.Steps == 1)
             {
+                if (fullRoute[routePosition].hasSpoon || fullRoute[routePosition].hasSpatula)
+                {
+                    trail.enabled = true;
+                }
                 GameManager.i.ActivateShitTalk();
             }
 
@@ -172,15 +185,10 @@ public class Ingredient : MonoBehaviour
         GameManager.i.UpdateMoveText();
     }
     private IEnumerator Slide() {
-        if (fullRoute[routePosition].hasSpoon)
+        if (fullRoute[routePosition].hasSpoon || fullRoute[routePosition].hasSpatula)
         {
-            routePosition = routePosition + 6;
-            yield return StartCoroutine(MoveToNextTile(null, 11f));
-        }
-        if (fullRoute[routePosition].hasSpatula)
-        {
-            routePosition = routePosition - 6;
-            yield return StartCoroutine(MoveToNextTile(null, 11f));
+            routePosition = routePosition + (fullRoute[routePosition].hasSpoon ? 6 : -6 );
+            yield return StartCoroutine(MoveToNextTile(null));
         }
     }
     private IEnumerator AfterMovement()
@@ -196,9 +204,8 @@ public class Ingredient : MonoBehaviour
             if (IngredientToCook != null)
             {
                 IngredientToCook.isCooked = true;
-                IngredientToCook.anim.Play("flip");
                 IngredientToCook.CookedQuad.gameObject.SetActive(true);
-                if (GameManager.i.playerList.SelectMany(x => x.myIngredients).Count(y => y.isCooked) == 1)
+                if (GameManager.i.playerList.SelectMany(x => x.myIngredients).Count(y => y.isCooked) == 1 && Settings.LoggedInPlayer.Wins == 0 && !Settings.IsDebug)
                 {
                     GameManager.i.FirstScoreHelp();
                 }
@@ -227,6 +234,7 @@ public class Ingredient : MonoBehaviour
                 {
                     if (fullRoute[routePosition].isSafe)
                     {
+                        fullRoute[routePosition].ingredient.stomp.Play();
                         if (!GameManager.i.IsCPUTurn() && this.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                         {
                             GameManager.i.PrepShitTalk(TalkType.SentBack);
@@ -236,6 +244,7 @@ public class Ingredient : MonoBehaviour
                     }
                     else //moving other ingredient
                     {
+                        stomp.Play();
                         if (!GameManager.i.IsCPUTurn() && fullRoute[routePosition].ingredient.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                         {
                             GameManager.i.PrepShitTalk(TalkType.SentBack);
@@ -257,11 +266,17 @@ public class Ingredient : MonoBehaviour
         yield return new WaitForSeconds(.1f);
     }
 
-    public IEnumerator MoveToNextTile(Vector3? nextPos = null, float speed = 9f)
+    public IEnumerator MoveToNextTile(Vector3? nextPos = null, bool isforEffect=false)
     {
-        var yValue = .12f;
+        float speed = 30f;
+        var yValue = .25f;
 
-        if (routePosition != 0)
+        if (isforEffect)
+        {
+            anim.Play("flip");
+            speed = 40f;
+        }
+        else if(routePosition != 0)
             anim.Play("Moving");
 
         if(nextPos == null)
@@ -269,7 +284,7 @@ public class Ingredient : MonoBehaviour
         
         if (fullRoute[routePosition].ingredient != null && GameManager.i.Steps > 1)
         {
-            yValue = .24f;
+            yValue = 1f;
         }
 
         var goalPos = new Vector3(nextPos.Value.x, yValue, nextPos.Value.z);
@@ -288,6 +303,7 @@ public class Ingredient : MonoBehaviour
     }
     public void SetSelector(bool on)
     {
+        trail.enabled = false;
         selector.SetActive(on);
         hasTurn = on;
         if (on)

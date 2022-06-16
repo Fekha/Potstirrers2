@@ -2637,7 +2637,7 @@ MonoBehaviour:
     image: {fileID: 21300000, guid: a2b8cddbbc009994284978b5e608565a, type: 3}
   allFruitIngredients:
   - purchaseId: 0
-    image: {fileID: 21300000, guid: 967b27bd3f83f684882d505cb8264cb0, type: 3}
+    image: {fileID: 21300000, guid: 2ac40c315ad1806439c6805011ed2125, type: 3}
   - purchaseId: 29
     image: {fileID: 21300000, guid: 628258b7704b6334aa2aa1100c9b1f87, type: 3}
   - purchaseId: 30
@@ -2772,7 +2772,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 967b27bd3f83f684882d505cb8264cb0, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 2ac40c315ad1806439c6805011ed2125, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1

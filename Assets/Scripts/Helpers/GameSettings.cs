@@ -45,7 +45,7 @@ Move one ingredient from your team with the highest roll.
 
 Move one ingredient from any team with the lowest roll.
 
-Take these moves in any order, but the same ingredient may not be moved twice.
+Take these moves in any order, but the same type(meat,vegie,fruit) of ingredient may not be moved twice.
 
 If doubles were rolled, take another turn.",
 
