@@ -116,38 +116,54 @@ public class MainMenuController : MonoBehaviour
     }
     public void showSettings()
     {
-        if (Settings.LoggedInPlayer.IsGuest)
+        if (!Settings.IsConnected)
         {
-            alertText.text = "Log in to edit settings!";
+            alertText.text = "Unable to connect! \n \n This feature requires an active connection to the game server.";
             alert.SetActive(true);
         }
-        else if (Settings.LoggedInPlayer.Wins == 0)
+        else
         {
-            alertText.text = "Win a game to access additional settings!";
-            alert.SetActive(true);
-        }
-        else if (!settings.activeInHierarchy)
-        {
-            settings.SetActive(true);
+            if (Settings.LoggedInPlayer.IsGuest)
+            {
+                alertText.text = "Log in to edit settings!";
+                alert.SetActive(true);
+            }
+            else if (Settings.LoggedInPlayer.Wins == 0)
+            {
+                alertText.text = "Win a game to access additional settings!";
+                alert.SetActive(true);
+            }
+            else if (!settings.activeInHierarchy)
+            {
+                settings.SetActive(true);
+            }
         }
     }
 
     public void ShowProfile(bool open)
     {
-        if (Settings.LoggedInPlayer.IsGuest)
+        if (!Settings.IsConnected)
         {
-            alertText.text = "Log in to create a profile!";
+            alertText.text = "Unable to connect! \n \n This feature requires an active connection to the game server.";
             alert.SetActive(true);
         }
         else
         {
-            if (!open)
+            if (Settings.LoggedInPlayer.IsGuest)
             {
-                friendslist.SetActive(showFriendList);
-                SetProfileData(); //reset
+                alertText.text = "Log in to create a profile!";
+                alert.SetActive(true);
             }
+            else
+            {
+                if (!open)
+                {
+                    friendslist.SetActive(showFriendList);
+                    SetProfileData(); //reset
+                }
 
-            profilePanel.SetActive(open);
+                profilePanel.SetActive(open);
+            }
         }
     }
 
@@ -160,14 +176,22 @@ public class MainMenuController : MonoBehaviour
     
     public void ShowMessages(bool open)
     {
-        if (Settings.LoggedInPlayer.IsGuest)
+        if (!Settings.IsConnected)
         {
-            alertText.text = "Log in to send and receive messages!";
+            alertText.text = "Unable to connect! \n \n This feature requires an active connection to the game server.";
             alert.SetActive(true);
         }
         else
         {
-            messagePanel.SetActive(open);
+            if (Settings.LoggedInPlayer.IsGuest)
+            {
+                alertText.text = "Log in to send and receive messages!";
+                alert.SetActive(true);
+            }
+            else
+            {
+                messagePanel.SetActive(open);
+            }
         }
     }
 
@@ -580,7 +604,15 @@ public class MainMenuController : MonoBehaviour
     }
     public void SceneChange(string sceneName)
     {
-        SceneManager.LoadScene(sceneName);
+        if (!Settings.IsConnected && (sceneName == "Skins" || sceneName == "LeaderboardScene"))
+        {
+            alertText.text = "Unable to connect! \n \n This feature requires an active connection to the game server.";
+            alert.SetActive(true);
+        }
+        else
+        {
+            SceneManager.LoadScene(sceneName);
+        }
     }
     public void StartDebug()
     {

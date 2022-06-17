@@ -6,6 +6,7 @@ public static class Settings
 {
     public static Player LoggedInPlayer = new Player();
     public static Player SecondPlayer = new Player() { Username = "Zach", playerType = PlayerTypes.CPU, UserId = 42 };
+    public static bool IsConnected = false;
     public static bool IsDebug = false;
     public static bool HardMode = false;
     public static bool EnteredGame = false;

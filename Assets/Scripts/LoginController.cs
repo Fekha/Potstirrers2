@@ -64,6 +64,7 @@ public class LoginController : MonoBehaviour
     }
     private void GetDeviceCallback(string data)
     {
+        Settings.IsConnected = true;
         Player = sql.jsonConvert<Player>(data);
         Settings.LoggedInPlayer = Player;
         if (Player != null)
