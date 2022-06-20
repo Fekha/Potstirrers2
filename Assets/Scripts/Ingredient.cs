@@ -80,15 +80,7 @@ public class Ingredient : MonoBehaviour
     private IEnumerator BeforeMoving()
     {
         GameManager.i.SetLastMovedIngredient(this.IngredientId);
-        if (routePosition != 0)
-        {
-            currentTile = fullRoute[routePosition];
-            currentTile.ingredient = null;
-        }
-        else
-        {
-            GameManager.i.setTileNull(this.name);
-        }
+        currentTile.ingredients.Pop();
         yield return new WaitForSeconds(.5f);
     }
 
@@ -170,10 +162,13 @@ public class Ingredient : MonoBehaviour
 
             if (routePosition == 0)
             {
-                yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this));
-                GameManager.i.Steps--;
+                if (didMove || !GameManager.i.prepTiles.Any(x => x.ingredients.Any(y => y.isCooked)))
+                {
+                    yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this, GameManager.i.Steps == 1));
+                    GameManager.i.Steps--;
+                }
             }
-            else if (fullRoute[routePosition].ingredient == null || !fullRoute[routePosition].ingredient.isCooked)
+            else if (fullRoute[routePosition].ingredients.Count() == 0 || !fullRoute[routePosition].ingredients.Peek().isCooked)
             {
                 yield return StartCoroutine(MoveToNextTile());
                 GameManager.i.Steps--;
@@ -188,7 +183,7 @@ public class Ingredient : MonoBehaviour
         if (fullRoute[routePosition].hasSpoon || fullRoute[routePosition].hasSpatula)
         {
             routePosition = routePosition + (fullRoute[routePosition].hasSpoon ? 6 : -6 );
-            yield return StartCoroutine(MoveToNextTile(null));
+            yield return StartCoroutine(MoveToNextTile());
         }
     }
     private IEnumerator AfterMovement()
@@ -204,6 +199,8 @@ public class Ingredient : MonoBehaviour
             if (IngredientToCook != null)
             {
                 IngredientToCook.isCooked = true;
+                anim.Play("flip");
+                trail.enabled = true;
                 IngredientToCook.CookedQuad.gameObject.SetActive(true);
                 if (GameManager.i.playerList.SelectMany(x => x.myIngredients).Count(y => y.isCooked) == 1 && Settings.LoggedInPlayer.Wins == 0 && !Settings.IsDebug)
                 {
@@ -217,12 +214,12 @@ public class Ingredient : MonoBehaviour
         {
             yield return StartCoroutine(Slide());
             //Check for kill after slide
-            if (fullRoute[routePosition].ingredient != null)
+            if (fullRoute[routePosition].ingredients.Count() > 0)
             {
                 //skip the spot if cooked
-                if (fullRoute[routePosition].ingredient != null && fullRoute[routePosition].ingredient.isCooked)
+                if (fullRoute[routePosition].ingredients.Count() > 0 && fullRoute[routePosition].ingredients.Peek().isCooked)
                 {
-                    while (fullRoute[routePosition].ingredient != null && fullRoute[routePosition].ingredient.isCooked)
+                    while (fullRoute[routePosition].ingredients.Count() > 0 && fullRoute[routePosition].ingredients.Peek().isCooked)
                     {
                         routePosition++;
                         yield return StartCoroutine(MoveToNextTile());
@@ -230,51 +227,52 @@ public class Ingredient : MonoBehaviour
                     }
                 }
 
-                if (fullRoute[routePosition].ingredient != null)
+                if (fullRoute[routePosition].ingredients.Count() > 0)
                 {
                     if (fullRoute[routePosition].isSafe)
                     {
-                        fullRoute[routePosition].ingredient.stomp.Play();
-                        if (!GameManager.i.IsCPUTurn() && this.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
-                        {
-                            GameManager.i.PrepShitTalk(TalkType.SentBack);
-                            GameManager.i.ActivateShitTalk();
-                        }
-                        yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this));
-                    }
-                    else //moving other ingredient
-                    {
                         stomp.Play();
-                        if (!GameManager.i.IsCPUTurn() && fullRoute[routePosition].ingredient.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
+                        if (!GameManager.i.IsCPUTurn() && fullRoute[routePosition].ingredients.Peek().TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                         {
                             GameManager.i.PrepShitTalk(TalkType.SentBack);
                             GameManager.i.ActivateShitTalk();
                         }
-                        yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(fullRoute[routePosition].ingredient));
+                        var ingToMove = fullRoute[routePosition].ingredients.Peek();
+                        fullRoute[routePosition].ingredients.Pop();
+                        yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(ingToMove));
                     }
+                    //else //moving other ingredient
+                    //{
+                    //    fullRoute[routePosition].ingredient.stomp.Play();
+                    //    if (!GameManager.i.IsCPUTurn() && this.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
+                    //    {
+                    //        GameManager.i.PrepShitTalk(TalkType.SentBack);
+                    //        GameManager.i.ActivateShitTalk();
+                    //    }
+                    //    yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this));
+                    //}
                 }
             }
         }
-
-        currentTile = fullRoute[routePosition];
         if (routePosition != 0)
-        {
-            currentTile.ingredient = this;
-            GameManager.i.setTileNull(this.name);
+        { 
+            currentTile = fullRoute[routePosition];
+            currentTile.ingredients.Push(this);
         }
+        
 
         yield return new WaitForSeconds(.1f);
     }
 
     public IEnumerator MoveToNextTile(Vector3? nextPos = null, bool isforEffect=false)
     {
-        float speed = 30f;
-        var yValue = .25f;
+        float speed = 35f;
+        var yValue = .2f;
 
         if (isforEffect)
         {
-            anim.Play("flip");
-            speed = 40f;
+            //anim.Play("flip");
+            speed = 45f;
         }
         else if(routePosition != 0)
             anim.Play("Moving");
@@ -282,10 +280,8 @@ public class Ingredient : MonoBehaviour
         if(nextPos == null)
             nextPos = fullRoute[routePosition].gameObject.transform.position;
         
-        if (fullRoute[routePosition].ingredient != null && GameManager.i.Steps > 1)
-        {
-            yValue = 1f;
-        }
+        if(!fullRoute[routePosition].isSafe || (fullRoute[routePosition].isSafe && GameManager.i.Steps != 1))
+            yValue += (.4f * fullRoute[routePosition].ingredients.Count());
 
         var goalPos = new Vector3(nextPos.Value.x, yValue, nextPos.Value.z);
 
@@ -296,7 +292,7 @@ public class Ingredient : MonoBehaviour
 
         if (routePosition == 0 && Settings.LoggedInPlayer.WineMenu)
         {
-            GameManager.i.setWineMenuText((TeamYellow && !isCooked || !TeamYellow && isCooked), GameManager.i.tiles.Count(x => x.ingredient != null));
+            GameManager.i.setWineMenuText((TeamYellow && !isCooked || !TeamYellow && isCooked), GameManager.i.prepTiles.Count(x => x.ingredients.Count() > 0));
         }
 
         yield return new WaitForSeconds(0.2f);
@@ -316,7 +312,7 @@ public class Ingredient : MonoBehaviour
     {
         if (hasTurn && !GameManager.i.IsCPUTurn())
         {
-            if (GameManager.i.firstMoveTaken)
+            if (!GameManager.i.firstMoveTaken)
             {
                 GameManager.i.undoButton.interactable = false;
             }
