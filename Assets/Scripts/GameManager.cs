@@ -109,7 +109,7 @@ public class GameManager : MonoBehaviour
         sql = new SqlController();
         activePlayer = Random.Range(0, 2);
 #if UNITY_EDITOR
-        Settings.IsDebug = true;
+        //Settings.IsDebug = true;
         //Settings.LoggedInPlayer.Experimental = true;
 #endif
 
@@ -120,11 +120,11 @@ public class GameManager : MonoBehaviour
             activePlayer = 0;
         }
 
-        if (Settings.LoggedInPlayer.Wins == 0 && !Settings.IsDebug)
-        {
-            activePlayer = 0;
-            getHelp();
-        }
+        //if (Settings.LoggedInPlayer.Wins == 0 && !Settings.IsDebug)
+        //{
+        //    activePlayer = 0;
+        //    getHelp();
+        //}
 
         if (Settings.LoggedInPlayer.PlayAsPurple)
         {
@@ -187,6 +187,21 @@ public class GameManager : MonoBehaviour
             var fruitQuads = HumanIngredients.FirstOrDefault(x => x.type == "Fruit").NormalQuad.GetComponent<MeshRenderer>();
             var fruitMats = fruitQuads.materials;
             fruitMats[0] = allFruitMaterials[Settings.LoggedInPlayer.SelectedFruit];
+            fruitQuads.materials = fruitMats; 
+            
+            meatQuads = HumanIngredients.FirstOrDefault(x => x.type == "Meat").BackNormalQuad.GetComponent<MeshRenderer>();
+            meatMats = meatQuads.materials;
+            meatMats[0] = allMeatMaterials[Settings.LoggedInPlayer.SelectedMeat];
+            meatQuads.materials = meatMats;
+
+            veggieQuads = HumanIngredients.FirstOrDefault(x => x.type == "Veggie").BackNormalQuad.GetComponent<MeshRenderer>();
+            veggieMats = veggieQuads.materials;
+            veggieMats[0] = allVeggieMaterials[Settings.LoggedInPlayer.SelectedVeggie];
+            veggieQuads.materials = veggieMats;
+
+            fruitQuads = HumanIngredients.FirstOrDefault(x => x.type == "Fruit").BackNormalQuad.GetComponent<MeshRenderer>();
+            fruitMats = fruitQuads.materials;
+            fruitMats[0] = allFruitMaterials[Settings.LoggedInPlayer.SelectedFruit];
             fruitQuads.materials = fruitMats;
 
             if (Settings.SecondPlayer.IsGuest)
@@ -215,6 +230,21 @@ public class GameManager : MonoBehaviour
                 var CPUfruitMats = CPUfruitQuads.materials;
                 CPUfruitMats[0] = allFruitMaterials[Settings.SecondPlayer.Username == "Jenn" ? allFruitMaterials.Count() - 1 : randFruit];
                 CPUfruitQuads.materials = CPUfruitMats;
+                
+                CPUmeatQuads = CPUIngredients.FirstOrDefault(x=>x.type == "Meat").BackNormalQuad.GetComponent<MeshRenderer>();
+                CPUmeatMats = CPUmeatQuads.materials;
+                CPUmeatMats[0] = allMeatMaterials[Settings.SecondPlayer.Username == "Jenn" ? allMeatMaterials.Count()-1 : randMeat];
+                CPUmeatQuads.materials = CPUmeatMats;
+
+                CPUveggieQuads = CPUIngredients.FirstOrDefault(x => x.type == "Veggie").BackNormalQuad.GetComponent<MeshRenderer>();
+                CPUveggieMats = CPUveggieQuads.materials;
+                CPUveggieMats[0] = allVeggieMaterials[Settings.SecondPlayer.Username == "Jenn" ? allVeggieMaterials.Count() - 1 : randVeggie];
+                CPUveggieQuads.materials = CPUveggieMats;
+
+                CPUfruitQuads = CPUIngredients.FirstOrDefault(x => x.type == "Fruit").BackNormalQuad.GetComponent<MeshRenderer>();
+                CPUfruitMats = CPUfruitQuads.materials;
+                CPUfruitMats[0] = allFruitMaterials[Settings.SecondPlayer.Username == "Jenn" ? allFruitMaterials.Count() - 1 : randFruit];
+                CPUfruitQuads.materials = CPUfruitMats;
             }
             else
             {
@@ -234,6 +264,21 @@ public class GameManager : MonoBehaviour
 
                 var fruit2Quads = Human2Ingredients.FirstOrDefault(x => x.type == "Fruit").NormalQuad.GetComponent<MeshRenderer>();
                 var fruit2Mats = fruit2Quads.materials;
+                fruit2Mats[0] = allFruitMaterials[Settings.SecondPlayer.SelectedFruit];
+                fruit2Quads.materials = fruit2Mats;  
+                
+                meat2Quads = Human2Ingredients.FirstOrDefault(x => x.type == "Meat").BackNormalQuad.GetComponent<MeshRenderer>();
+                meat2Mats = meat2Quads.materials;
+                meat2Mats[0] = allMeatMaterials[Settings.SecondPlayer.SelectedMeat];
+                meat2Quads.materials = meat2Mats;
+
+                veggie2Quads = Human2Ingredients.FirstOrDefault(x => x.type == "Veggie").BackNormalQuad.GetComponent<MeshRenderer>();
+                veggie2Mats = veggie2Quads.materials;
+                veggie2Mats[0] = allVeggieMaterials[Settings.SecondPlayer.SelectedVeggie];
+                veggie2Quads.materials = veggie2Mats;
+
+                fruit2Quads = Human2Ingredients.FirstOrDefault(x => x.type == "Fruit").BackNormalQuad.GetComponent<MeshRenderer>();
+                fruit2Mats = fruit2Quads.materials;
                 fruit2Mats[0] = allFruitMaterials[Settings.SecondPlayer.SelectedFruit];
                 fruit2Quads.materials = fruit2Mats;
             }
@@ -494,7 +539,7 @@ public class GameManager : MonoBehaviour
             ingredientToMove.currentTile.ingredients.Push(ingredientToMove);
         //}
 
-        yield return ingredientToMove.MoveToNextTile(ingredientToMove.currentTile.transform.position, true);
+        yield return ingredientToMove.MoveToNextTile(ingredientToMove.currentTile.transform.position, shouldPush,45f);
     }
     internal void FirstScoreHelp()
     {

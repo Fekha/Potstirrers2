@@ -456,15 +456,15 @@ public class MainMenuController : MonoBehaviour
 
     public void DifficultyMenu(bool open)
     {
-        if (Settings.LoggedInPlayer.Wins > 0 || Settings.LoggedInPlayer.IsGuest)
-        {
-            DifficultyPrompt.SetActive(open);
-        }
-        else
-        {
-            Settings.HardMode = false;
+        //if (Settings.LoggedInPlayer.Wins > 0 || Settings.LoggedInPlayer.IsGuest)
+        //{
+        //    DifficultyPrompt.SetActive(open);
+        //}
+        //else
+        //{
+            Settings.HardMode = true;
             StartTheGame(true);
-        }
+        //}
     }
 
     public void ExitSettings()

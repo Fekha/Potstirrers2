@@ -37,7 +37,9 @@ public class Ingredient : MonoBehaviour
     [Header("Selector")]
     public GameObject selector;
     public GameObject NormalQuad;
+    public GameObject BackNormalQuad;
     public GameObject CookedQuad;
+    public GameObject BackCookedQuad;
     private void Start()
     {
         //plane = new Plane(this.transform.up, Vector3.zero);
@@ -183,7 +185,7 @@ public class Ingredient : MonoBehaviour
         if (fullRoute[routePosition].hasSpoon || fullRoute[routePosition].hasSpatula)
         {
             routePosition = routePosition + (fullRoute[routePosition].hasSpoon ? 6 : -6 );
-            yield return StartCoroutine(MoveToNextTile());
+            yield return StartCoroutine(MoveToNextTile(null, true, 20f));
         }
     }
     private IEnumerator AfterMovement()
@@ -199,13 +201,14 @@ public class Ingredient : MonoBehaviour
             if (IngredientToCook != null)
             {
                 IngredientToCook.isCooked = true;
-                anim.Play("flip");
                 trail.enabled = true;
+                stomp.Play();
                 IngredientToCook.CookedQuad.gameObject.SetActive(true);
-                if (GameManager.i.playerList.SelectMany(x => x.myIngredients).Count(y => y.isCooked) == 1 && Settings.LoggedInPlayer.Wins == 0 && !Settings.IsDebug)
-                {
-                    GameManager.i.FirstScoreHelp();
-                }
+                IngredientToCook.BackCookedQuad.gameObject.SetActive(false);
+                //if (GameManager.i.playerList.SelectMany(x => x.myIngredients).Count(y => y.isCooked) == 1 && Settings.LoggedInPlayer.Wins == 0 && !Settings.IsDebug)
+                //{
+                //    GameManager.i.FirstScoreHelp();
+                //}
             }
             yield return new WaitForSeconds(.1f);
             yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this));
@@ -264,16 +267,12 @@ public class Ingredient : MonoBehaviour
         yield return new WaitForSeconds(.1f);
     }
 
-    public IEnumerator MoveToNextTile(Vector3? nextPos = null, bool isforEffect=false)
+    public IEnumerator MoveToNextTile(Vector3? nextPos = null, bool isforEffect=false, float speed = 35f)
     {
-        float speed = 35f;
         var yValue = .2f;
 
         if (isforEffect)
-        {
-            //anim.Play("flip");
-            speed = 45f;
-        }
+            anim.Play("flip");
         else if(routePosition != 0)
             anim.Play("Moving");
 
