@@ -40,15 +40,28 @@ You also skip spaces cooked ingredients are on while moving, which gives you a b
 
 @"Taking a turn:
 
-Roll two dice.
+Roll both of your dice and move two different ingredients.
 
-Move one ingredient from your team with the highest roll.
+Your own ingredients are valid moves with either dice
 
-Move one ingredient from any team with the lowest roll.
+If one of the die has a lower value than the other, you may instead move any of your opponents ingredients with it. 
 
-Take these moves in any order, but the same type(meat,vegie,fruit) of ingredient may not be moved twice.
+An ingredient is a vlid move if it is not part of a stack or on top of a stack.
 
-If doubles were rolled, take another turn.",
+You must always move an ingredient if possible.
+
+If you have taken both moves or can not make a legal move move then your turn is over.
+",
+
+@"Landing on an ingredient:
+
+If an ingredient is landed on, it stacks on top of it, unless it is in a danger zone.
+
+If it was in a danger zone, you do not stack but instead, send the ingredient that was landed on to Prep.
+
+An ingredient that has been stacked on may not be moved until the pieces above it are moved.
+
+Note: Cooked ingredients can't be landed on because you never count the space they are on while moving.",
 
 @"Exact Spaces:
 
@@ -61,29 +74,19 @@ The first two you come across lead the ingredient to a trash can that sends it b
 
 The last leads to the pot, where you cook your ingredients.",
 
-@"Landing on an ingredient:
-
-If an ingredient is landed on, send it to Prep, unless it is in a safe area.
-
-If it was in a safe area, send the ingredient that landed on it to Prep instead.
-
-Note: Cooked ingredients can't be landed on because you never count the space they are on while moving.",
-
 @"Sliding:
 
 If an ingredient ends its movement on a space with a utensil handle, immediately move it to the other side of the utensil.
 
-If an uncooked ingredient was on the other side, send them back to Prep! 
-
-If it was a cooked ingredient, skip over it.",
+Note: If there is a cooked ingredient on the other side of the utensil, skip over it!",
 
 @"Prep:
 
-All ingredients start on Prep, and are sent there after being landed on. Prep is its own space when counting.
+All ingredients start on Prep, and return here after being cooked, being landed on in a danger zone, or moving onto a trash can.
 
-Prep is never skipped, despite the number of cooked ingredients on it.
+Ingredients all share Prep and do not stack
 
-Note: You can be moved onto or past Prep from the end of the board, so be careful!
+Prep is not skipped if there is a cooked ingredient on it when being sent there or when getting moved onto it from the end of the board.
 ",
 
 @"Conclusion:

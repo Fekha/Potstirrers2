@@ -81,7 +81,7 @@ public class Ingredient : MonoBehaviour
 
     private IEnumerator BeforeMoving()
     {
-        GameManager.i.SetLastMovedIngredient(this.IngredientId);
+        GameManager.i.firstIngredientMoved = IngredientId;
         currentTile.ingredients.Pop();
         yield return new WaitForSeconds(.5f);
     }
@@ -164,11 +164,8 @@ public class Ingredient : MonoBehaviour
 
             if (routePosition == 0)
             {
-                if (didMove || !GameManager.i.prepTiles.Any(x => x.ingredients.Any(y => y.isCooked)))
-                {
-                    yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this, GameManager.i.Steps == 1));
-                    GameManager.i.Steps--;
-                }
+                yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this, GameManager.i.Steps == 1));
+                GameManager.i.Steps--;
             }
             else if (fullRoute[routePosition].ingredients.Count() == 0 || !fullRoute[routePosition].ingredients.Peek().isCooked)
             {
@@ -193,18 +190,13 @@ public class Ingredient : MonoBehaviour
         //Cook!
         if (routePosition == fullRoute.Count - 1)
         {
-            Ingredient IngredientToCook = null;
             if (!isCooked)
             {
-                IngredientToCook = this;
-            }
-            if (IngredientToCook != null)
-            {
-                IngredientToCook.isCooked = true;
                 trail.enabled = true;
                 stomp.Play();
-                IngredientToCook.CookedQuad.gameObject.SetActive(true);
-                IngredientToCook.BackCookedQuad.gameObject.SetActive(false);
+                isCooked = true;
+                CookedQuad.gameObject.SetActive(true);
+                BackCookedQuad.gameObject.SetActive(false);
                 //if (GameManager.i.playerList.SelectMany(x => x.myIngredients).Count(y => y.isCooked) == 1 && Settings.LoggedInPlayer.Wins == 0 && !Settings.IsDebug)
                 //{
                 //    GameManager.i.FirstScoreHelp();
@@ -311,9 +303,27 @@ public class Ingredient : MonoBehaviour
     {
         if (hasTurn && !GameManager.i.IsCPUTurn())
         {
-            if (!GameManager.i.firstMoveTaken)
+            if (GameManager.i.firstIngredientMoved != null)
             {
-                GameManager.i.undoButton.interactable = false;
+                GameManager.i.undoButton1.gameObject.SetActive(false);
+                GameManager.i.undoButton2.gameObject.SetActive(false);
+            }
+            else if (GameManager.i.firstMoveTaken)
+            {
+                if (GameManager.i.activePlayer == 0)
+                {
+                    GameManager.i.undoButton1.gameObject.SetActive(true);
+                }
+                else
+                {
+                    GameManager.i.undoButton2.gameObject.SetActive(true);
+                }
+                
+            }
+            else
+            {
+                GameManager.i.undoButton1.gameObject.SetActive(false);
+                GameManager.i.undoButton2.gameObject.SetActive(false);
             }
             StartCoroutine(MoveSelectedIngredient());
         }
