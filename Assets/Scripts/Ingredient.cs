@@ -7,7 +7,7 @@ using UnityEngine;
 public class Ingredient : MonoBehaviour
 {
     public int IngredientId;
-
+    private SqlController sql;
     [Header("Routes")]
     public Route route;
 
@@ -46,6 +46,7 @@ public class Ingredient : MonoBehaviour
         startNodeIndex = 0;
         CreateFullRoute();
         SetSelector(false);
+        sql = new SqlController();
     }
     void CreateFullRoute()
     {
@@ -111,8 +112,8 @@ public class Ingredient : MonoBehaviour
                             didMove = true;
                             if (!GameManager.i.IsCPUTurn() && this.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                             {
-                                GameManager.i.PrepShitTalk(TalkType.SentBack);
-                                GameManager.i.ActivateShitTalk();
+                                CpuLogic.i.PrepShitTalk(TalkType.SentBack);
+                                CpuLogic.i.ActivateShitTalk();
                             }
                             trail.enabled = true;
                             yield return StartCoroutine(MoveToNextTile(GameManager.i.TrashCan2.transform.position));
@@ -122,8 +123,8 @@ public class Ingredient : MonoBehaviour
                             didMove = true;
                             if (!GameManager.i.IsCPUTurn() && this.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                             {
-                                GameManager.i.PrepShitTalk(TalkType.SentBack);
-                                GameManager.i.ActivateShitTalk();
+                                CpuLogic.i.PrepShitTalk(TalkType.SentBack);
+                                CpuLogic.i.ActivateShitTalk();
                             }
                             trail.enabled = true;
                             yield return StartCoroutine(MoveToNextTile(GameManager.i.TrashCan3.transform.position));
@@ -159,7 +160,7 @@ public class Ingredient : MonoBehaviour
                 {
                     trail.enabled = true;
                 }
-                GameManager.i.ActivateShitTalk();
+                CpuLogic.i.ActivateShitTalk();
             }
 
             if (routePosition == 0)
@@ -229,8 +230,8 @@ public class Ingredient : MonoBehaviour
                         stomp.Play();
                         if (!GameManager.i.IsCPUTurn() && fullRoute[routePosition].ingredients.Peek().TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                         {
-                            GameManager.i.PrepShitTalk(TalkType.SentBack);
-                            GameManager.i.ActivateShitTalk();
+                            CpuLogic.i.PrepShitTalk(TalkType.SentBack);
+                            CpuLogic.i.ActivateShitTalk();
                         }
                         var ingToMove = fullRoute[routePosition].ingredients.Peek();
                         fullRoute[routePosition].ingredients.Pop();
@@ -301,6 +302,11 @@ public class Ingredient : MonoBehaviour
 
     private void OnMouseDown()
     {
+        if (Settings.OnlineGameId != 0 && GameManager.i.GetActivePlayer().player.Username != Settings.LoggedInPlayer.Username)
+        {
+            return;
+        }
+
         if (hasTurn && !GameManager.i.IsCPUTurn())
         {
             if (GameManager.i.firstIngredientMoved != null)
@@ -331,6 +337,9 @@ public class Ingredient : MonoBehaviour
 
     private IEnumerator MoveSelectedIngredient()
     {
+        if (Settings.OnlineGameId != 0)
+            yield return StartCoroutine(sql.RequestRoutine($"analytic/UpdateTurn?GameId={Settings.OnlineGameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
+
         yield return StartCoroutine(GameManager.i.DeactivateAllSelectors());
         yield return StartCoroutine(Move());
     }

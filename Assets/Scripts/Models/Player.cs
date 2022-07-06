@@ -8,6 +8,11 @@ namespace Assets.Models
 {
     public class Player
     {
+        public Player ShallowCopy()
+        {
+            return (Player)this.MemberwiseClone();
+        }
+
         public int UserId = 40;
         public string Username = "Guest";
         public string Password = "";
@@ -29,4 +34,6 @@ namespace Assets.Models
         public bool DisableDoubles = false;
         public bool PlayAsPurple = false;
     }
+
+   
 }

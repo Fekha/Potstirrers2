@@ -6,10 +6,11 @@ public static class Settings
 {
     public static Player LoggedInPlayer = new Player();
     public static Player SecondPlayer = new Player() { Username = "Zach", playerType = PlayerTypes.CPU, UserId = 42 };
-    public static bool IsConnected = false;
+    public static bool IsConnected = true;
     public static bool IsDebug = false;
     public static bool HardMode = false;
     public static bool EnteredGame = false;
+    public static int OnlineGameId = 0;
 
     public static List<Player> CPUPlayers = new List<Player>() { 
         new Player() { Username = "Joe", playerType = PlayerTypes.CPU, UserId = 43 },
@@ -42,11 +43,11 @@ You also skip spaces cooked ingredients are on while moving, which gives you a b
 
 Roll both of your dice and move two different ingredients.
 
-Your own ingredients are valid moves with either dice
+Your own ingredients are valid moves with either die.
 
 If one of the die has a lower value than the other, you may instead move any of your opponents ingredients with it. 
 
-An ingredient is a vlid move if it is not part of a stack or on top of a stack.
+An ingredient is a valid move if it is not part of a stack or on top of a stack.
 
 You must always move an ingredient if possible.
 

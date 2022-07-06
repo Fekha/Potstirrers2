@@ -75,13 +75,15 @@ public class MainMenuController : MonoBehaviour
     #region ConfirmationPopups
     public GameObject alert;
     public Text alertText;
+    public GameObject LoadingPanel;
+    public Text loadingTimer;
     public GameObject ExitPrompt;
     public GameObject DifficultyPrompt;
     public GameObject LoginSecondPlayer;
     public GameObject usernameText;
     #endregion
 
-    #region Internal Varibale
+    #region Internal Varibales
     private Profile CurrentPlayer;
     private Profile YourFriend;
     private bool toggleActivated;
@@ -90,9 +92,14 @@ public class MainMenuController : MonoBehaviour
     private SqlController sql;
     private int debugClicks;
     private Message CurrentMessage;
+    private float totalElapsed = 0f;
+    private float elapsed = 0f;
+    private bool LookingForGame = false;
     #endregion
     void Awake()
     {
+        sql = new SqlController();
+        Settings.OnlineGameId = 0;
         wineToggle.isOn = Settings.LoggedInPlayer.WineMenu;
         d8Toggle.isOn = Settings.LoggedInPlayer.UseD8s;
         doubleToggle.isOn = Settings.LoggedInPlayer.DisableDoubles;
@@ -100,7 +107,6 @@ public class MainMenuController : MonoBehaviour
     }
     private void Start()
     {
-        sql = new SqlController();
         //loading starts as true but is turned false after elements render and toggles are set correctly
         loadingToggle = false;
         toggleActivated = false;
@@ -112,6 +118,47 @@ public class MainMenuController : MonoBehaviour
             alertText.text = $"If you enjoyed the game make an account! You can unlock new pieces and dice to play with and compete on the leaderboard.";
             alert.SetActive(true);
             Settings.EnteredGame = false;
+        }
+    }
+    private void GetGameUpdate(string data)
+    {
+        Settings.OnlineGameId = sql.jsonConvert<int>(data);
+        if (Settings.OnlineGameId != 0)
+        {
+            LookingForGame = false;
+            Settings.HardMode = false;
+            SceneManager.LoadScene("PlayScene");
+        }
+    }
+    private void Update()
+    {
+        if (LookingForGame)
+        {
+            elapsed += Time.deltaTime;
+            totalElapsed += Time.deltaTime;
+            if (elapsed >= 1f)
+            {
+                TimeSpan time = TimeSpan.FromSeconds(totalElapsed);
+                loadingTimer.text = "Time in queue: " + time.ToString(@"mm\:ss");
+                elapsed = elapsed % 1f;
+                if(sql == null)
+                    sql = new SqlController();
+                StartCoroutine(sql.RequestRoutine($"analytic/LookforGame?UserId={Settings.LoggedInPlayer.UserId}", GetGameUpdate));
+            }
+        }
+        else
+        {
+            totalElapsed = 0;
+        }
+       
+    }
+    public void Matchmaking(bool start)
+    {
+        LookingForGame = start;
+        LoadingPanel.SetActive(start);
+        if (!start)
+        {
+            StartCoroutine(sql.RequestRoutine($"analytic/StopLookingforGame?UserId={Settings.LoggedInPlayer.UserId}"));
         }
     }
     public void showSettings()
@@ -463,7 +510,7 @@ public class MainMenuController : MonoBehaviour
         //else
         //{
             Settings.HardMode = true;
-            StartTheGame(true);
+            StartLocalGame(true);
         //}
     }
 
@@ -500,7 +547,7 @@ public class MainMenuController : MonoBehaviour
         Settings.HardMode = false;
         if (Settings.LoggedInPlayer.IsGuest)
         {
-            StartTheGame(false);
+            StartLocalGame(false);
         }
         else
         {
@@ -520,7 +567,7 @@ public class MainMenuController : MonoBehaviour
         else
         {
             Settings.SecondPlayer.IsGuest = false;
-            StartTheGame(false);
+            StartLocalGame(false);
         }
     } 
     private void GetFriendByUsernameCallback(string data)
@@ -624,7 +671,7 @@ public class MainMenuController : MonoBehaviour
             SceneManager.LoadScene("PlayScene");
         }
     }
-    public void StartTheGame(bool cpu)
+    public void StartLocalGame(bool cpu)
     {
         Settings.EnteredGame = true;
         if (cpu)
@@ -647,7 +694,7 @@ public class MainMenuController : MonoBehaviour
     public void StartCPUGame(bool hardMode)
     {
         Settings.HardMode = hardMode;
-        StartTheGame(true);
+        StartLocalGame(true);
     }
 
     private class FriendDTO
