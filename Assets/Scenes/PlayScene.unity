@@ -141,7 +141,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &16547261
 RectTransform:
   m_ObjectHideFlags: 0
@@ -337,7 +337,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 1
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &53477592
@@ -813,7 +813,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &250866045
@@ -994,7 +994,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!23 &267061372
@@ -1140,7 +1140,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &328527585
@@ -1734,7 +1734,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 1
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &551021265
@@ -1910,7 +1910,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 1
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &561932786
@@ -2164,7 +2164,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &636352308
@@ -2419,7 +2419,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &671450789
@@ -2654,7 +2654,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &690175007
@@ -3098,7 +3098,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &725270448
@@ -3195,7 +3195,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 1
   hasSpatula: 0
 --- !u!1 &725377163
@@ -3292,7 +3292,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 1
 --- !u!1 &743072539
@@ -3729,7 +3729,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &884044090
@@ -3777,7 +3777,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!23 &884044093
@@ -4137,7 +4137,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 1
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &914253619
@@ -4234,7 +4234,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 1
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &934495646
@@ -4547,7 +4547,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!23 &949210744
@@ -4891,7 +4891,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1021202251
@@ -5722,7 +5722,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!23 &1157088449
@@ -5898,7 +5898,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!23 &1184433971
@@ -6334,7 +6334,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1295412755
@@ -6790,7 +6790,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1351034099
@@ -6969,7 +6969,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1427223260
@@ -7224,7 +7224,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1514026507
@@ -8038,7 +8038,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1671147575
@@ -8295,7 +8295,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 1
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1699642545
@@ -8504,7 +8504,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1722497762
@@ -8812,7 +8812,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 1
   hasSpatula: 0
 --- !u!1 &1739223631
@@ -8909,7 +8909,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1750138944
@@ -9006,7 +9006,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1766704482
@@ -9054,7 +9054,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!23 &1766704485
@@ -9358,7 +9358,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 1
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1812948357
@@ -9881,7 +9881,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &1971406111
@@ -10270,7 +10270,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &2065021673
@@ -10448,7 +10448,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 1
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &2104688623
@@ -10545,7 +10545,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 0
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
 --- !u!1 &2128611901
@@ -10642,6 +10642,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e6d921e7425cc646ac396abe91c4353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSafe: 1
+  isDangerZone: 0
   hasSpoon: 0
   hasSpatula: 0
