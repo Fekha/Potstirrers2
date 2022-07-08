@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class Tile : MonoBehaviour
 {
-    public bool isSafe;
+    public bool isDangerZone;
     public bool hasSpoon;
     public bool hasSpatula;
     public Stack<Ingredient> ingredients = new Stack<Ingredient>();

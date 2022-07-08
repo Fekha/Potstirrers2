@@ -3,45 +3,25 @@ using UnityEngine;
 
 public class Route : MonoBehaviour
 {
-    Transform[] childNodes;
-
+    internal static Route i;
+    internal List<Tile> FullRoute = new List<Tile>();
     public List<Transform> childNodeList = new List<Transform>();
-    // Start is called before the first frame update
+    private void Awake()
+    {
+        i = this;
+    }
     void Start()
     {
-        FillNodes();
+        CreateFullRoute();
     }
-
-    //private void OnDrawGizmos()
-    //{
-    //    Gizmos.color = Color.red;
-    //    FillNodes();
-
-    //    for (int i = 0; i < childNodeList.Count; i++)
-    //    {
-    //        Vector3 pos = childNodeList[i].position;
-    //        if (i > 0)
-    //        {
-    //            Vector3 prev = childNodeList[i - 1].position;
-    //            Gizmos.DrawLine(prev, pos);
-    //        }
-    //    }
-    //}
-    void FillNodes()
+    void CreateFullRoute()
     {
-        childNodeList.Clear();
-        childNodes = GetComponentsInChildren<Transform>();
-        foreach(Transform child in childNodes)
+        var startNodeIndex = 0;
+        for (int i = 0; i < childNodeList.Count; i++)
         {
-            if(child != this.transform)
-            {
-                childNodeList.Add(child);
-            }
+            int tempPos = startNodeIndex + i;
+            tempPos %= childNodeList.Count;
+            FullRoute.Add(childNodeList[tempPos].GetComponent<Tile>());
         }
-    }
-
-    public int RequestPosition(Transform tileTransform)
-    {
-        return childNodeList.IndexOf(tileTransform);
     }
 }

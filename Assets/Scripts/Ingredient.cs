@@ -6,36 +6,28 @@ using UnityEngine;
 
 public class Ingredient : MonoBehaviour
 {
-    public int IngredientId;
+    public int IngredientId = 0;
     private SqlController sql;
-    [Header("Routes")]
-    public Route route;
-
-    [Header("Tiles")]
-    public List<Tile> fullRoute = new List<Tile>();
-    public Tile currentTile;
-
     public Animator anim;
     public TrailRenderer trail;
     public ParticleSystem fire;
     public ParticleSystem stomp;
 
-    internal int routePosition;
-    internal int endLowerPosition;
-    internal int endHigherPosition;
-    internal int endHigherPositionWithoutSlide;
-    internal int endLowerPositionWithoutSlide;
-    internal int distanceFromScore;
-    private int startNodeIndex;
-    public string type;
+    internal int routePosition = 0;
+    internal int endLowerPosition = 0;
+    internal int endHigherPosition = 0;
+    internal int endHigherPositionWithoutSlide = 0;
+    internal int endLowerPositionWithoutSlide = 0;
+    internal int distanceFromScore = 0;
 
     [Header("Bools")]
-    private bool hasTurn; //human input
-    public bool isCooked;
-    public bool TeamYellow;
+    private int IsMovableBy; //human input
+    internal bool isCooked = false;
+    internal int Team;
 
     [Header("Selector")]
     public GameObject selector;
+    public GameObject ColorQuad;
     public GameObject NormalQuad;
     public GameObject BackNormalQuad;
     public GameObject CookedQuad;
@@ -43,24 +35,14 @@ public class Ingredient : MonoBehaviour
     private void Start()
     {
         //plane = new Plane(this.transform.up, Vector3.zero);
-        startNodeIndex = 0;
-        CreateFullRoute();
-        SetSelector(false);
         sql = new SqlController();
     }
-    void CreateFullRoute()
-    {
-        for (int i = 0; i < route.childNodeList.Count; i++)
-        {
-            int tempPos = startNodeIndex + i;
-            tempPos %= route.childNodeList.Count;
-
-            fullRoute.Add(route.childNodeList[tempPos].GetComponent<Tile>());
-        }
-    }
+   
 
     public IEnumerator Move()
     {
+        GameManager.i.AllIngredients.ForEach(x => x.SetSelector(false));
+
         if (GameManager.i.isMoving)
         {
             yield break;
@@ -83,7 +65,10 @@ public class Ingredient : MonoBehaviour
     private IEnumerator BeforeMoving()
     {
         GameManager.i.firstIngredientMoved = IngredientId;
-        currentTile.ingredients.Pop();
+        if (routePosition != 0)
+            Route.i.FullRoute[routePosition].ingredients.Pop();
+        else
+            GameManager.i.prepTiles.FirstOrDefault(x => x.ingredients.Any(y=>y.IngredientId==IngredientId)).ingredients.Pop();
         yield return new WaitForSeconds(.5f);
     }
 
@@ -104,13 +89,13 @@ public class Ingredient : MonoBehaviour
                 if (!GameManager.i.IsCPUTurn() && isCooked)
                     yield return StartCoroutine(GameManager.i.AskShouldTrash());
 
-                if (TeamYellow != GameManager.i.GetActivePlayer().TeamYellow || GameManager.i.ShouldTrash == true) {
+                if (Team != GameManager.i.activePlayer || GameManager.i.ShouldTrash == true) {
                     if (!isCooked || GameManager.i.ShouldTrash == true || GameManager.i.IsCPUTurn())
                     {
                         if (routePosition == 9)
                         {
                             didMove = true;
-                            if (!GameManager.i.IsCPUTurn() && this.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
+                            if (!GameManager.i.IsCPUTurn() && this.Team != GameManager.i.activePlayer && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                             {
                                 CpuLogic.i.PrepShitTalk(TalkType.SentBack);
                                 CpuLogic.i.ActivateShitTalk();
@@ -121,7 +106,7 @@ public class Ingredient : MonoBehaviour
                         else if (routePosition == 17)
                         {
                             didMove = true;
-                            if (!GameManager.i.IsCPUTurn() && this.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
+                            if (!GameManager.i.IsCPUTurn() && this.Team != GameManager.i.activePlayer && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                             {
                                 CpuLogic.i.PrepShitTalk(TalkType.SentBack);
                                 CpuLogic.i.ActivateShitTalk();
@@ -137,14 +122,14 @@ public class Ingredient : MonoBehaviour
            
             if (!didMove)
             {
-                if (GameManager.i.Steps == 1 && routePosition == fullRoute.Count - 2 && TeamYellow == GameManager.i.GetActivePlayer().TeamYellow && !isCooked) //go to pot only if its your team
+                if (GameManager.i.Steps == 1 && routePosition == Route.i.FullRoute.Count - 2 && Team == GameManager.i.activePlayer && !isCooked) //go to pot only if its your team
                 {
-                    if (routePosition == fullRoute.Count - 2) {
+                    if (routePosition == Route.i.FullRoute.Count - 2) {
                         fire.Play();
                     }
                     routePosition++;
                 }
-                else if (routePosition != fullRoute.Count - 2) //go forward one
+                else if (routePosition != Route.i.FullRoute.Count - 2) //go forward one
                 {
                     routePosition++;
                 }
@@ -156,7 +141,7 @@ public class Ingredient : MonoBehaviour
 
             if (GameManager.i.Steps == 1)
             {
-                if (fullRoute[routePosition].hasSpoon || fullRoute[routePosition].hasSpatula)
+                if (Route.i.FullRoute[routePosition].hasSpoon || Route.i.FullRoute[routePosition].hasSpatula)
                 {
                     trail.enabled = true;
                 }
@@ -168,7 +153,7 @@ public class Ingredient : MonoBehaviour
                 yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this, GameManager.i.Steps == 1));
                 GameManager.i.Steps--;
             }
-            else if (fullRoute[routePosition].ingredients.Count() == 0 || !fullRoute[routePosition].ingredients.Peek().isCooked)
+            else if (Route.i.FullRoute[routePosition].ingredients.Count() == 0 || !Route.i.FullRoute[routePosition].ingredients.Peek().isCooked)
             {
                 yield return StartCoroutine(MoveToNextTile());
                 GameManager.i.Steps--;
@@ -180,16 +165,16 @@ public class Ingredient : MonoBehaviour
         GameManager.i.UpdateMoveText();
     }
     private IEnumerator Slide() {
-        if (fullRoute[routePosition].hasSpoon || fullRoute[routePosition].hasSpatula)
+        if (Route.i.FullRoute[routePosition].hasSpoon || Route.i.FullRoute[routePosition].hasSpatula)
         {
-            routePosition = routePosition + (fullRoute[routePosition].hasSpoon ? 6 : -6 );
+            routePosition = routePosition + (Route.i.FullRoute[routePosition].hasSpoon ? 6 : -6 );
             yield return StartCoroutine(MoveToNextTile(null, true, 20f));
         }
     }
     private IEnumerator AfterMovement()
     {
         //Cook!
-        if (routePosition == fullRoute.Count - 1)
+        if (routePosition == Route.i.FullRoute.Count - 1)
         {
             if (!isCooked)
             {
@@ -203,19 +188,19 @@ public class Ingredient : MonoBehaviour
                 //    GameManager.i.FirstScoreHelp();
                 //}
             }
-            yield return new WaitForSeconds(.1f);
+            routePosition = 0;
             yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this));
         }
         else
         {
             yield return StartCoroutine(Slide());
             //Check for kill after slide
-            if (fullRoute[routePosition].ingredients.Count() > 0)
+            if (Route.i.FullRoute[routePosition].ingredients.Count() > 0)
             {
                 //skip the spot if cooked
-                if (fullRoute[routePosition].ingredients.Count() > 0 && fullRoute[routePosition].ingredients.Peek().isCooked)
+                if (Route.i.FullRoute[routePosition].ingredients.Count() > 0 && Route.i.FullRoute[routePosition].ingredients.Peek().isCooked)
                 {
-                    while (fullRoute[routePosition].ingredients.Count() > 0 && fullRoute[routePosition].ingredients.Peek().isCooked)
+                    while (Route.i.FullRoute[routePosition].ingredients.Count() > 0 && Route.i.FullRoute[routePosition].ingredients.Peek().isCooked)
                     {
                         routePosition++;
                         yield return StartCoroutine(MoveToNextTile());
@@ -223,23 +208,23 @@ public class Ingredient : MonoBehaviour
                     }
                 }
 
-                if (fullRoute[routePosition].ingredients.Count() > 0)
+                if (Route.i.FullRoute[routePosition].ingredients.Count() > 0)
                 {
-                    if (fullRoute[routePosition].isSafe)
+                    if (Route.i.FullRoute[routePosition].isDangerZone)
                     {
                         stomp.Play();
-                        if (!GameManager.i.IsCPUTurn() && fullRoute[routePosition].ingredients.Peek().TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
+                        if (!GameManager.i.IsCPUTurn() && Route.i.FullRoute[routePosition].ingredients.Peek().Team != GameManager.i.activePlayer && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                         {
                             CpuLogic.i.PrepShitTalk(TalkType.SentBack);
                             CpuLogic.i.ActivateShitTalk();
                         }
-                        var ingToMove = fullRoute[routePosition].ingredients.Peek();
-                        fullRoute[routePosition].ingredients.Pop();
+                        var ingToMove = Route.i.FullRoute[routePosition].ingredients.Peek();
+                        Route.i.FullRoute[routePosition].ingredients.Pop();
                         yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(ingToMove));
                     }
                     //else //moving other ingredient
                     //{
-                    //    fullRoute[routePosition].ingredient.stomp.Play();
+                    //    Route.i.FullRoute[routePosition].ingredient.stomp.Play();
                     //    if (!GameManager.i.IsCPUTurn() && this.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                     //    {
                     //        GameManager.i.PrepShitTalk(TalkType.SentBack);
@@ -252,12 +237,8 @@ public class Ingredient : MonoBehaviour
         }
         if (routePosition != 0)
         { 
-            currentTile = fullRoute[routePosition];
-            currentTile.ingredients.Push(this);
+            Route.i.FullRoute[routePosition].ingredients.Push(this);
         }
-        
-
-        yield return new WaitForSeconds(.1f);
     }
 
     public IEnumerator MoveToNextTile(Vector3? nextPos = null, bool isforEffect=false, float speed = 35f)
@@ -270,10 +251,10 @@ public class Ingredient : MonoBehaviour
             anim.Play("Moving");
 
         if(nextPos == null)
-            nextPos = fullRoute[routePosition].gameObject.transform.position;
+            nextPos = Route.i.FullRoute[routePosition].gameObject.transform.position;
         
-        if(!fullRoute[routePosition].isSafe || (fullRoute[routePosition].isSafe && GameManager.i.Steps != 1))
-            yValue += (.4f * fullRoute[routePosition].ingredients.Count());
+        if(!Route.i.FullRoute[routePosition].isDangerZone || (Route.i.FullRoute[routePosition].isDangerZone && GameManager.i.Steps != 1))
+            yValue += (.4f * Route.i.FullRoute[routePosition].ingredients.Count());
 
         var goalPos = new Vector3(nextPos.Value.x, yValue, nextPos.Value.z);
 
@@ -284,7 +265,7 @@ public class Ingredient : MonoBehaviour
 
         if (routePosition == 0 && Settings.LoggedInPlayer.WineMenu)
         {
-            GameManager.i.setWineMenuText((TeamYellow && !isCooked || !TeamYellow && isCooked), GameManager.i.prepTiles.Count(x => x.ingredients.Count() > 0));
+            GameManager.i.setWineMenuText((Team == 0 && !isCooked || Team == 1 && isCooked), GameManager.i.prepTiles.Count(x => x.ingredients.Count() > 0));
         }
 
         yield return new WaitForSeconds(0.2f);
@@ -292,45 +273,49 @@ public class Ingredient : MonoBehaviour
     public void SetSelector(bool on)
     {
         trail.enabled = false;
-        selector.SetActive(on);
-        hasTurn = on;
         if (on)
         {
+            IsMovableBy = GameManager.i.GetActivePlayer().UserId;
             anim.Play("Moving");
         }
+        else
+        {
+            IsMovableBy = 0;
+        }
+        selector.SetActive(on);
     }
 
     private void OnMouseDown()
     {
-        if (Settings.OnlineGameId != 0 && GameManager.i.GetActivePlayer().player.Username != Settings.LoggedInPlayer.Username)
+        if (Settings.OnlineGameId != 0 && GameManager.i.GetActivePlayer().UserId != Settings.LoggedInPlayer.UserId)
         {
             return;
         }
 
-        if (hasTurn && !GameManager.i.IsCPUTurn())
+        if (IsMovableBy == Settings.LoggedInPlayer.UserId && !GameManager.i.IsCPUTurn() && !GameManager.i.BlockPlayerActionPanel.activeInHierarchy)
         {
-            if (GameManager.i.firstIngredientMoved != null)
-            {
-                GameManager.i.undoButton1.gameObject.SetActive(false);
-                GameManager.i.undoButton2.gameObject.SetActive(false);
-            }
-            else if (GameManager.i.firstMoveTaken)
-            {
-                if (GameManager.i.activePlayer == 0)
-                {
-                    GameManager.i.undoButton1.gameObject.SetActive(true);
-                }
-                else
-                {
-                    GameManager.i.undoButton2.gameObject.SetActive(true);
-                }
+        //    if (GameManager.i.firstIngredientMoved != null)
+        //    {
+        //        GameManager.i.undoButton1.gameObject.SetActive(false);
+        //        GameManager.i.undoButton2.gameObject.SetActive(false);
+        //    }
+        //    else if (GameManager.i.firstMoveTaken)
+        //    {
+        //        if (GameManager.i.activePlayer == 0)
+        //        {
+        //            GameManager.i.undoButton1.gameObject.SetActive(true);
+        //        }
+        //        else
+        //        {
+        //            GameManager.i.undoButton2.gameObject.SetActive(true);
+        //        }
                 
-            }
-            else
-            {
-                GameManager.i.undoButton1.gameObject.SetActive(false);
-                GameManager.i.undoButton2.gameObject.SetActive(false);
-            }
+        //    }
+        //    else
+        //    {
+        //        GameManager.i.undoButton1.gameObject.SetActive(false);
+        //        GameManager.i.undoButton2.gameObject.SetActive(false);
+        //    }
             StartCoroutine(MoveSelectedIngredient());
         }
     }
@@ -340,7 +325,6 @@ public class Ingredient : MonoBehaviour
         if (Settings.OnlineGameId != 0)
             yield return StartCoroutine(sql.RequestRoutine($"analytic/UpdateTurn?GameId={Settings.OnlineGameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
 
-        yield return StartCoroutine(GameManager.i.DeactivateAllSelectors());
         yield return StartCoroutine(Move());
     }
 }

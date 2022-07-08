@@ -11,6 +11,8 @@ public class CpuLogic : MonoBehaviour
     private List<Ingredient> UseableTeamIngredients;
     private List<Ingredient> EnemyIngredients;
     private List<Ingredient> UseableEnemyIngredients;
+    internal Ingredient IngredientMovedWithLower;
+    internal Ingredient IngredientMovedWithHigher;
     private bool hasBeenDumb = false;
     internal static CpuLogic i;
     private void Awake()
@@ -20,22 +22,25 @@ public class CpuLogic : MonoBehaviour
     public IEnumerator FindCPUIngredientMoves()
     {
         yield return new WaitForSeconds(.5f);
-        yield return new WaitForSeconds(.5f);
+        yield return StartCoroutine(FindBestMove());
 
-        if (GameManager.i.IsCPUTurn())
+        if (GameManager.i.DoublesRolled())
+        {
+            IngredientMovedWithHigher = null;
+            IngredientMovedWithLower = null;
+        }
+
+        if (!GameManager.i.GameOver && GameManager.i.lowerMove != 0 && (IngredientMovedWithLower == null || IngredientMovedWithHigher == null))
             yield return StartCoroutine(FindBestMove());
 
-        if (!GameManager.i.GameOver && GameManager.i.IsCPUTurn() && (GameManager.i.IngredientMovedWithLower == null || GameManager.i.IngredientMovedWithHigher == null))
-            yield return StartCoroutine(FindBestMove());
-
-        GameManager.i.IngredientMovedWithLower = null;
-        GameManager.i.IngredientMovedWithHigher = null;
+        IngredientMovedWithLower = null;
+        IngredientMovedWithHigher = null;
         hasBeenDumb = false;
     }
 
     private IEnumerator SetCPUVariables()
     {
-        UseableIngredients = GameManager.i.AllIngredients.Where(x => x.IngredientId != GameManager.i.firstIngredientMoved && (x.currentTile.ingredients.Peek() == x || x.routePosition == 0)).ToList();
+        UseableIngredients = GameManager.i.AllIngredients.Where(x => (x.IngredientId != GameManager.i.firstIngredientMoved || GameManager.i.DoublesRolled() )  && (x.routePosition == 0 || Route.i.FullRoute[x.routePosition].ingredients.Peek() == x)).ToList();
         foreach (var ing in GameManager.i.AllIngredients)
         {
             //find what ingredients actual end will be accounting for cooked ingredients
@@ -44,14 +49,14 @@ public class CpuLogic : MonoBehaviour
             ing.distanceFromScore = 0;
             for (int i = ing.routePosition + 1; i <= ing.endHigherPositionWithoutSlide; i++)
             {
-                if (ing.fullRoute[i % 26].ingredients.Count() > 0 && ing.fullRoute[i % 26].ingredients.Peek().isCooked)
+                if (Route.i.FullRoute[i % 26].ingredients.Count() > 0 && Route.i.FullRoute[i % 26].ingredients.Peek().isCooked)
                 {
                     ing.endHigherPositionWithoutSlide++;
                 }
             }
             for (int i = ing.routePosition + 1; i <= ing.endLowerPositionWithoutSlide; i++)
             {
-                if (ing.fullRoute[i % 26].ingredients.Count() > 0 && ing.fullRoute[i % 26].ingredients.Peek().isCooked)
+                if (Route.i.FullRoute[i % 26].ingredients.Count() > 0 && Route.i.FullRoute[i % 26].ingredients.Peek().isCooked)
                 {
                     ing.endLowerPositionWithoutSlide++;
                 }
@@ -59,18 +64,18 @@ public class CpuLogic : MonoBehaviour
 
             for (int i = ing.routePosition + 1; i <= 26; i++)
             {
-                if (ing.fullRoute[i % 26].ingredients.Count() == 0 || !ing.fullRoute[i % 26].ingredients.Peek().isCooked)
+                if (Route.i.FullRoute[i % 26].ingredients.Count() == 0 || !Route.i.FullRoute[i % 26].ingredients.Peek().isCooked)
                 {
                     ing.distanceFromScore++;
                 }
             }
 
             //account for slides
-            if (ing.fullRoute[ing.endLowerPositionWithoutSlide % 26].hasSpoon)
+            if (Route.i.FullRoute[ing.endLowerPositionWithoutSlide % 26].hasSpoon)
             {
                 ing.endLowerPosition = ing.endLowerPositionWithoutSlide + 6;
             }
-            else if (ing.fullRoute[ing.endLowerPositionWithoutSlide % 26].hasSpatula)
+            else if (Route.i.FullRoute[ing.endLowerPositionWithoutSlide % 26].hasSpatula)
             {
                 ing.endLowerPosition = ing.endLowerPositionWithoutSlide - 6;
             }
@@ -79,11 +84,11 @@ public class CpuLogic : MonoBehaviour
                 ing.endLowerPosition = ing.endLowerPositionWithoutSlide;
             }
 
-            if (ing.fullRoute[ing.endHigherPositionWithoutSlide % 26].hasSpoon)
+            if (Route.i.FullRoute[ing.endHigherPositionWithoutSlide % 26].hasSpoon)
             {
                 ing.endHigherPosition = ing.endHigherPositionWithoutSlide + 6;
             }
-            if (ing.fullRoute[ing.endHigherPositionWithoutSlide % 26].hasSpatula)
+            if (Route.i.FullRoute[ing.endHigherPositionWithoutSlide % 26].hasSpatula)
             {
                 ing.endHigherPosition = ing.endHigherPositionWithoutSlide - 6;
             }
@@ -93,12 +98,12 @@ public class CpuLogic : MonoBehaviour
             }
         }
         //create subsets based on new info
-        TeamIngredients = GameManager.i.AllIngredients.Where(x => x.TeamYellow == GameManager.i.GetActivePlayer().TeamYellow).ToList();
-        EnemyIngredients = GameManager.i.AllIngredients.Where(x => x.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow).ToList();
+        TeamIngredients = GameManager.i.AllIngredients.Where(x => x.Team == GameManager.i.activePlayer).ToList();
+        EnemyIngredients = GameManager.i.AllIngredients.Where(x => x.Team != GameManager.i.activePlayer).ToList();
 
         UseableIngredients = UseableIngredients.OrderBy(x => x.isCooked).ThenBy(x => x.distanceFromScore).ToList();
-        UseableTeamIngredients = UseableIngredients.Where(x => x.TeamYellow == GameManager.i.GetActivePlayer().TeamYellow).ToList();
-        UseableEnemyIngredients = UseableIngredients.Where(x => x.TeamYellow != GameManager.i.GetActivePlayer().TeamYellow).ToList();
+        UseableTeamIngredients = UseableIngredients.Where(x => x.Team == GameManager.i.activePlayer).ToList();
+        UseableEnemyIngredients = UseableIngredients.Where(x => x.Team != GameManager.i.activePlayer).ToList();
 
         //If reading wait
         while (GameManager.i.IsReading)
@@ -112,6 +117,7 @@ public class CpuLogic : MonoBehaviour
         yield return StartCoroutine(SetCPUVariables());
         //TODO add HelpStomp
         var ingredientToMove = CookIngredient()
+            ?? CookIngredientWithDoubleMove()
             ?? HelpScore()
             ?? MoveOffStackToScore()
             ?? BeDumb()
@@ -141,18 +147,12 @@ public class CpuLogic : MonoBehaviour
     {
         if (ingredientToMove == null)
         {
-            GameManager.i.firstMoveTaken = true;
-            yield return StartCoroutine(GameManager.i.DoneMoving());
+            GameManager.i.SwitchPlayer();
         }
         else
         {
-            yield return StartCoroutine(GameManager.i.RollSelected(ingredientToMove == GameManager.i.IngredientMovedWithHigher, false));
-            if (!GameManager.i.firstMoveTaken)
-            {
-                GameManager.i.IngredientMovedWithHigher = null;
-            }
+            yield return StartCoroutine(GameManager.i.RollSelected(ingredientToMove == IngredientMovedWithHigher, false));
             yield return new WaitForSeconds(.5f);
-            yield return StartCoroutine(GameManager.i.DeactivateAllSelectors());
             yield return StartCoroutine(ingredientToMove.Move());
         }
     }
@@ -172,7 +172,7 @@ public class CpuLogic : MonoBehaviour
         if (Settings.OnlineGameId != 0 || !string.IsNullOrEmpty(GameManager.i.talkShitText.text))
             return;
 
-        var username = GameManager.i.GetActivePlayer().player.Username;
+        var username = GameManager.i.GetActivePlayer().Username;
         switch (talk)
         {
             case TalkType.MoveRandomly:
@@ -328,7 +328,7 @@ public class CpuLogic : MonoBehaviour
                 }
                 break;
             case TalkType.SentBack:
-                username = GameManager.i.playerList.FirstOrDefault(x => x.player.playerType == PlayerTypes.CPU).player.Username;
+                username = GameManager.i.playerList.FirstOrDefault(x => x.playerType == PlayerTypes.CPU).Username;
 
                 var ZachOptions = new List<string>() { "", "Man it sucks to suck...", "Dag Nabbit!", "What do you think your doing!?" };
                 var JoeOptions = new List<string>() { "", "Wait, you can't do that to me!!", "Watch your back!", "I'll remember that!" };
@@ -360,24 +360,24 @@ public class CpuLogic : MonoBehaviour
     {
         if (UseableTeamIngredients.Count > 0)
         {
-            if (GameManager.i.IngredientMovedWithHigher == null)
+            if (IngredientMovedWithHigher == null)
             {
 
-                GameManager.i.IngredientMovedWithHigher = UseableTeamIngredients[Random.Range(0, UseableTeamIngredients.Count())];
-                if (GameManager.i.IngredientMovedWithHigher != null)
+                IngredientMovedWithHigher = UseableTeamIngredients[Random.Range(0, UseableTeamIngredients.Count())];
+                if (IngredientMovedWithHigher != null)
                 {
                     PrepShitTalk(TalkType.MoveRandomly);
-                    return GameManager.i.IngredientMovedWithHigher;
+                    return IngredientMovedWithHigher;
                 }
             }
 
-            if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+            if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
             {
-                GameManager.i.IngredientMovedWithLower = UseableTeamIngredients[Random.Range(0, UseableTeamIngredients.Count())];
-                if (GameManager.i.IngredientMovedWithLower != null)
+                IngredientMovedWithLower = UseableTeamIngredients[Random.Range(0, UseableTeamIngredients.Count())];
+                if (IngredientMovedWithLower != null)
                 {
                     PrepShitTalk(TalkType.MoveRandomly);
-                    return GameManager.i.IngredientMovedWithLower;
+                    return IngredientMovedWithLower;
                 }
             }
         }
@@ -385,27 +385,27 @@ public class CpuLogic : MonoBehaviour
     }
     private Ingredient MoveNotPastPrep()
     {
-        if (GameManager.i.IngredientMovedWithHigher == null)
+        if (IngredientMovedWithHigher == null)
         {
-            GameManager.i.IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 26
-            && x.fullRoute[x.routePosition].ingredients.Count == 1
+            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 26
+            && Route.i.FullRoute[x.routePosition].ingredients.Count == 1
             && CanMoveSafely(x, x.endHigherPosition));
-            if (GameManager.i.IngredientMovedWithHigher != null)
+            if (IngredientMovedWithHigher != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Not Past Prep"; }
-                return GameManager.i.IngredientMovedWithHigher;
+                return IngredientMovedWithHigher;
             }
         }
 
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            GameManager.i.IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 26
-            && x.fullRoute[x.routePosition].ingredients.Count == 1
+            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 26
+            && Route.i.FullRoute[x.routePosition].ingredients.Count == 1
             && CanMoveSafely(x, x.endLowerPosition));
-            if (GameManager.i.IngredientMovedWithLower != null)
+            if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Not Past Prep"; }
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
         return null;
@@ -413,30 +413,30 @@ public class CpuLogic : MonoBehaviour
 
     private Ingredient MoveIntoScoring()
     {
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            GameManager.i.IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 23
+            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 23
             && x.endLowerPosition > 17
             && !x.isCooked
             && x.distanceFromScore > 8
             && CanMoveSafely(x, x.endLowerPosition));
-            if (GameManager.i.IngredientMovedWithLower != null)
+            if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Into Scoring"; }
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
-        if (GameManager.i.IngredientMovedWithHigher == null)
+        if (IngredientMovedWithHigher == null)
         {
-            GameManager.i.IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 23
+            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 23
             && x.endHigherPosition > 17
             && !x.isCooked
             && x.distanceFromScore > 8
             && CanMoveSafely(x, x.endHigherPosition));
-            if (GameManager.i.IngredientMovedWithHigher != null)
+            if (IngredientMovedWithHigher != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Into Scoring"; }
-                return GameManager.i.IngredientMovedWithHigher;
+                return IngredientMovedWithHigher;
             }
         }
         return null;
@@ -444,36 +444,36 @@ public class CpuLogic : MonoBehaviour
 
     //private Ingredient MoveCookedIngredient()
     //{
-    //    if (GameManager.i.IngredientMovedWithHigher == null)
+    //    if (IngredientMovedWithHigher == null)
     //    {
-    //        GameManager.i.IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x=>x.distanceFromScore).FirstOrDefault(x => x.isCooked
+    //        IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x=>x.distanceFromScore).FirstOrDefault(x => x.isCooked
     //        && x.endHigherPosition < 26
     //        && CanMoveSafely(x, x.endHigherPosition));
-    //        if (GameManager.i.IngredientMovedWithHigher != null)
+    //        if (IngredientMovedWithHigher != null)
     //        {
     //            if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Cooked Ingredient"; }
-    //            return GameManager.i.IngredientMovedWithHigher;
+    //            return IngredientMovedWithHigher;
     //        }
     //    }
-    //    if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+    //    if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
     //    {
-    //        GameManager.i.IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
+    //        IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
     //        && x.endLowerPosition < 26
     //        && CanMoveSafely(x, x.endLowerPosition));
-    //        if (GameManager.i.IngredientMovedWithLower != null)
+    //        if (IngredientMovedWithLower != null)
     //        {
     //            if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Cooked Ingredient"; }
-    //            return GameManager.i.IngredientMovedWithLower;
+    //            return IngredientMovedWithLower;
     //        }
     //    }
     //    return null;
     //}  
     private Ingredient BoostWithCookedIngredient()
     {
-        if (!UseableIngredients.Any(x => x.isCooked) || GameManager.i.IngredientMovedWithHigher != null || GameManager.i.IngredientMovedWithLower != null)
+        if (!UseableIngredients.Any(x => x.isCooked) || IngredientMovedWithHigher != null || IngredientMovedWithLower != null)
             return null;
 
-        if (GameManager.i.IngredientMovedWithHigher == null)
+        if (IngredientMovedWithHigher == null)
         {
             var CookedIngredientsThatCanHelp = UseableTeamIngredients.Where(x => x.isCooked
                 && (UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y, y.endLowerPosition + 1)).Any(y => y.routePosition >= x.routePosition && y.routePosition < x.endHigherPosition && y.endLowerPosition >= x.endHigherPosition)
@@ -481,27 +481,27 @@ public class CpuLogic : MonoBehaviour
 
             if (CookedIngredientsThatCanHelp.Count() > 0)
             {
-                GameManager.i.IngredientMovedWithHigher = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x, x.endHigherPosition));
-                if (GameManager.i.IngredientMovedWithHigher != null)
+                IngredientMovedWithHigher = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x, x.endHigherPosition));
+                if (IngredientMovedWithHigher != null)
                 {
                     if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Boosted with Cooked"; }
-                    return GameManager.i.IngredientMovedWithHigher;
+                    return IngredientMovedWithHigher;
                 }
             }
         }
 
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
             var CookedIngredientsThatCanHelp = UseableIngredients.Where(x => x.isCooked
                 && (UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y, y.endHigherPosition + 1)).Any(y => y.routePosition >= x.routePosition && y.routePosition < x.endLowerPosition && y.endHigherPosition >= x.endLowerPosition)
                     || UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y, y.endHigherPosition - 1)).Any(y => y.routePosition < x.routePosition && y.endHigherPosition > x.routePosition && y.endHigherPosition < x.endLowerPosition))).ToList();
             if (CookedIngredientsThatCanHelp.Count() > 0)
             {
-                GameManager.i.IngredientMovedWithLower = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x, x.endLowerPosition));
-                if (GameManager.i.IngredientMovedWithLower != null)
+                IngredientMovedWithLower = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x, x.endLowerPosition));
+                if (IngredientMovedWithLower != null)
                 {
                     if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Boosted with Cooked"; }
-                    return GameManager.i.IngredientMovedWithLower;
+                    return IngredientMovedWithLower;
                 }
             }
         }
@@ -510,7 +510,7 @@ public class CpuLogic : MonoBehaviour
 
     private bool CanMoveSafely(Ingredient x, int endPosition)
     {
-        return !TeamIngredients.Any(y => y.routePosition == endPosition % 26) && (!x.fullRoute[endPosition % 26].isSafe || x.fullRoute[endPosition % 26].ingredients.Count() == 0);
+        return !TeamIngredients.Any(y => y.routePosition == endPosition % 26) && (!Route.i.FullRoute[endPosition % 26].isDangerZone || Route.i.FullRoute[endPosition % 26].ingredients.Count() == 0);
     }
 
     private Ingredient MoveCookedPastPrep()
@@ -518,26 +518,26 @@ public class CpuLogic : MonoBehaviour
         if (!UseableIngredients.Any(x => x.isCooked))
             return null;
 
-        if (GameManager.i.IngredientMovedWithHigher == null)
+        if (IngredientMovedWithHigher == null)
         {
-            GameManager.i.IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
-            && x.fullRoute[x.routePosition].ingredients.Count == 1
+            IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
+            && Route.i.FullRoute[x.routePosition].ingredients.Count == 1
             && CanMoveSafely(x, x.endHigherPosition));
-            if (GameManager.i.IngredientMovedWithHigher != null)
+            if (IngredientMovedWithHigher != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Cooked Past Prep"; }
-                return GameManager.i.IngredientMovedWithHigher;
+                return IngredientMovedWithHigher;
             }
         }
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            GameManager.i.IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
-                && x.fullRoute[x.routePosition].ingredients.Count == 1
+            IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
+                && Route.i.FullRoute[x.routePosition].ingredients.Count == 1
             && CanMoveSafely(x, x.endLowerPosition));
-            if (GameManager.i.IngredientMovedWithLower != null)
+            if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Cooked Past Prep"; }
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
         return null;
@@ -545,31 +545,31 @@ public class CpuLogic : MonoBehaviour
 
     private Ingredient MoveFrontMostIngredient(bool withCooked, bool moveStacked)
     {
-        if (GameManager.i.IngredientMovedWithHigher == null)
+        if (IngredientMovedWithHigher == null)
         {
-            GameManager.i.IngredientMovedWithHigher = UseableTeamIngredients.OrderByDescending(x => x.endHigherPosition).FirstOrDefault(x => x.endHigherPosition < 23 //Dont move past prep
+            IngredientMovedWithHigher = UseableTeamIngredients.OrderByDescending(x => x.endHigherPosition).FirstOrDefault(x => x.endHigherPosition < 23 //Dont move past prep
             && (x.distanceFromScore > 8 || withCooked) //Dont move from scoring position unless cooked
             && x.isCooked == withCooked
-            && (moveStacked || x.fullRoute[x.routePosition].ingredients.Count == 1)
+            && (moveStacked || Route.i.FullRoute[x.routePosition].ingredients.Count == 1)
             && CanMoveSafely(x, x.endHigherPosition)); //Dont stomp on safe area
-            if (GameManager.i.IngredientMovedWithHigher != null)
+            if (IngredientMovedWithHigher != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Front Most " + (withCooked ? "cooked " : "uncooked ") + (moveStacked ? "stacked " : "unstacked ") + "Ingredient"; }
-                return GameManager.i.IngredientMovedWithHigher;
+                return IngredientMovedWithHigher;
             }
         }
 
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            GameManager.i.IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.endLowerPosition).FirstOrDefault(x => x.endLowerPosition < 23 //Dont move past prep
+            IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.endLowerPosition).FirstOrDefault(x => x.endLowerPosition < 23 //Dont move past prep
             && (x.distanceFromScore > 8 || withCooked) //Dont move from scoring position unless cooked
             && x.isCooked == withCooked
-            && (moveStacked || x.fullRoute[x.routePosition].ingredients.Count == 1)
+            && (moveStacked || Route.i.FullRoute[x.routePosition].ingredients.Count == 1)
             && CanMoveSafely(x, x.endLowerPosition)); //Dont stomp on safe area
-            if (GameManager.i.IngredientMovedWithLower != null)
+            if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Front Most Ingredient"; }
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
         return null;
@@ -577,45 +577,45 @@ public class CpuLogic : MonoBehaviour
     private Ingredient MoveEnemyIngredient()
     {
 
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove && UseableTeamIngredients.Count(x => x.routePosition == 0) == 0)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0 && UseableTeamIngredients.Count(x => x.routePosition == 0) == 0)
         {
-            GameManager.i.IngredientMovedWithLower = UseableEnemyIngredients.OrderBy(x => x.endLowerPosition).FirstOrDefault(x =>
-            !TeamIngredients.Any(y => y.routePosition == x.endLowerPosition % 26 && !x.fullRoute[x.endLowerPosition % 26].isSafe));
-            if (GameManager.i.IngredientMovedWithLower != null)
+            IngredientMovedWithLower = UseableEnemyIngredients.OrderBy(x => x.endLowerPosition).FirstOrDefault(x =>
+            !TeamIngredients.Any(y => y.routePosition == x.endLowerPosition % 26 && !Route.i.FullRoute[x.endLowerPosition % 26].isDangerZone));
+            if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Enemy"; }
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
         return null;
     }
     private Ingredient MoveOffStack(bool notInScoring = true)
     {
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            GameManager.i.IngredientMovedWithLower = UseableEnemyIngredients.OrderByDescending(x => x.distanceFromScore).FirstOrDefault(x => (notInScoring || x.distanceFromScore < 9)
-            && (x.currentTile.ingredients.Count > 1 && x.currentTile.ingredients.Any(x => x.TeamYellow == GameManager.i.GetActivePlayer().TeamYellow))
+            IngredientMovedWithLower = UseableEnemyIngredients.OrderByDescending(x => x.distanceFromScore).FirstOrDefault(x => (notInScoring || x.distanceFromScore < 9)
+            && (x.routePosition != 0 && Route.i.FullRoute[x.routePosition].ingredients.Count > 1 && Route.i.FullRoute[x.routePosition].ingredients.Any(x => x.Team == GameManager.i.activePlayer))
             && CanMoveSafely(x, x.endLowerPosition)); //Dont stomp on safe area
-            if (GameManager.i.IngredientMovedWithLower != null)
+            if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Off stack" + (notInScoring ? " from non-scoring" : " from scoring"); }
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
         return null;
     }
     private Ingredient MoveOffStackToScore()
     {
-        if (GameManager.i.IngredientMovedWithHigher == null && GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithHigher == null && IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            var ingredientThatCouldScore = TeamIngredients.FirstOrDefault(x => x.endHigherPosition == 26 && !x.isCooked && x.fullRoute[x.routePosition].ingredients.Peek() != x);
+            var ingredientThatCouldScore = TeamIngredients.FirstOrDefault(x => x.endHigherPosition == 26 && !x.isCooked && Route.i.FullRoute[x.routePosition].ingredients.Peek() != x);
             if (ingredientThatCouldScore != null)
             {
-                GameManager.i.IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => x.routePosition == ingredientThatCouldScore.routePosition && x.endLowerPosition != x.routePosition); //Dont stomp on safe area
-                if (GameManager.i.IngredientMovedWithLower != null)
+                IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => x.routePosition == ingredientThatCouldScore.routePosition && x.endLowerPosition != x.routePosition); //Dont stomp on safe area
+                if (IngredientMovedWithLower != null)
                 {
                     if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move off stack to score"; }
-                    return GameManager.i.IngredientMovedWithLower;
+                    return IngredientMovedWithLower;
                 }
             }
         }
@@ -623,16 +623,16 @@ public class CpuLogic : MonoBehaviour
     }
     private Ingredient MoveFrontMostEnemy()
     {
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove && EnemyIngredients.Count(x => !x.isCooked) == 1)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0 && EnemyIngredients.Count(x => !x.isCooked) == 1)
         {
-            GameManager.i.IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.distanceFromScore < 9 //move from scoring position
+            IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.distanceFromScore < 9 //move from scoring position
             && !x.isCooked
-            && !x.fullRoute[x.endLowerPositionWithoutSlide % 26].hasSpatula
+            && !Route.i.FullRoute[x.endLowerPositionWithoutSlide % 26].hasSpatula
             && !TeamIngredients.Any(y => y.routePosition == x.endLowerPosition % 26)); //Dont stomp yourself
-            if (GameManager.i.IngredientMovedWithLower != null)
+            if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Front Most Enemy"; }
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
         return null;
@@ -640,47 +640,47 @@ public class CpuLogic : MonoBehaviour
 
     private Ingredient Slide(bool WithCooked)
     {
-        if (GameManager.i.IngredientMovedWithHigher == null)
+        if (IngredientMovedWithHigher == null)
         {
-            GameManager.i.IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 26 //Dont move past preparation
+            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 26 //Dont move past preparation
             && x.isCooked == WithCooked
             && (x.distanceFromScore > 8 || x.distanceFromScore < 3)  //Dont move from scoring position
             && CanMoveSafely(x, x.endHigherPosition)
-            && ((x.fullRoute[x.endHigherPositionWithoutSlide % 26].hasSpatula && !x.isCooked)
-            || x.fullRoute[x.endHigherPositionWithoutSlide % 26].hasSpoon));
-            if (GameManager.i.IngredientMovedWithHigher != null)
+            && ((Route.i.FullRoute[x.endHigherPositionWithoutSlide % 26].hasSpatula && !x.isCooked)
+            || Route.i.FullRoute[x.endHigherPositionWithoutSlide % 26].hasSpoon));
+            if (IngredientMovedWithHigher != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Slide"; }
-                return GameManager.i.IngredientMovedWithHigher;
+                return IngredientMovedWithHigher;
             }
         }
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            GameManager.i.IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
+            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
             && x.isCooked == WithCooked
             && (x.distanceFromScore > 8 || x.distanceFromScore < 3)  //Dont move from scoring position
             && CanMoveSafely(x, x.endHigherPosition)
-            && ((x.fullRoute[x.endLowerPositionWithoutSlide % 26].hasSpatula && !x.isCooked)
-            || x.fullRoute[x.endLowerPositionWithoutSlide % 26].hasSpoon));
-            if (GameManager.i.IngredientMovedWithLower != null)
+            && ((Route.i.FullRoute[x.endLowerPositionWithoutSlide % 26].hasSpatula && !x.isCooked)
+            || Route.i.FullRoute[x.endLowerPositionWithoutSlide % 26].hasSpoon));
+            if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Slide"; }
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
         return null;
     }
     private Ingredient GoToTrash()
     {
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            GameManager.i.IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.routePosition != 0
+            IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.routePosition != 0
             && !x.isCooked
             && ((GameManager.i.lowerMove < 6 && (x.endLowerPositionWithoutSlide % 26) == 10) || (x.endLowerPositionWithoutSlide % 26) == 18));
-            if (GameManager.i.IngredientMovedWithLower != null)
+            if (IngredientMovedWithLower != null)
             {
                 PrepShitTalk(TalkType.Trash);
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
         return null;
@@ -689,33 +689,33 @@ public class CpuLogic : MonoBehaviour
     private Ingredient StompEnemy(bool useEither = true)
     {
         var teamToMove = useEither ? UseableTeamIngredients : UseableEnemyIngredients;
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            GameManager.i.IngredientMovedWithLower = teamToMove.FirstOrDefault(x => (x.endLowerPosition < 26 || x.isCooked) //Dont move past preparation unless cooked
-                && (x.routePosition != 0 || x.TeamYellow == GameManager.i.GetActivePlayer().TeamYellow) // if not your piece then dont move from prep
+            IngredientMovedWithLower = teamToMove.FirstOrDefault(x => (x.endLowerPosition < 26 || x.isCooked) //Dont move past preparation unless cooked
+                && (x.routePosition != 0 || x.Team == GameManager.i.activePlayer) // if not your piece then dont move from prep
                 && x.endLowerPosition != 0
                 && x.endLowerPosition != x.routePosition
                 && EnemyIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition) //Stomp Enemy
-                && x.fullRoute[x.endLowerPosition % 26].isSafe); //stomp safe area if someone is there
-            if (GameManager.i.IngredientMovedWithLower != null)
+                && Route.i.FullRoute[x.endLowerPosition % 26].isDangerZone); //stomp safe area if someone is there
+            if (IngredientMovedWithLower != null)
             {
                 PrepShitTalk(useEither ? TalkType.Stomped : TalkType.StompedBySelf);
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
 
-        if (useEither && GameManager.i.IngredientMovedWithHigher == null)
+        if (useEither && IngredientMovedWithHigher == null)
         {
-            GameManager.i.IngredientMovedWithHigher = teamToMove.FirstOrDefault(x => (x.endHigherPosition < 26 || x.isCooked) //Dont move past preparation
-            && (x.routePosition != 0 || x.TeamYellow == GameManager.i.GetActivePlayer().TeamYellow) // if not your piece then dont move from prep
+            IngredientMovedWithHigher = teamToMove.FirstOrDefault(x => (x.endHigherPosition < 26 || x.isCooked) //Dont move past preparation
+            && (x.routePosition != 0 || x.Team == GameManager.i.activePlayer) // if not your piece then dont move from prep
             && x.endHigherPosition != 0
             && x.endHigherPosition != x.routePosition
             && EnemyIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition) //Stomp Enemy
-            && x.fullRoute[x.endHigherPosition % 26].isSafe); //Dont stomp safe area if someone is there
-            if (GameManager.i.IngredientMovedWithHigher != null)
+            && Route.i.FullRoute[x.endHigherPosition % 26].isDangerZone); //Dont stomp safe area if someone is there
+            if (IngredientMovedWithHigher != null)
             {
                 PrepShitTalk(useEither ? TalkType.Stomped : TalkType.StompedBySelf);
-                return GameManager.i.IngredientMovedWithHigher;
+                return IngredientMovedWithHigher;
             }
         }
 
@@ -724,35 +724,35 @@ public class CpuLogic : MonoBehaviour
     private Ingredient StackEnemy(bool useEither = true)
     {
         var teamToMove = useEither ? UseableTeamIngredients : UseableEnemyIngredients;
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            GameManager.i.IngredientMovedWithLower = teamToMove.FirstOrDefault(x => (x.endLowerPosition < 26 || x.isCooked) //Dont move past preparation
-                && (x.routePosition != 0 || x.TeamYellow == GameManager.i.GetActivePlayer().TeamYellow) // if not your piece then dont move from prep
+            IngredientMovedWithLower = teamToMove.FirstOrDefault(x => (x.endLowerPosition < 26 || x.isCooked) //Dont move past preparation
+                && (x.routePosition != 0 || x.Team == GameManager.i.activePlayer) // if not your piece then dont move from prep
                 && x.endLowerPosition != 0
                 && x.endLowerPosition != x.routePosition
                 && EnemyIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition) //Stomp Enemy
-                && x.fullRoute[x.endLowerPosition % 26].ingredients.Peek().TeamYellow != GameManager.i.GetActivePlayer().TeamYellow // if enemy is on top
-                && !x.fullRoute[x.endLowerPosition % 26].isSafe); //stomp safe area if someone is there
-            if (GameManager.i.IngredientMovedWithLower != null)
+                && Route.i.FullRoute[x.endLowerPosition % 26].ingredients.Peek().Team != GameManager.i.activePlayer // if enemy is on top
+                && !Route.i.FullRoute[x.endLowerPosition % 26].isDangerZone); //stomp safe area if someone is there
+            if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Stack"; }
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
 
-        if (useEither && GameManager.i.IngredientMovedWithHigher == null)
+        if (useEither && IngredientMovedWithHigher == null)
         {
-            GameManager.i.IngredientMovedWithHigher = teamToMove.FirstOrDefault(x => (x.endHigherPosition < 26 || x.isCooked) //Dont move past preparation
-            && (x.routePosition != 0 || x.TeamYellow == GameManager.i.GetActivePlayer().TeamYellow) // if not your piece then dont move from prep
+            IngredientMovedWithHigher = teamToMove.FirstOrDefault(x => (x.endHigherPosition < 26 || x.isCooked) //Dont move past preparation
+            && (x.routePosition != 0 || x.Team == GameManager.i.activePlayer) // if not your piece then dont move from prep
             && x.endHigherPosition != 0
             && x.endHigherPosition != x.routePosition
             && EnemyIngredients.Any(y => !y.isCooked && y.routePosition == x.endHigherPosition) //Stomp Enemy
-            && x.fullRoute[x.endHigherPosition % 26].ingredients.Peek().TeamYellow != GameManager.i.GetActivePlayer().TeamYellow // if enemy is on top
-            && !x.fullRoute[x.endHigherPosition % 26].isSafe); //Dont stomp safe area if someone is there
-            if (GameManager.i.IngredientMovedWithHigher != null)
+            && Route.i.FullRoute[x.endHigherPosition % 26].ingredients.Peek().Team != GameManager.i.activePlayer // if enemy is on top
+            && !Route.i.FullRoute[x.endHigherPosition % 26].isDangerZone); //Dont stomp safe area if someone is there
+            if (IngredientMovedWithHigher != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Stack"; }
-                return GameManager.i.IngredientMovedWithHigher;
+                return IngredientMovedWithHigher;
             }
         }
 
@@ -760,38 +760,52 @@ public class CpuLogic : MonoBehaviour
     }
     //private Ingredient StompSafeZone()   
     //{
-    //    if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+    //    if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
     //    {
-    //        GameManager.i.IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
+    //        IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
     //        && x.routePosition != 0 //dont move them from prep
     //        && GameManager.i.AllIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26) //anyone there?
-    //        && x.fullRoute[x.endLowerPosition % 26].isSafe);
-    //        if (GameManager.i.IngredientMovedWithLower != null)
+    //        && Route.i.FullRoute[x.endLowerPosition % 26].isSafe);
+    //        if (IngredientMovedWithLower != null)
     //        {
     //            PrepShitTalk(TalkType.SafeZoned);
-    //            return GameManager.i.IngredientMovedWithLower;
+    //            return IngredientMovedWithLower;
     //        }
     //    }
     //    return null;
     //}
     private Ingredient CookIngredient()
     {
-        if (GameManager.i.IngredientMovedWithHigher == null)
+        if (IngredientMovedWithHigher == null)
         {
-            GameManager.i.IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition == 26 && !x.isCooked);
-            if (GameManager.i.IngredientMovedWithHigher != null)
+            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition == 26 && !x.isCooked);
+            if (IngredientMovedWithHigher != null)
             {
                 PrepShitTalk(TalkType.Cook);
-                return GameManager.i.IngredientMovedWithHigher;
+                return IngredientMovedWithHigher;
             }
         }
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            GameManager.i.IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition == 26 && !x.isCooked); //Move into pot if not cooked
-            if (GameManager.i.IngredientMovedWithLower != null)
+            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition == 26 && !x.isCooked); //Move into pot if not cooked
+            if (IngredientMovedWithLower != null)
             {
                 PrepShitTalk(TalkType.Cook);
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
+            }
+        }
+        return null;
+    }
+    
+    private Ingredient CookIngredientWithDoubleMove()
+    {
+        if (IngredientMovedWithHigher == null && IngredientMovedWithLower == null && GameManager.i.firstMoveTaken == false && GameManager.i.DoublesRolled())
+        {
+            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.distanceFromScore == (GameManager.i.higherMove + GameManager.i.lowerMove) && !x.isCooked);
+            if (IngredientMovedWithHigher != null)
+            {
+                PrepShitTalk(TalkType.HelpCook);
+                return IngredientMovedWithHigher;
             }
         }
         return null;
@@ -802,21 +816,21 @@ public class CpuLogic : MonoBehaviour
             return null;
 
         Ingredient ScoreableIng = null;
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove && GameManager.i.IngredientMovedWithHigher == null)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0 && IngredientMovedWithHigher == null)
         {
             ScoreableIng = UseableTeamIngredients.FirstOrDefault(x => !x.isCooked && x.endLowerPosition == 25);
             if (ScoreableIng != null)
             {
-                GameManager.i.IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x != ScoreableIng
+                IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x != ScoreableIng
                 && x.isCooked
                 && x.routePosition < ScoreableIng.routePosition
                 && x.endHigherPosition > ScoreableIng.routePosition
                 && x.endHigherPosition < 26
                 && CanMoveSafely(x, x.endHigherPosition));
-                if (GameManager.i.IngredientMovedWithHigher != null)
+                if (IngredientMovedWithHigher != null)
                 {
                     PrepShitTalk(TalkType.HelpCook);
-                    return GameManager.i.IngredientMovedWithHigher;
+                    return IngredientMovedWithHigher;
                 }
             }
 
@@ -824,46 +838,46 @@ public class CpuLogic : MonoBehaviour
 
             if (ScoreableIng != null)
             {
-                GameManager.i.IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => x != ScoreableIng
+                IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => x != ScoreableIng
                 && x.isCooked
                 && x.routePosition < ScoreableIng.routePosition
                 && x.endLowerPosition > ScoreableIng.routePosition
                 && x.endLowerPosition < 26
                 && CanMoveSafely(x, x.endLowerPosition));
-                if (GameManager.i.IngredientMovedWithLower != null)
+                if (IngredientMovedWithLower != null)
                 {
                     PrepShitTalk(TalkType.HelpCook);
-                    return GameManager.i.IngredientMovedWithLower;
+                    return IngredientMovedWithLower;
                 }
             }
 
             ScoreableIng = UseableTeamIngredients.FirstOrDefault(x => !x.isCooked && x.endLowerPosition == 27);
             if (ScoreableIng != null)
             {
-                GameManager.i.IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x != ScoreableIng
+                IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x != ScoreableIng
                 && x.isCooked
                 && x.routePosition > ScoreableIng.routePosition
                 && x.endHigherPosition % 26 < ScoreableIng.routePosition
                 && CanMoveSafely(x, x.endHigherPosition));
-                if (GameManager.i.IngredientMovedWithHigher != null)
+                if (IngredientMovedWithHigher != null)
                 {
                     PrepShitTalk(TalkType.HelpCook);
-                    return GameManager.i.IngredientMovedWithHigher;
+                    return IngredientMovedWithHigher;
                 }
             }
 
             ScoreableIng = UseableTeamIngredients.FirstOrDefault(x => !x.isCooked && x.endHigherPosition == 27);
             if (ScoreableIng != null)
             {
-                GameManager.i.IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => x != ScoreableIng
+                IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => x != ScoreableIng
                 && x.isCooked
                 && x.routePosition > ScoreableIng.routePosition
                 && x.endLowerPosition % 26 < ScoreableIng.routePosition
                 && CanMoveSafely(x, x.endLowerPosition));
-                if (GameManager.i.IngredientMovedWithLower != null)
+                if (IngredientMovedWithLower != null)
                 {
                     PrepShitTalk(TalkType.HelpCook);
-                    return GameManager.i.IngredientMovedWithLower;
+                    return IngredientMovedWithLower;
                 }
             }
         }
@@ -872,14 +886,14 @@ public class CpuLogic : MonoBehaviour
 
     private Ingredient MovePastPrep()
     {
-        if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+        if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            GameManager.i.IngredientMovedWithLower = UseableEnemyIngredients.OrderByDescending(x => x.distanceFromScore).FirstOrDefault(x => x.endLowerPosition >= 26
+            IngredientMovedWithLower = UseableEnemyIngredients.OrderByDescending(x => x.distanceFromScore).FirstOrDefault(x => x.endLowerPosition >= 26
             && !x.isCooked); //Move enemy past pot if uncooked
-            if (GameManager.i.IngredientMovedWithLower != null)
+            if (IngredientMovedWithLower != null)
             {
                 PrepShitTalk(TalkType.MovePastPrep);
-                return GameManager.i.IngredientMovedWithLower;
+                return IngredientMovedWithLower;
             }
         }
         return null;
@@ -888,27 +902,27 @@ public class CpuLogic : MonoBehaviour
     {
         if (!Settings.IsDebug && !Settings.HardMode && (Settings.LoggedInPlayer.Wins == 0 || (!hasBeenDumb && (Random.Range(0, Mathf.Min(Settings.LoggedInPlayer.Wins, 50)) == 0))))
         {
-            if (GameManager.i.IngredientMovedWithHigher == null)
+            if (IngredientMovedWithHigher == null)
             {
                 var ingsToMove = UseableTeamIngredients.Where(x => x.distanceFromScore > 8).ToList();
                 if (ingsToMove.Count() > 0)
                 {
                     var toMove = ingsToMove[Random.Range(0, ingsToMove.Count())];
                     hasBeenDumb = true;
-                    GameManager.i.IngredientMovedWithHigher = toMove;
-                    return GameManager.i.IngredientMovedWithHigher;
+                    IngredientMovedWithHigher = toMove;
+                    return IngredientMovedWithHigher;
                 }
             }
 
-            if (GameManager.i.IngredientMovedWithLower == null && GameManager.i.higherMove != GameManager.i.lowerMove)
+            if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
             {
                 var ingsToMove = UseableIngredients.Where(x => x.distanceFromScore > 8).ToList();
                 if (ingsToMove.Count() > 0)
                 {
                     var toMove = ingsToMove[Random.Range(0, ingsToMove.Count())];
                     hasBeenDumb = true;
-                    GameManager.i.IngredientMovedWithLower = toMove;
-                    return GameManager.i.IngredientMovedWithLower;
+                    IngredientMovedWithLower = toMove;
+                    return IngredientMovedWithLower;
                 }
             }
         }
