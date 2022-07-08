@@ -24,7 +24,7 @@ public class GameManager : MonoBehaviour
     internal float talkingTimeStart;
     private float turnTime = 0;
     private float rollDuration = 1; //10;
-    private float turnDuration = 5; //25;
+    private float turnDuration = 1; //25;
     private bool? Player1Turn = null;
     internal bool GameOver = false;
     private bool? OnlineDiceFound = null;
@@ -107,9 +107,7 @@ public class GameManager : MonoBehaviour
     public List<Sprite> allD10s;
     
     [Header("Material")]
-    public List<Material> allMeatMaterials;
-    public List<Material> allVeggieMaterials;
-    public List<Material> allFruitMaterials;
+    public List<Material> allIngredientMaterials;
     public List<Material> allColorMaterials;
     #endregion
   
@@ -178,7 +176,7 @@ public class GameManager : MonoBehaviour
     }
     private void Update()
     {
-        if (!IsCPUTurn())
+        if (!IsCPUTurn() && (Settings.OnlineGameId != 0 || Settings.IsDebug))
         {
             switch (State)
             {
@@ -290,18 +288,29 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator MoveForHuman()
     {
+        var currentPlayer = activePlayer;
         BlockPlayerActionPanel.SetActive(true);
-        if (!firstMoveTaken || lowerMove == 0)
+        if (firstMoveTaken)
         {
-            yield return StartCoroutine(RollSelected(true, true));
-            if (!firstMoveTaken)
+            if (lowerMove == 0)
             {
-                yield return new WaitForSeconds(0.5f);
-                yield return StartCoroutine(MoveableList[Random.Range(0, MoveableList.Count())].Move());
+                yield return StartCoroutine(RollSelected(true, true));
             }
         }
-        yield return new WaitForSeconds(0.5f);
-        yield return StartCoroutine(MoveableList[Random.Range(0, MoveableList.Count())].Move());
+        else
+        {
+            yield return StartCoroutine(RollSelected(true, true));
+            yield return new WaitForSeconds(0.5f);
+            yield return StartCoroutine(MoveableList[Random.Range(0, MoveableList.Count())].Move());
+           
+        }
+        if (currentPlayer == activePlayer)
+        {
+            yield return new WaitForSeconds(0.5f);
+            yield return StartCoroutine(MoveableList[Random.Range(0, MoveableList.Count())].Move());
+        }
+
+
     }
 
     private void SetSkins()
@@ -320,14 +329,19 @@ public class GameManager : MonoBehaviour
             var playerIngs = AllIngredients.Where(x => x.Team == i).ToList();
             for (int j = 0; j < playerIngs.Count; j++)
             {
+                var SelMat = j == 0 ? playerList[i].SelectedMeat : j == 1 ? playerList[i].SelectedVeggie : j == 2 ? playerList[i].SelectedFruit : playerList[i].SelectedFourth;
+                if (playerList[i].IsCPU)
+                {
+                    SelMat = allIngredientMaterials.Count()-1 - j;
+                }
                 var frontQuads = playerIngs[j].NormalQuad.GetComponent<MeshRenderer>();
                 var frontMats = frontQuads.materials;
-                frontMats[0] = allMeatMaterials[playerList[i].SelectedMeat];
+                frontMats[0] = allIngredientMaterials[SelMat];
                 frontQuads.materials = frontMats;
                 
                 var backQads = playerIngs[j].BackNormalQuad.GetComponent<MeshRenderer>();
                 var backMats = backQads.materials;
-                backMats[0] = allMeatMaterials[playerList[i].SelectedMeat];
+                backMats[0] = allIngredientMaterials[SelMat];
                 backQads.materials = backMats;
 
                 var colorQads = playerIngs[j].ColorQuad.GetComponent<MeshRenderer>();
@@ -360,9 +374,9 @@ public class GameManager : MonoBehaviour
     {
         var GameState = sql.jsonConvert<GameState>(data);
         GameState.Player1.IsGuest = false;
-        GameState.Player2.IsGuest = false; 
-        GameState.Player1.playerType = PlayerTypes.HUMAN;
-        GameState.Player2.playerType = PlayerTypes.HUMAN;
+        GameState.Player2.IsGuest = false;
+        GameState.Player1.IsCPU = false;
+        GameState.Player2.IsCPU = false;
         playerList[0] = Settings.LoggedInPlayer;
         Settings.SecondPlayer = GameState.Player2.UserId == Settings.LoggedInPlayer.UserId ? GameState.Player1 : GameState.Player2;
         playerList[1] = Settings.SecondPlayer;
@@ -477,17 +491,15 @@ public class GameManager : MonoBehaviour
 
     internal IEnumerator RollSelected(bool isHigher, bool HUMAN)
     {
-        if (isMoving || (IsCPUTurn() && HUMAN))
+        while (isMoving || (IsCPUTurn() && HUMAN))
         {
             yield return new WaitForSeconds(0.5f);
         }
-        else
-        {
-            higherMoveSelected = isHigher;
-            Steps = higherMoveSelected ? higherMove : lowerMove;
-            SetDice();
-            yield return StartCoroutine(SetSelectableIngredients());
-        }
+
+        higherMoveSelected = isHigher;
+        Steps = higherMoveSelected ? higherMove : lowerMove;
+        SetDice();
+        yield return StartCoroutine(SetSelectableIngredients());
     }
     private void SetDice()
     {
@@ -558,7 +570,7 @@ public class GameManager : MonoBehaviour
         
         if (MoveableList.Count() == 0)
         {
-            yield return new WaitForSeconds(2f);
+            yield return new WaitForSeconds(.1f);
             SwitchPlayer();
         }
 
@@ -583,7 +595,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            playerWhoWon = playerList.FirstOrDefault(x => AllIngredients.Where((y,i)=> y.Team == i).All(y => y.isCooked));
+            playerWhoWon = playerList.Where((x,i) => AllIngredients.Where(y=> y.Team == i).All(y => y.isCooked)).FirstOrDefault();
         }
         var playerwhoLost = playerList.FirstOrDefault(x => x.UserId != playerWhoWon.UserId);
         var lostCount = rageQuit == null ? player1Count > player2Count ? player2Count : player1Count : 0;
@@ -598,9 +610,9 @@ public class GameManager : MonoBehaviour
         }
         var wonXp = BonusXP + 300 + ((3 - lostCount) * 50);
         var lostXp = BonusXP + 150 + (lostCount * 50);
-        if (playerList.Any(x => x.playerType == PlayerTypes.CPU) && playerList.Any(x => x.playerType == PlayerTypes.HUMAN))
+        if (playerList.Any(x => x.IsCPU) && playerList.Any(x => !x.IsCPU))
         {
-            if (playerWhoWon.playerType == PlayerTypes.HUMAN)
+            if (!playerWhoWon.IsCPU)
             {
                 eventText.text += $" You earned: \n {150+BonusStars} Calories \n {wonXp} Xp";
             }
@@ -611,14 +623,16 @@ public class GameManager : MonoBehaviour
         }
         else
         {
+            eventText.text += "You gained 50 Calories for each of your cooked ingredients";
             if (rageQuit == null)
             {
-                eventText.text += "You each gained 50 Calories for each of your cooked ingredients! \n" + playerWhoWon.Username + " earned " + wonXp + " XP \n " + playerwhoLost.Username + " earned " + lostXp + " xp!";
+                eventText.text += "!";
             }
             else
             {
-                eventText.text += "You gained 50 Calories for each of your cooked ingredients and they gained nothing! \n" + playerWhoWon.Username + " earned " + wonXp + " XP \n ";
+                eventText.text += "and they gained nothing!";
             }
+            eventText.text += "\n You earned " + wonXp + " XP \n ";
         }
 
         if (Settings.LoggedInPlayer.WineMenu)
@@ -635,7 +649,7 @@ public class GameManager : MonoBehaviour
     #region Used by ingredient
     internal bool IsCPUTurn()
     {
-        return GetActivePlayer().playerType == PlayerTypes.CPU;
+        return GetActivePlayer().IsCPU;
     }
     internal Player GetActivePlayer()
     {
@@ -655,6 +669,7 @@ public class GameManager : MonoBehaviour
         }
         else if (firstMoveTaken || lowerMove == 0)
         {
+            yield return new WaitForSeconds(.1f);
             SwitchPlayer();
         }
         else
@@ -679,7 +694,7 @@ public class GameManager : MonoBehaviour
                 //        undoButton2.gameObject.SetActive(true);
                 //    }
                 //}
-                yield return RollSelected(!higherMoveSelected, !IsCPUTurn());
+                yield return StartCoroutine(RollSelected(!higherMoveSelected, !IsCPUTurn()));
             }
         }
     }
@@ -708,7 +723,7 @@ public class GameManager : MonoBehaviour
     }
     internal IEnumerator AskShouldTrash()
     {
-        if (Settings.OnlineGameId != 0 && GetActivePlayer().UserId == Settings.LoggedInPlayer.UserId)
+        if (Settings.OnlineGameId == 0 || (Settings.OnlineGameId != 0 && GetActivePlayer().UserId == Settings.LoggedInPlayer.UserId))
         {
             ShouldTrashPopup.SetActive(true);
         }

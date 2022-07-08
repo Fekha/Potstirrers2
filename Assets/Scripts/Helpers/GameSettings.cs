@@ -5,20 +5,19 @@ using UnityEngine;
 public static class Settings
 {
     public static Player LoggedInPlayer = new Player();
-    public static Player SecondPlayer = new Player() { Username = "Jenn", playerType = PlayerTypes.CPU, UserId = 41 };
+    public static Player SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
     public static bool IsConnected = true;
     public static bool IsDebug = false;
     public static bool HardMode = true;
     public static bool EnteredGame = false;
     public static int OnlineGameId = 0;
 
-    public static List<Player> CPUPlayers = new List<Player>() { 
-        new Player() { Username = "Joe", playerType = PlayerTypes.CPU, UserId = 43 },
-        new Player() { Username = "Zach", playerType = PlayerTypes.CPU, UserId = 42  },
-        new Player() { Username = "Chrissy", playerType = PlayerTypes.CPU, UserId = 44  },
-        new Player() { Username = "Jenn", playerType = PlayerTypes.CPU, UserId = 41  }
-
-    };
+    //public static List<Player> CPUPlayers = new List<Player>() { 
+    //    new Player() { Username = "Joe", IsCPU = true, UserId = 43 },
+    //    new Player() { Username = "Zach", IsCPU = true, UserId = 42  },
+    //    new Player() { Username = "Chrissy", IsCPU = true, UserId = 44  },
+    //    new Player() { Username = "Jenn", IsCPU = true, UserId = 41  }
+    //};
 }
 public static class Library
 {

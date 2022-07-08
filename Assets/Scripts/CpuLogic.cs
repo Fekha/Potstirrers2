@@ -30,7 +30,7 @@ public class CpuLogic : MonoBehaviour
             IngredientMovedWithLower = null;
         }
 
-        if (!GameManager.i.GameOver && GameManager.i.lowerMove != 0 && (IngredientMovedWithLower == null || IngredientMovedWithHigher == null))
+        if (!GameManager.i.GameOver && GameManager.i.IsCPUTurn() && (IngredientMovedWithLower == null || IngredientMovedWithHigher == null))
             yield return StartCoroutine(FindBestMove());
 
         IngredientMovedWithLower = null;
@@ -147,6 +147,7 @@ public class CpuLogic : MonoBehaviour
     {
         if (ingredientToMove == null)
         {
+            yield return new WaitForSeconds(.1f);
             GameManager.i.SwitchPlayer();
         }
         else
@@ -169,6 +170,9 @@ public class CpuLogic : MonoBehaviour
     }
     internal void PrepShitTalk(TalkType talk)
     {
+        if (!GameManager.i.playerList.Any(x => x.IsCPU))
+            return;
+
         if (Settings.OnlineGameId != 0 || !string.IsNullOrEmpty(GameManager.i.talkShitText.text))
             return;
 
@@ -328,7 +332,7 @@ public class CpuLogic : MonoBehaviour
                 }
                 break;
             case TalkType.SentBack:
-                username = GameManager.i.playerList.FirstOrDefault(x => x.playerType == PlayerTypes.CPU).Username;
+                username = GameManager.i.playerList.FirstOrDefault(x => x.IsCPU).Username;
 
                 var ZachOptions = new List<string>() { "", "Man it sucks to suck...", "Dag Nabbit!", "What do you think your doing!?" };
                 var JoeOptions = new List<string>() { "", "Wait, you can't do that to me!!", "Watch your back!", "I'll remember that!" };
@@ -389,7 +393,7 @@ public class CpuLogic : MonoBehaviour
         {
             IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 26
             && Route.i.FullRoute[x.routePosition].ingredients.Count == 1
-            && CanMoveSafely(x, x.endHigherPosition));
+            && CanMoveSafely(x.endHigherPosition));
             if (IngredientMovedWithHigher != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Not Past Prep"; }
@@ -401,7 +405,7 @@ public class CpuLogic : MonoBehaviour
         {
             IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 26
             && Route.i.FullRoute[x.routePosition].ingredients.Count == 1
-            && CanMoveSafely(x, x.endLowerPosition));
+            && CanMoveSafely(x.endLowerPosition));
             if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Not Past Prep"; }
@@ -416,10 +420,10 @@ public class CpuLogic : MonoBehaviour
         if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
             IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 23
-            && x.endLowerPosition > 17
+            && x.endLowerPosition > 16
             && !x.isCooked
-            && x.distanceFromScore > 8
-            && CanMoveSafely(x, x.endLowerPosition));
+            && x.distanceFromScore > 9
+            && CanMoveSafely(x.endLowerPosition));
             if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Into Scoring"; }
@@ -429,10 +433,10 @@ public class CpuLogic : MonoBehaviour
         if (IngredientMovedWithHigher == null)
         {
             IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 23
-            && x.endHigherPosition > 17
+            && x.endHigherPosition > 16
             && !x.isCooked
-            && x.distanceFromScore > 8
-            && CanMoveSafely(x, x.endHigherPosition));
+            && x.distanceFromScore > 9
+            && CanMoveSafely(x.endHigherPosition));
             if (IngredientMovedWithHigher != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Into Scoring"; }
@@ -448,7 +452,7 @@ public class CpuLogic : MonoBehaviour
     //    {
     //        IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x=>x.distanceFromScore).FirstOrDefault(x => x.isCooked
     //        && x.endHigherPosition < 26
-    //        && CanMoveSafely(x, x.endHigherPosition));
+    //        && CanMoveSafely(x.endHigherPosition));
     //        if (IngredientMovedWithHigher != null)
     //        {
     //            if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Cooked Ingredient"; }
@@ -459,7 +463,7 @@ public class CpuLogic : MonoBehaviour
     //    {
     //        IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
     //        && x.endLowerPosition < 26
-    //        && CanMoveSafely(x, x.endLowerPosition));
+    //        && CanMoveSafely(x.endLowerPosition));
     //        if (IngredientMovedWithLower != null)
     //        {
     //            if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Cooked Ingredient"; }
@@ -476,12 +480,12 @@ public class CpuLogic : MonoBehaviour
         if (IngredientMovedWithHigher == null)
         {
             var CookedIngredientsThatCanHelp = UseableTeamIngredients.Where(x => x.isCooked
-                && (UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y, y.endLowerPosition + 1)).Any(y => y.routePosition >= x.routePosition && y.routePosition < x.endHigherPosition && y.endLowerPosition >= x.endHigherPosition)
-                    || UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y, y.endLowerPosition - 1)).Any(y => y.routePosition < x.routePosition && y.endLowerPosition > x.routePosition && y.endLowerPosition < x.endHigherPosition))).ToList();
+                && (UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y.endLowerPosition + 1)).Any(y => y.routePosition >= x.routePosition && y.routePosition < x.endHigherPosition && y.endLowerPosition >= x.endHigherPosition)
+                    || UseableTeamIngredients.Where(y => !y.isCooked && y.routePosition != 0 && CanMoveSafely(y.endLowerPosition - 1)).Any(y => y.routePosition < x.routePosition && y.endLowerPosition > x.routePosition && y.endLowerPosition < x.endHigherPosition))).ToList();
 
             if (CookedIngredientsThatCanHelp.Count() > 0)
             {
-                IngredientMovedWithHigher = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x, x.endHigherPosition));
+                IngredientMovedWithHigher = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x.endHigherPosition));
                 if (IngredientMovedWithHigher != null)
                 {
                     if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Boosted with Cooked"; }
@@ -493,11 +497,11 @@ public class CpuLogic : MonoBehaviour
         if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
             var CookedIngredientsThatCanHelp = UseableIngredients.Where(x => x.isCooked
-                && (UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y, y.endHigherPosition + 1)).Any(y => y.routePosition >= x.routePosition && y.routePosition < x.endLowerPosition && y.endHigherPosition >= x.endLowerPosition)
-                    || UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y, y.endHigherPosition - 1)).Any(y => y.routePosition < x.routePosition && y.endHigherPosition > x.routePosition && y.endHigherPosition < x.endLowerPosition))).ToList();
+                && (UseableTeamIngredients.Where(y => !y.isCooked && CanMoveSafely(y.endHigherPosition + 1)).Any(y => y.routePosition >= x.routePosition && y.routePosition < x.endLowerPosition && y.endHigherPosition >= x.endLowerPosition)
+                    || UseableTeamIngredients.Where(y => !y.isCooked && y.routePosition != 0 && CanMoveSafely(y.endHigherPosition - 1)).Any(y => y.routePosition < x.routePosition && y.endHigherPosition > x.routePosition && y.endHigherPosition < x.endLowerPosition))).ToList();
             if (CookedIngredientsThatCanHelp.Count() > 0)
             {
-                IngredientMovedWithLower = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x, x.endLowerPosition));
+                IngredientMovedWithLower = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x.endLowerPosition));
                 if (IngredientMovedWithLower != null)
                 {
                     if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Boosted with Cooked"; }
@@ -508,9 +512,13 @@ public class CpuLogic : MonoBehaviour
         return null;
     }
 
-    private bool CanMoveSafely(Ingredient x, int endPosition)
+    private bool CanMoveSafely(int endPosition)
     {
-        return !TeamIngredients.Any(y => y.routePosition == endPosition % 26) && (!Route.i.FullRoute[endPosition % 26].isDangerZone || Route.i.FullRoute[endPosition % 26].ingredients.Count() == 0);
+        if (endPosition < 0)
+        {
+            return false;
+        }
+        return !TeamIngredients.Any(y => y.routePosition == endPosition % 26) && (endPosition % 26 == 0 || !Route.i.FullRoute[endPosition % 26].isDangerZone || Route.i.FullRoute[endPosition % 26].ingredients.Count() == 0);
     }
 
     private Ingredient MoveCookedPastPrep()
@@ -522,7 +530,7 @@ public class CpuLogic : MonoBehaviour
         {
             IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
             && Route.i.FullRoute[x.routePosition].ingredients.Count == 1
-            && CanMoveSafely(x, x.endHigherPosition));
+            && CanMoveSafely(x.endHigherPosition));
             if (IngredientMovedWithHigher != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Cooked Past Prep"; }
@@ -533,7 +541,7 @@ public class CpuLogic : MonoBehaviour
         {
             IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.isCooked
                 && Route.i.FullRoute[x.routePosition].ingredients.Count == 1
-            && CanMoveSafely(x, x.endLowerPosition));
+            && CanMoveSafely(x.endLowerPosition));
             if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Cooked Past Prep"; }
@@ -548,10 +556,10 @@ public class CpuLogic : MonoBehaviour
         if (IngredientMovedWithHigher == null)
         {
             IngredientMovedWithHigher = UseableTeamIngredients.OrderByDescending(x => x.endHigherPosition).FirstOrDefault(x => x.endHigherPosition < 23 //Dont move past prep
-            && (x.distanceFromScore > 8 || withCooked) //Dont move from scoring position unless cooked
+            && (x.distanceFromScore > 9 || withCooked) //Dont move from scoring position unless cooked
             && x.isCooked == withCooked
             && (moveStacked || Route.i.FullRoute[x.routePosition].ingredients.Count == 1)
-            && CanMoveSafely(x, x.endHigherPosition)); //Dont stomp on safe area
+            && CanMoveSafely(x.endHigherPosition)); //Dont stomp on safe area
             if (IngredientMovedWithHigher != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Front Most " + (withCooked ? "cooked " : "uncooked ") + (moveStacked ? "stacked " : "unstacked ") + "Ingredient"; }
@@ -562,10 +570,10 @@ public class CpuLogic : MonoBehaviour
         if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
             IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.endLowerPosition).FirstOrDefault(x => x.endLowerPosition < 23 //Dont move past prep
-            && (x.distanceFromScore > 8 || withCooked) //Dont move from scoring position unless cooked
+            && (x.distanceFromScore > 9 || withCooked) //Dont move from scoring position unless cooked
             && x.isCooked == withCooked
             && (moveStacked || Route.i.FullRoute[x.routePosition].ingredients.Count == 1)
-            && CanMoveSafely(x, x.endLowerPosition)); //Dont stomp on safe area
+            && CanMoveSafely(x.endLowerPosition)); //Dont stomp on safe area
             if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Front Most Ingredient"; }
@@ -593,9 +601,9 @@ public class CpuLogic : MonoBehaviour
     {
         if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            IngredientMovedWithLower = UseableEnemyIngredients.OrderByDescending(x => x.distanceFromScore).FirstOrDefault(x => (notInScoring || x.distanceFromScore < 9)
+            IngredientMovedWithLower = UseableIngredients.OrderByDescending(x => x.distanceFromScore).FirstOrDefault(x => (notInScoring || x.distanceFromScore < 9)
             && (x.routePosition != 0 && Route.i.FullRoute[x.routePosition].ingredients.Count > 1 && Route.i.FullRoute[x.routePosition].ingredients.Any(x => x.Team == GameManager.i.activePlayer))
-            && CanMoveSafely(x, x.endLowerPosition)); //Dont stomp on safe area
+            && CanMoveSafely(x.endLowerPosition)); //Dont stomp on safe area
             if (IngredientMovedWithLower != null)
             {
                 if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Off stack" + (notInScoring ? " from non-scoring" : " from scoring"); }
@@ -608,10 +616,10 @@ public class CpuLogic : MonoBehaviour
     {
         if (IngredientMovedWithHigher == null && IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            var ingredientThatCouldScore = TeamIngredients.FirstOrDefault(x => x.endHigherPosition == 26 && !x.isCooked && Route.i.FullRoute[x.routePosition].ingredients.Peek() != x);
+            var ingredientThatCouldScore = TeamIngredients.FirstOrDefault(x => x.endHigherPosition == 26 && !x.isCooked && Route.i.FullRoute[x.routePosition].ingredients.Peek().IngredientId != x.IngredientId);
             if (ingredientThatCouldScore != null)
             {
-                IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => x.routePosition == ingredientThatCouldScore.routePosition && x.endLowerPosition != x.routePosition); //Dont stomp on safe area
+                IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => x.routePosition == ingredientThatCouldScore.routePosition && Route.i.FullRoute[x.routePosition].ingredients.Peek().IngredientId == x.IngredientId && x.endLowerPosition != x.routePosition);
                 if (IngredientMovedWithLower != null)
                 {
                     if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move off stack to score"; }
@@ -642,10 +650,10 @@ public class CpuLogic : MonoBehaviour
     {
         if (IngredientMovedWithHigher == null)
         {
-            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 26 //Dont move past preparation
+            IngredientMovedWithHigher = UseableTeamIngredients.OrderBy(x=>x.distanceFromScore).FirstOrDefault(x => x.endHigherPosition < 26 //Dont move past preparation
             && x.isCooked == WithCooked
-            && (x.distanceFromScore > 8 || x.distanceFromScore < 3)  //Dont move from scoring position
-            && CanMoveSafely(x, x.endHigherPosition)
+            && (x.distanceFromScore > 9 || x.distanceFromScore < 3)  //Dont move from scoring position
+            && CanMoveSafely(x.endHigherPosition)
             && ((Route.i.FullRoute[x.endHigherPositionWithoutSlide % 26].hasSpatula && !x.isCooked)
             || Route.i.FullRoute[x.endHigherPositionWithoutSlide % 26].hasSpoon));
             if (IngredientMovedWithHigher != null)
@@ -656,10 +664,10 @@ public class CpuLogic : MonoBehaviour
         }
         if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
+            IngredientMovedWithLower = UseableTeamIngredients.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
             && x.isCooked == WithCooked
-            && (x.distanceFromScore > 8 || x.distanceFromScore < 3)  //Dont move from scoring position
-            && CanMoveSafely(x, x.endHigherPosition)
+            && (x.distanceFromScore > 9 || x.distanceFromScore < 3)  //Dont move from scoring position
+            && CanMoveSafely(x.endHigherPosition)
             && ((Route.i.FullRoute[x.endLowerPositionWithoutSlide % 26].hasSpatula && !x.isCooked)
             || Route.i.FullRoute[x.endLowerPositionWithoutSlide % 26].hasSpoon));
             if (IngredientMovedWithLower != null)
@@ -801,11 +809,11 @@ public class CpuLogic : MonoBehaviour
     {
         if (IngredientMovedWithHigher == null && IngredientMovedWithLower == null && GameManager.i.firstMoveTaken == false && GameManager.i.DoublesRolled())
         {
-            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.distanceFromScore == (GameManager.i.higherMove + GameManager.i.lowerMove) && !x.isCooked);
-            if (IngredientMovedWithHigher != null)
+            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.distanceFromScore == (GameManager.i.higherMove + GameManager.i.lowerMove) && !x.isCooked);
+            if (IngredientMovedWithLower != null)
             {
                 PrepShitTalk(TalkType.HelpCook);
-                return IngredientMovedWithHigher;
+                return IngredientMovedWithLower;
             }
         }
         return null;
@@ -826,7 +834,7 @@ public class CpuLogic : MonoBehaviour
                 && x.routePosition < ScoreableIng.routePosition
                 && x.endHigherPosition > ScoreableIng.routePosition
                 && x.endHigherPosition < 26
-                && CanMoveSafely(x, x.endHigherPosition));
+                && CanMoveSafely(x.endHigherPosition));
                 if (IngredientMovedWithHigher != null)
                 {
                     PrepShitTalk(TalkType.HelpCook);
@@ -843,7 +851,7 @@ public class CpuLogic : MonoBehaviour
                 && x.routePosition < ScoreableIng.routePosition
                 && x.endLowerPosition > ScoreableIng.routePosition
                 && x.endLowerPosition < 26
-                && CanMoveSafely(x, x.endLowerPosition));
+                && CanMoveSafely(x.endLowerPosition));
                 if (IngredientMovedWithLower != null)
                 {
                     PrepShitTalk(TalkType.HelpCook);
@@ -858,7 +866,7 @@ public class CpuLogic : MonoBehaviour
                 && x.isCooked
                 && x.routePosition > ScoreableIng.routePosition
                 && x.endHigherPosition % 26 < ScoreableIng.routePosition
-                && CanMoveSafely(x, x.endHigherPosition));
+                && CanMoveSafely(x.endHigherPosition));
                 if (IngredientMovedWithHigher != null)
                 {
                     PrepShitTalk(TalkType.HelpCook);
@@ -873,7 +881,7 @@ public class CpuLogic : MonoBehaviour
                 && x.isCooked
                 && x.routePosition > ScoreableIng.routePosition
                 && x.endLowerPosition % 26 < ScoreableIng.routePosition
-                && CanMoveSafely(x, x.endLowerPosition));
+                && CanMoveSafely(x.endLowerPosition));
                 if (IngredientMovedWithLower != null)
                 {
                     PrepShitTalk(TalkType.HelpCook);
@@ -904,7 +912,7 @@ public class CpuLogic : MonoBehaviour
         {
             if (IngredientMovedWithHigher == null)
             {
-                var ingsToMove = UseableTeamIngredients.Where(x => x.distanceFromScore > 8).ToList();
+                var ingsToMove = UseableTeamIngredients.Where(x => x.distanceFromScore > 9).ToList();
                 if (ingsToMove.Count() > 0)
                 {
                     var toMove = ingsToMove[Random.Range(0, ingsToMove.Count())];
@@ -916,7 +924,7 @@ public class CpuLogic : MonoBehaviour
 
             if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
             {
-                var ingsToMove = UseableIngredients.Where(x => x.distanceFromScore > 8).ToList();
+                var ingsToMove = UseableIngredients.Where(x => x.distanceFromScore > 9).ToList();
                 if (ingsToMove.Count() > 0)
                 {
                     var toMove = ingsToMove[Random.Range(0, ingsToMove.Count())];

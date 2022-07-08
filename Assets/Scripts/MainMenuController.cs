@@ -28,14 +28,6 @@ public class MainMenuController : MonoBehaviour
     public GameObject CodeText;
     #endregion
 
-    [Header("FriendsList")]
-    #region FriendsList
-    public GameObject friendslist;
-    public GameObject FriendButtonContent;
-    public GameObject FriendText;
-    private List<Button> FriendButtonLog = new List<Button>();
-    #endregion
-
     [Header("Profile")]
     #region Profile
     public GameObject profilePanel;
@@ -52,25 +44,6 @@ public class MainMenuController : MonoBehaviour
     public Text LastLoginText;
     #endregion
 
-    [Header("Messages")]
-    #region Messages
-    public GameObject hasMessage;
-    public GameObject sendMessagePanel;
-    public GameObject messageAlert;
-    public GameObject messageChoice;
-    public GameObject SubjectInput;
-    public GameObject BodyInput;
-    public Text ToInput;
-    public Dropdown ToDropdown;
-    public Text SubjectText;
-    public Text BodyText;
-    public Text FromText;
-    public GameObject messagePanel;
-    public GameObject MessageButtonContent;
-    public Button ButtonObject;
-    private List<Button> MessageButtonLog = new List<Button>();
-    #endregion
-
     [Header("ConfirmationPopups")]
     #region ConfirmationPopups
     public GameObject alert;
@@ -82,22 +55,21 @@ public class MainMenuController : MonoBehaviour
     public GameObject LoginSecondPlayer;
     public GameObject usernameText;
     #endregion
-
+    public static MainMenuController i;
     #region Internal Varibales
     private Profile CurrentPlayer;
-    private Profile YourFriend;
+
     private bool toggleActivated;
-    private bool showFriendList = false;
     private bool loadingToggle = true; 
     private SqlController sql;
-    private int debugClicks;
-    private Message CurrentMessage;
+
     private float totalElapsed = 0f;
     private float elapsed = 0f;
     private bool LookingForGame = false;
     #endregion
     void Awake()
     {
+        i = this;
         sql = new SqlController();
         Settings.OnlineGameId = 0;
         wineToggle.isOn = Settings.LoggedInPlayer.WineMenu;
@@ -110,8 +82,7 @@ public class MainMenuController : MonoBehaviour
         //loading starts as true but is turned false after elements render and toggles are set correctly
         loadingToggle = false;
         toggleActivated = false;
-        debugClicks = 0;
-        Settings.SecondPlayer = new Player();
+        Settings.SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
         StartCoroutine(SetPlayer());
         if (Settings.LoggedInPlayer.IsGuest && Settings.EnteredGame)
         {
@@ -205,7 +176,6 @@ public class MainMenuController : MonoBehaviour
             {
                 if (!open)
                 {
-                    friendslist.SetActive(showFriendList);
                     SetProfileData(); //reset
                 }
 
@@ -214,48 +184,11 @@ public class MainMenuController : MonoBehaviour
         }
     }
 
-    public void ShowFriendsList(bool open)
-    {
-        showFriendList = open;
-        profilePanel.SetActive(!open);
-        friendslist.SetActive(open);
-    }
-    
-    public void ShowMessages(bool open)
-    {
-        if (!Settings.IsConnected)
-        {
-            alertText.text = "Unable to connect! \n \n This feature requires an active connection to the game server.";
-            alert.SetActive(true);
-        }
-        else
-        {
-            if (Settings.LoggedInPlayer.IsGuest)
-            {
-                alertText.text = "Log in to send and receive messages!";
-                alert.SetActive(true);
-            }
-            else
-            {
-                messagePanel.SetActive(open);
-            }
-        }
-    }
-
     public void ExitMenu(bool open)
     {
         ExitPrompt.SetActive(open);
     } 
-    public void ShowSendMessage(bool open)
-    {
-        if (ToDropdown.options.Count > 0)
-            sendMessagePanel.SetActive(open);
-        else
-        {
-            alertText.text = "You must have friends that are friends with you to be able to send a message! Why did you remove poor feca :(";
-            alert.SetActive(true);
-        }
-    }
+
     public void exitLogin()
     {
         LoginSecondPlayer.SetActive(false);
@@ -264,46 +197,14 @@ public class MainMenuController : MonoBehaviour
     {
         alert.SetActive(false);
     } 
-    public void hideMessageAlert()
-    {
-        messageAlert.SetActive(false);
-    } 
-    private void showMessageChoice(Message message)
-    {
-        CurrentMessage = message;
-        if (message.IsRead)
-        {
-            messageChoice.SetActive(true);
-        }
-        else
-        {
-            viewMessage();
-        }
-    }
-    public void viewMessage()
-    {
-        SubjectText.text = CurrentMessage.Subject;
-        BodyText.text = CurrentMessage.Body;
-        FromText.text = $"From: " + CurrentMessage.FromName;
-        messageAlert.SetActive(true);
-        messageChoice.SetActive(false);
-        StartCoroutine(sql.RequestRoutine($"player/ReadMessage?MessageId={CurrentMessage.MessageId}", GetMessageCallback));
-    } 
-    public void deleteMessage()
-    {
-        messageChoice.SetActive(false);
-        alertText.text = "Message Deleted!";
-        alert.SetActive(true);
-        StartCoroutine(sql.RequestRoutine($"player/DeleteMessage?MessageId={CurrentMessage.MessageId}", GetMessageCallback));
-    }
+
     private IEnumerator SetPlayer()
     {
         yield return StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
         yield return StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Settings.LoggedInPlayer.Username}", GetPlayerCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetProfile?username={Settings.LoggedInPlayer.Username}", GetProfileCallback));
-        StartCoroutine(sql.RequestRoutine($"player/GetMessages?userId={Settings.LoggedInPlayer.UserId}", GetMessageCallback));
-        StartCoroutine(sql.RequestRoutine($"player/GetFriends?userId={Settings.LoggedInPlayer.UserId}", GetFriendCallback));
+
     }
 
     public void UpdateLvlText() {
@@ -347,14 +248,11 @@ public class MainMenuController : MonoBehaviour
         CookedIngredientsText.text = $"Cooked Ingredients: {CurrentPlayer.Cooked}";
         CaloriesText.text = $"Calories: {CurrentPlayer.Stars}";
         LastLoginText.text = $"";
-
-        viewFriends.SetActive(true);
-        removeFriend.SetActive(false);
     }
 
-    private void GetFriendProfileCallback(string data)
+    public void GetFriendProfileCallback(string data)
     {
-        YourFriend = sql.jsonConvert<Profile>(data);
+        var YourFriend = sql.jsonConvert<Profile>(data);
 
         CurrentLevelText.color = Color.white;
         DailyWinsText.color = Color.white;
@@ -407,90 +305,9 @@ public class MainMenuController : MonoBehaviour
             LastLoginText.color = Color.green;
         LastLoginText.text = YourFriend.LastLogin.HasValue ? $"Last Login: {YourFriend.LastLogin.Value.ToShortDateString()} {YourFriend.LastLogin.Value.ToShortTimeString()}" : "";
 
-        viewFriends.SetActive(false);
-        removeFriend.SetActive(true);
         profilePanel.SetActive(true);
-        friendslist.SetActive(false);
     }  
-    private void GetFriendCallback(string data)
-    {
-        ClearFriends();
-        var friends = sql.jsonConvert<List<FriendDTO>>(data);
-        foreach (var d in friends.OrderByDescending(x => x.Level))
-        {
-            CreateFriend(d.Username, d.RealFriend);
-        }
-    }
-    private void CreateFriend(string username, bool realFriend)
-    {
-        if (realFriend)
-        {
-            ToDropdown.options.Add(new Dropdown.OptionData()
-            {
-                text = username
-            });
-        }
-        ButtonObject.transform.Find("Image").gameObject.SetActive(!realFriend);
-        ButtonObject.GetComponentInChildren<Text>().text = username;
-        Button newButton = Instantiate(ButtonObject, FriendButtonContent.transform);
-        newButton.onClick.AddListener(() => StartCoroutine(sql.RequestRoutine($"player/GetProfile?username={username}", GetFriendProfileCallback)));
-        FriendButtonLog.Add(newButton);
-    }
-    private void ClearFriends()
-    {
-        if (FriendButtonLog.Count() > 0)
-        {
-            for (int i = FriendButtonLog.Count() - 1; i >= 0; i--)
-            {
-                Destroy(FriendButtonLog[i].gameObject);
-                FriendButtonLog.Remove(FriendButtonLog[i]);
-            }
-        }
-    }
-    private void GetMessageCallback(string data)
-    {
-        ClearMessages();
-        var messages = sql.jsonConvert<List<Message>>(data);
-        foreach (var d in messages.OrderByDescending(x => x.CreatedDate))
-        {
-            CreateMessage(d);
-        }
-        hasMessage.SetActive(messages.Any(x => !x.IsRead));
-    }
-    private void CreateMessage(Message message)
-    {
-        ButtonObject.transform.Find("Image").gameObject.SetActive(!message.IsRead);
-        ButtonObject.GetComponentInChildren<Text>().text = message.Subject;
-        Button newButton = Instantiate(ButtonObject, MessageButtonContent.transform);
-        newButton.onClick.AddListener(() => showMessageChoice(message));
-        MessageButtonLog.Add(newButton);
-    }
-    private void ClearMessages()
-    {
-        if (MessageButtonLog.Count() > 0)
-        {
-            for (int i = MessageButtonLog.Count() - 1; i >= 0; i--)
-            {
-                Destroy(MessageButtonLog[i].gameObject);
-                MessageButtonLog.Remove(MessageButtonLog[i]);
-            }
-        }
-    }
 
-    public void SendMessage()
-    {
-        if (!String.IsNullOrEmpty(ToInput.text))
-        {
-            StartCoroutine(sql.RequestRoutine($"player/SendMessage?userId={Settings.LoggedInPlayer.UserId}&toName={ToInput.text}&subject={SubjectInput.GetComponent<InputField>().text}&body={BodyInput.GetComponent<InputField>().text}"));
-            sendMessagePanel.SetActive(false);
-            alertText.text = "Message sent to " + ToInput.text;
-        }
-        else
-        {
-            alertText.text = "Can not send a message without a friend selected!";
-        }
-        alert.SetActive(true);
-    }
     private void GetRewardCallback(string data)
     {
         var rewardText = sql.jsonConvert<string>(data);      
@@ -499,19 +316,6 @@ public class MainMenuController : MonoBehaviour
             alertText.text = rewardText;
             alert.SetActive(true);
         }
-    }
-
-    public void DifficultyMenu(bool open)
-    {
-        //if (Settings.LoggedInPlayer.Wins > 0 || Settings.LoggedInPlayer.IsGuest)
-        //{
-        //    DifficultyPrompt.SetActive(open);
-        //}
-        //else
-        //{
-            Settings.HardMode = true;
-            StartLocalGame(true);
-        //}
     }
 
     public void ExitSettings()
@@ -523,69 +327,12 @@ public class MainMenuController : MonoBehaviour
         }
         toggleActivated = false;
     }
-    public void EditFriend(bool add)
-    {
-        if (add)
-        {
-            StartCoroutine(sql.RequestRoutine("player/GetUserByName?username=" + FriendText.GetComponent<InputField>().text, this.GetFriendByUsernameCallback));
-        }
-        else
-        {
-            alertText.text = $"You have removed {YourFriend.Username} as a friend :(";
-            alert.SetActive(true);
-            ShowProfile(false);
-            StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Settings.LoggedInPlayer.UserId}&username={YourFriend.Username}&add={add}", GetFriendCallback));
-        }
-    }
+
     public void TryCode()
     {
        StartCoroutine(sql.RequestRoutine($"purchase/UseKey?key={CodeText.GetComponent<InputField>().text}&userId={Settings.LoggedInPlayer.UserId}", this.GetCodeCallback));
     }
 
-    public void PlayerVsPlayer()
-    {
-        Settings.HardMode = false;
-        if (Settings.LoggedInPlayer.IsGuest)
-        {
-            StartLocalGame(false);
-        }
-        else
-        {
-            LoginSecondPlayer.SetActive(true);
-        }
-    }
-
-    private void GetByUsernameCallback(string data)
-    {
-        var player = sql.jsonConvert<Player>(data);
-        Settings.SecondPlayer = player;
-        if (player == null)
-        {
-            alertText.text = "Username not found.";
-            alert.SetActive(true);
-        }
-        else
-        {
-            Settings.SecondPlayer.IsGuest = false;
-            StartLocalGame(false);
-        }
-    } 
-    private void GetFriendByUsernameCallback(string data)
-    {
-        var player = sql.jsonConvert<Player>(data);
-        if (player == null)
-        {
-            alertText.text = "Player not found.";
-            alert.SetActive(true);
-        }
-        else
-        {
-            alertText.text = $"You have added {player.Username} as a friend :)";
-            alert.SetActive(true);
-            FriendText.GetComponent<InputField>().text = "";
-            StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Settings.LoggedInPlayer.UserId}&username={player.Username}&add={true}", GetFriendCallback));
-        }
-    }
     private void GetCodeCallback(string data)
     {
         var reward = sql.jsonConvert<int>(data);
@@ -599,30 +346,6 @@ public class MainMenuController : MonoBehaviour
             alertText.text = $"Your code was valid! \n \n you have recieved {reward} Calories!";
             alert.SetActive(true);
             StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Settings.LoggedInPlayer.Username}", GetPlayerCallback));
-        }
-    }
-    public void Login()
-    {
-
-        if (String.IsNullOrEmpty(usernameText.GetComponent<InputField>().text))
-        {
-            if (String.IsNullOrEmpty(usernameText.GetComponent<InputField>().text))
-            {
-                alertText.text = "Username may not be blank.";
-            }
-            alert.SetActive(true);
-        }
-        else if (usernameText.GetComponent<InputField>().text == Settings.LoggedInPlayer.Username)
-        {
-            if (string.IsNullOrEmpty(usernameText.GetComponent<InputField>().text))
-            {
-                alertText.text = "User already in use!";
-            }
-            alert.SetActive(true);
-        }
-        else
-        {
-            StartCoroutine(sql.RequestRoutine("player/GetUserByName?username=" + usernameText.GetComponent<InputField>().text, this.GetByUsernameCallback, true));
         }
     }
    
@@ -661,46 +384,12 @@ public class MainMenuController : MonoBehaviour
             SceneManager.LoadScene(sceneName);
         }
     }
-    public void StartDebug()
+    public void StartCPUGame(bool hardMode)
     {
-        debugClicks++;
-   
-        if (debugClicks > 2)
-        {
-            Settings.IsDebug = true;
-            SceneManager.LoadScene("PlayScene");
-        }
-    }
-    public void StartLocalGame(bool cpu)
-    {
+        Settings.HardMode = true;
         Settings.EnteredGame = true;
-        if (cpu)
-        {
-            if(Settings.HardMode)
-                Settings.SecondPlayer = Settings.CPUPlayers[Settings.CPUPlayers.Count-1];
-            else
-                Settings.SecondPlayer = Settings.CPUPlayers[UnityEngine.Random.Range(0, Settings.CPUPlayers.Count - 1)];
-
-        }
-        else
-        {
-            Settings.HardMode = false;
-            Settings.SecondPlayer = !Settings.SecondPlayer.IsGuest ? Settings.SecondPlayer : new Player() { Username = Settings.LoggedInPlayer.Username+"(2)", playerType = PlayerTypes.HUMAN};
-        }
-
         SceneManager.LoadScene("PlayScene");
     }
 
-    public void StartCPUGame(bool hardMode)
-    {
-        Settings.HardMode = hardMode;
-        StartLocalGame(true);
-    }
 
-    private class FriendDTO
-    {
-        public string Username { get; set; }
-        public bool RealFriend { get; set; }
-        public int Level { get; set; }
-    }
 }
