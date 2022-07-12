@@ -87,8 +87,8 @@ public class SkinsController : MonoBehaviour
         currentMeat = Settings.LoggedInPlayer.SelectedMeat;
         currentVeggie = Settings.LoggedInPlayer.SelectedVeggie;
         currentFruit = Settings.LoggedInPlayer.SelectedFruit;
-        currentDie = Settings.LoggedInPlayer.SelectedDie;
-        currentDie2 = Settings.LoggedInPlayer.SelectedDie2;
+        //currentDie = Settings.LoggedInPlayer.SelectedDie;
+        //currentDie2 = Settings.LoggedInPlayer.SelectedDie2;
  
         currentMeatImage.sprite = allMeatIngredients[currentMeat].image;
         currentVeggieImage.sprite = allVeggieIngredients[currentVeggie].image;
@@ -219,24 +219,24 @@ public class SkinsController : MonoBehaviour
                 cost = IngredientData.FirstOrDefault(x => x.PurchaseId == allFruitIngredients[currentFruit].purchaseId).PurchaseCost;
                 PlayerOwns.Add(allFruitIngredients[currentFruit].purchaseId);
             }
-            else if (PurchaseType == "die")
-            {
-                lockedDie.SetActive(false);
-                diePurchaseButton.SetActive(false);
-                dieButtonText.text = "";
-                Settings.LoggedInPlayer.SelectedDie = currentDie;
-                cost = IngredientData.FirstOrDefault(x => x.PurchaseId == allD10s[currentDie].purchaseId).PurchaseCost;
-                PlayerOwns.Add(allD10s[currentDie].purchaseId);
-            }
-            else if (PurchaseType == "die2")
-            {
-                lockedDie2.SetActive(false);
-                die2PurchaseButton.SetActive(false);
-                die2ButtonText.text = "";
-                Settings.LoggedInPlayer.SelectedDie2 = currentDie2;
-                cost = IngredientData.FirstOrDefault(x => x.PurchaseId == allD10s[currentDie2].purchaseId).PurchaseCost;
-                PlayerOwns.Add(allD10s[currentDie2].purchaseId);
-            }
+            //else if (PurchaseType == "die")
+            //{
+            //    lockedDie.SetActive(false);
+            //    diePurchaseButton.SetActive(false);
+            //    dieButtonText.text = "";
+            //    Settings.LoggedInPlayer.SelectedDie = currentDie;
+            //    cost = IngredientData.FirstOrDefault(x => x.PurchaseId == allD10s[currentDie].purchaseId).PurchaseCost;
+            //    PlayerOwns.Add(allD10s[currentDie].purchaseId);
+            //}
+            //else if (PurchaseType == "die2")
+            //{
+            //    lockedDie2.SetActive(false);
+            //    die2PurchaseButton.SetActive(false);
+            //    die2ButtonText.text = "";
+            //    Settings.LoggedInPlayer.SelectedDie2 = currentDie2;
+            //    cost = IngredientData.FirstOrDefault(x => x.PurchaseId == allD10s[currentDie2].purchaseId).PurchaseCost;
+            //    PlayerOwns.Add(allD10s[currentDie2].purchaseId);
+            //}
             Settings.LoggedInPlayer.Stars -= cost;
             SetStarsTotalText();
             checkMeatUnlock();
@@ -254,7 +254,7 @@ public class SkinsController : MonoBehaviour
     }
     public void SaveAndExit()
     {
-        StartCoroutine(sql.RequestRoutine($"purchase/UpdateSkins?UserId={Settings.LoggedInPlayer.UserId}&SelectedMeat={Settings.LoggedInPlayer.SelectedMeat}&SelectedVeggie={Settings.LoggedInPlayer.SelectedVeggie}&SelectedFruit={Settings.LoggedInPlayer.SelectedFruit}&SelectedD10={Settings.LoggedInPlayer.SelectedDie}&SelectedD102={Settings.LoggedInPlayer.SelectedDie2}"));
+        //StartCoroutine(sql.RequestRoutine($"purchase/UpdateSkins?UserId={Settings.LoggedInPlayer.UserId}&SelectedMeat={Settings.LoggedInPlayer.SelectedMeat}&SelectedVeggie={Settings.LoggedInPlayer.SelectedVeggie}&SelectedFruit={Settings.LoggedInPlayer.SelectedFruit}&SelectedD10={Settings.LoggedInPlayer.SelectedDie}&SelectedD102={Settings.LoggedInPlayer.SelectedDie2}"));
         SceneManager.LoadScene("MainMenu");
     }
 
@@ -612,7 +612,7 @@ public class SkinsController : MonoBehaviour
                 dieRequiredText.text += $"You burned {SelectedDieData.PurchaseCost} Calories";
             }
             lockedDie.SetActive(false);
-            Settings.LoggedInPlayer.SelectedDie = currentDie;
+            //Settings.LoggedInPlayer.SelectedDie = currentDie;
         }
         else
         {
@@ -675,7 +675,7 @@ public class SkinsController : MonoBehaviour
                 die2RequiredText.text += $"You burned {SelectedDie2Data.PurchaseCost} Calories";
             }
             lockedDie2.SetActive(false);
-            Settings.LoggedInPlayer.SelectedDie2 = currentDie2;
+            //Settings.LoggedInPlayer.SelectedDie2 = currentDie2;
         }
         else
         {

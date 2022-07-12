@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Networking;
 
 public class SqlController
@@ -33,12 +35,13 @@ public class SqlController
     public IEnumerator PostRoutine(string url, dynamic ToPost, Action<string> callback = null)
     {
         var json = Newtonsoft.Json.JsonConvert.SerializeObject(ToPost);
-        //byte[] postData = System.Text.Encoding.UTF8.GetBytes(json);
-        using (UnityWebRequest request = UnityWebRequest.Post(apiUrl + url, json))
+        byte[] postData = System.Text.Encoding.UTF8.GetBytes(json);
+        using (UnityWebRequest request = UnityWebRequest.Put(apiUrl + url, postData))
         {
-            request.SetRequestHeader("Access-Control-Allow-Origin", "*");
+            //request.SetRequestHeader("Access-Control-Allow-Origin", "*");
             request.SetRequestHeader("Content-Type", "application/json");
-            request.SetRequestHeader("Accept", "application/json");
+            request.method = "POST";
+            //request.chunkedTransfer = false;
             yield return request.SendWebRequest();
 
             var data = request.downloadHandler.text;

@@ -146,6 +146,7 @@ public class FriendController : MonoBehaviour
         BodyText.text = CurrentMessage.Body;
         FromText.text = $"From: " + CurrentMessage.FromName;
         messageChoice.SetActive(false);
+        ViewMessagePanel.SetActive(true);
         StartCoroutine(sql.RequestRoutine($"player/ReadMessage?MessageId={CurrentMessage.MessageId}", GetMessageCallback));
     }
     public void deleteMessage()
@@ -156,25 +157,9 @@ public class FriendController : MonoBehaviour
         StartCoroutine(sql.RequestRoutine($"player/DeleteMessage?MessageId={CurrentMessage.MessageId}", GetMessageCallback));
     }
 
-    public void ShowMessages(bool open)
+    public void HideMessage()
     {
-        if (!Settings.IsConnected)
-        {
-            alertText.text = "Unable to connect! \n \n This feature requires an active connection to the game server.";
-            alert.SetActive(true);
-        }
-        else
-        {
-            if (Settings.LoggedInPlayer.IsGuest)
-            {
-                alertText.text = "Log in to send and receive messages!";
-                alert.SetActive(true);
-            }
-            else
-            {
-                ViewMessagePanel.SetActive(open);
-            }
-        }
+        ViewMessagePanel.SetActive(false);
     }
 
     private void CreateFriend(string username, bool realFriend)

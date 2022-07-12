@@ -8,23 +8,17 @@ namespace Assets.Models
 {
     public class Player
     {
-        public Player ShallowCopy()
-        {
-            return (Player)this.MemberwiseClone();
-        }
-
         public int UserId = 40;
         public string Username = "Guest";
         public string Password = "";
         public bool IsCPU = false;
         public int Wins = 0;
         public int LocalWins = 0;
-        public int SelectedDie = 0;
-        public int SelectedDie2 = 0;
-        public int SelectedMeat = 0;
-        public int SelectedVeggie = 1;
-        public int SelectedFruit = 2;
-        public int SelectedFourth = 3;
+        public List<int> SelectedDie = new List<int>();
+        public int SelectedMeat = 1;
+        public int SelectedVeggie = 2;
+        public int SelectedFruit = 3;
+        public int SelectedFourth = 4;
         public int Stars = 0;
         public int Cooked = 0;
         public int Xp = 0;

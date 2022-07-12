@@ -34,6 +34,7 @@ public class MainMenuController : MonoBehaviour
     public GameObject viewFriends;
     public GameObject removeFriend;
     public Text ProfileText;
+    public Text MainProfileText;
     public Text CurrentLevelText;
     public Text DailyWinsText;
     public Text WeeklyWinsText;
@@ -240,6 +241,7 @@ public class MainMenuController : MonoBehaviour
         LastLoginText.color = Color.white;
 
         ProfileText.text = $"{CurrentPlayer.Username}'s Profile";
+        MainProfileText.text = $"{CurrentPlayer.Username}";
         CurrentLevelText.text = $"";
         DailyWinsText.text = $"Daily CPU Wins: {CurrentPlayer.DailyWins}";
         WeeklyWinsText.text = $"Weekly CPU Wins: {CurrentPlayer.WeeklyWins}";

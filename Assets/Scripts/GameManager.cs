@@ -23,8 +23,8 @@ public class GameManager : MonoBehaviour
     private float readingTimeStart;
     internal float talkingTimeStart;
     private float turnTime = 0;
-    private float rollDuration = 1; //10;
-    private float turnDuration = 1; //25;
+    private float rollDuration = 10;
+    private float turnDuration = 25;
     private bool? Player1Turn = null;
     internal bool GameOver = false;
     private bool? OnlineDiceFound = null;
@@ -134,10 +134,7 @@ public class GameManager : MonoBehaviour
         Settings.IsDebug = true;
         //Settings.LoggedInPlayer.Experimental = true;
 #endif
-    }
 
-    private void Start()
-    {
         if (Settings.OnlineGameId == 0)
         {
             activePlayer = Random.Range(0, 2);
@@ -318,8 +315,8 @@ public class GameManager : MonoBehaviour
         ProfileText1.text = Settings.LoggedInPlayer.Username;
         ProfileText2.text = Settings.SecondPlayer.Username;
         UpdateIngredientSkins();
-        UpdateDiceSkin(HigherRollImage1, LowerRollImage1, Settings.LoggedInPlayer.Username);
-        UpdateDiceSkin(HigherRollImage2, LowerRollImage2, Settings.SecondPlayer.Username);
+        UpdateDiceSkin(HigherRollImage1, LowerRollImage1, Settings.LoggedInPlayer);
+        UpdateDiceSkin(HigherRollImage2, LowerRollImage2, Settings.SecondPlayer);
     }
 
     private void UpdateIngredientSkins()
@@ -471,7 +468,7 @@ public class GameManager : MonoBehaviour
         }
         UpdateDiceSkin(activePlayer == 0 ? HigherRollImage1 : HigherRollImage2,
             activePlayer == 0 ? LowerRollImage1 : LowerRollImage2,
-            GetActivePlayer().Username);
+            GetActivePlayer());
         if (Settings.OnlineGameId != 0 && GetActivePlayer().UserId != Settings.LoggedInPlayer.UserId)
         {
             OnlineDiceFound = false;
@@ -922,23 +919,25 @@ public class GameManager : MonoBehaviour
         } 
     }
 
-    private void UpdateDiceSkin(Button HigherRoll, Button LowerRoll, string Username)
+    private void UpdateDiceSkin(Button HigherRoll, Button LowerRoll, Player User)
     {
-        if (Username == "Jenn")
+        Sprite higherSprite = User.UserId == playerList[0].UserId ? yellowDie : purpleDie;
+        Sprite lowerSprite = User.UserId == playerList[0].UserId ? yellowDie : purpleDie;
+        if (User.Username == "Jenn")
         {
-            HigherRoll.gameObject.GetComponent<Image>().sprite = allD10s[Random.Range(allD10s.Count() - 3, allD10s.Count())];
-            LowerRoll.gameObject.GetComponent<Image>().sprite = allD10s[Random.Range(allD10s.Count() - 3, allD10s.Count())];
+            higherSprite = allD10s[Random.Range(allD10s.Count() - 3, allD10s.Count())];
+            lowerSprite = allD10s[Random.Range(allD10s.Count() - 3, allD10s.Count())];
         }
-        else if (Username == playerList[0].Username)
+        else if (User.SelectedDie.Count > 0)
         {
-            HigherRoll.gameObject.GetComponent<Image>().sprite = playerList[0].SelectedDie != 0 ? allD10s[playerList[0].SelectedDie] : yellowDie;
-            LowerRoll.gameObject.GetComponent<Image>().sprite = playerList[0].SelectedDie2 != 0 ? allD10s[playerList[0].SelectedDie2] : yellowDie;
+            var random = new System.Random();
+            int index1 = random.Next(User.SelectedDie.Count);
+            int index2 = random.Next(User.SelectedDie.Count);
+            higherSprite = allD10s[User.SelectedDie[index1]];
+            lowerSprite = allD10s[User.SelectedDie[index2]];
         }
-        else if (Username == playerList[1].Username)
-        {
-            HigherRoll.gameObject.GetComponent<Image>().sprite = playerList[1].SelectedDie != 0 ? allD10s[playerList[1].SelectedDie] : purpleDie;
-            LowerRoll.gameObject.GetComponent<Image>().sprite = playerList[1].SelectedDie2 != 0 ? allD10s[playerList[1].SelectedDie2] : purpleDie;
-        }
+        HigherRoll.gameObject.GetComponent<Image>().sprite = higherSprite;
+        LowerRoll.gameObject.GetComponent<Image>().sprite = lowerSprite;
     }
 
     public void RollSelected(bool isHigher)
