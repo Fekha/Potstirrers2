@@ -17,7 +17,6 @@ public class CollectionController : MonoBehaviour
     public Sprite UnselectedTabSprite;
 
     [Header("Ingredients")]
-    public List<Sprite> ingSprites;
     public GameObject IngButtonContent;
     public Button IngPrefabObj;
     private List<SkinData> AllIngSkins = new List<SkinData>();
@@ -25,7 +24,6 @@ public class CollectionController : MonoBehaviour
     internal List<int> SelectedIngSkins = new List<int>();  
 
     [Header("Dice")]
-    public List<Sprite> diceSprites;
     public GameObject DiceButtonContent;
     public Button DicePrefabObj;
     private List<SkinData> AllDiceSkins = new List<SkinData>();
@@ -38,9 +36,9 @@ public class CollectionController : MonoBehaviour
     public GameObject alert;
     public Text alertText;
     private SqlController sql;
-    public static CollectionController i;
     private bool hasBeenIngChange = false;
     private bool hasBeenDiceChange = false;
+    public static CollectionController i;
     private class SkinData : Skin
     {
         public Button SkinButton = null;
@@ -60,7 +58,7 @@ public class CollectionController : MonoBehaviour
     {
         MyIngSkins = sql.jsonConvert<List<SkinData>>(data);
         var j = 0;
-        ingSprites.ForEach(x => { j++; CreateIng(x, j); });
+        MainMenuController.i.ingSprites.ForEach(x => { j++; CreateIng(x, j); });
     }
     
     private void GetMyDiceCallback(string data)
@@ -68,18 +66,20 @@ public class CollectionController : MonoBehaviour
         MyDiceSkins = sql.jsonConvert<List<SkinData>>(data);
         ClearDice();
         var j = 0;
-        diceSprites.ForEach(x => { j++; CreateDice(x, j); });
+        MainMenuController.i.diceSprites.ForEach(x => { j++; CreateDice(x, j); });
     }
 
     private void ClearDice()
     {
         if (DiceButtonLog.Count() > 0)
         {
+            AllDiceSkins.Clear();
             for (int i = DiceButtonLog.Count() - 1; i >= 0; i--)
             {
                 Destroy(DiceButtonLog[i].gameObject);
                 DiceButtonLog.Remove(DiceButtonLog[i]);
             }
+            DiceButtonLog.Clear();
         }
     }
     #region Ingredients
@@ -145,6 +145,16 @@ public class CollectionController : MonoBehaviour
                 item.SkinButton.transform.Find("Selected").gameObject.SetActive(true);
                 item.IsSelected = true;
                 SelectedIngSkins.Add(item.SkinId);
+                var skin1 = SelectedIngSkins.Count > 0 ? SelectedIngSkins[0] : 0;
+                var skin2 = SelectedIngSkins.Count > 1 ? SelectedIngSkins[1] : 0;
+                var skin3 = SelectedIngSkins.Count > 2 ? SelectedIngSkins[2] : 0;
+                var skin4 = SelectedIngSkins.Count > 3 ? SelectedIngSkins[3] : 0;
+                Settings.LoggedInPlayer.SelectedMeat = skin1;
+                Settings.LoggedInPlayer.SelectedVeggie = skin2;
+                Settings.LoggedInPlayer.SelectedFruit = skin3;
+                Settings.LoggedInPlayer.SelectedFourth = skin4;
+
+                StartCoroutine(sql.RequestRoutine($"purchase/UpdateIngredientSkins?UserId={Settings.LoggedInPlayer.UserId}&SelectedMeat={skin1}&SelectedVeggie={skin2}&SelectedFruit={skin3}&SelectedFourth={skin4}"));
             }
             else
             {
@@ -208,6 +218,8 @@ public class CollectionController : MonoBehaviour
             item.SkinButton.transform.Find("Selected").gameObject.SetActive(false);
             item.IsSelected = false;
             SelectedDiceSkins.Remove(item.SkinId);
+            Settings.LoggedInPlayer.SelectedDie.Remove(item.SkinId);
+            StartCoroutine(sql.RequestRoutine($"purchase/UpdateDiceSkins?UserId={Settings.LoggedInPlayer.UserId}&dieId={item.SkinId}&add=false"));
         }
         else
         {
@@ -216,6 +228,8 @@ public class CollectionController : MonoBehaviour
                 item.SkinButton.transform.Find("Selected").gameObject.SetActive(true);
                 item.IsSelected = true;
                 SelectedDiceSkins.Add(item.SkinId);
+                Settings.LoggedInPlayer.SelectedDie.Add(item.SkinId);
+                StartCoroutine(sql.RequestRoutine($"purchase/UpdateDiceSkins?UserId={Settings.LoggedInPlayer.UserId}&dieId={item.SkinId}&add=true"));
             }
             else
             {
@@ -230,54 +244,27 @@ public class CollectionController : MonoBehaviour
     #region Tabs
     public void TabClicked(int Selected)
     {
-        if (CheckValid())
+        if (Selected != 1)
         {
-            if (Selected != 1)
-            {
-                IngPanel.SetActive(false);
-                IngButtonImage.sprite = UnselectedTabSprite;
-            }
-            else
-            {
-                IngPanel.SetActive(true);
-                IngButtonImage.sprite = SelectedTabSprite;
-            }
-            if (Selected != 2)
-            {
-                DicePanel.SetActive(false);
-                DiceButtonImage.sprite = UnselectedTabSprite;
-            }
-            else
-            {
-                DicePanel.SetActive(true);
-                DiceButtonImage.sprite = SelectedTabSprite;
-            }
-        }
-    }
-
-    public bool CheckValid()
-    {
-        if (SelectedIngSkins.Count < 4)
-        {
-            alertText.text = "You must select 4 Ingredients to be active!";
-            alert.SetActive(true);
-            return false;
+            IngPanel.SetActive(false);
+            IngButtonImage.sprite = UnselectedTabSprite;
         }
         else
         {
-            if (hasBeenIngChange)
-            {
-                StartCoroutine(sql.RequestRoutine($"purchase/UpdateIngredientSkins?UserId={Settings.LoggedInPlayer.UserId}&SelectedMeat={SelectedIngSkins[0]}&SelectedVeggie={SelectedIngSkins[1]}&SelectedFruit={SelectedIngSkins[2]}&SelectedFourth={SelectedIngSkins[3]}"));
-                hasBeenIngChange = false;
-            }
-
-            if (hasBeenDiceChange)
-            {
-                StartCoroutine(sql.PostRoutine($"purchase/UpdateDiceSkins?UserId={Settings.LoggedInPlayer.UserId}", SelectedDiceSkins));
-                hasBeenDiceChange = false;
-            }
-            return true;
+            IngPanel.SetActive(true);
+            IngButtonImage.sprite = SelectedTabSprite;
+        }
+        if (Selected != 2)
+        {
+            DicePanel.SetActive(false);
+            DiceButtonImage.sprite = UnselectedTabSprite;
+        }
+        else
+        {
+            DicePanel.SetActive(true);
+            DiceButtonImage.sprite = SelectedTabSprite;
         }
     }
+
     #endregion region
 }

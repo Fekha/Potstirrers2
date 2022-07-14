@@ -10,11 +10,14 @@ public static class Settings
     public static bool IsDebug = false;
     public static bool HardMode = true;
     public static bool EnteredGame = false;
+    public static bool JustWonOnline = false;
     public static int OnlineGameId = 0;
+    public static double AppVersion = 1.03;
+    public static bool FakeOnlineGame = false;
 
     //public static List<Player> CPUPlayers = new List<Player>() { 
     //    new Player() { Username = "Joe", IsCPU = true, UserId = 43 },
-    //    new Player() { Username = "Zach", IsCPU = true, UserId = 42  },
+    //    new Player() { Username = "Ethan", IsCPU = true, UserId = 42  },
     //    new Player() { Username = "Chrissy", IsCPU = true, UserId = 44  },
     //    new Player() { Username = "Jenn", IsCPU = true, UserId = 41  }
     //};
@@ -31,7 +34,7 @@ For more in depth help join our discord! https://discord.gg/fab.",
 
 @"How to win:
 
-Cook all 3 of your ingredients!
+Cook all 4 of your ingredients!
 
 An ingredient becomes cooked when you enter the pot with one of your uncooked ingredients.
 
@@ -42,15 +45,17 @@ You also skip spaces cooked ingredients are on while moving, which gives you a b
 
 Roll both of your dice and move two different ingredients.
 
-Your own ingredients are valid moves with either die.
+Rules for moving:
 
-If one of the die has a lower value than the other, you may instead move any of your opponents ingredients with it. 
+You may move one of your ingredients with either roll.
 
-An ingredient is a valid move if it is not part of a stack or on top of a stack.
+With your lower roll you may also move an ingredient from the other team.
+
+If you rolled doubles, they both count as a lower roll, and you may move the same ingredient twice.
+
+You may not move an ingredient that has been stacked on.
 
 You must always move an ingredient if possible.
-
-If you have taken both moves or can not make a legal move move then your turn is over.
 ",
 
 @"Landing on an ingredient:
@@ -66,6 +71,7 @@ Note: Cooked ingredients can't be landed on because you never count the space th
 @"Exact Spaces:
 
 There are three spaces labeled Exact.
+
 Landing on them does NOTHING. 
 
 They signal a split in the path that may be taken if you have exactly one move left.
@@ -84,7 +90,7 @@ Note: If there is a cooked ingredient on the other side of the utensil, skip ove
 
 All ingredients start on Prep, and return here after being cooked, being landed on in a danger zone, or moving onto a trash can.
 
-Ingredients all share Prep and do not stack
+Ingredients all share Prep and do not stack.
 
 Prep is not skipped if there is a cooked ingredient on it when being sent there or when getting moved onto it from the end of the board.
 ",
@@ -96,13 +102,6 @@ Prep is not skipped if there is a cooked ingredient on it when being sent there 
 Playtesting is the core of game design. 
 Without you there is no game, so please let me know about any feedback you have!"
  };
-}
-
-public enum PlayerTypes
-{
-    HUMAN,
-    CPU,
-    NO_PLAYER
 }
 public enum TalkType
 {

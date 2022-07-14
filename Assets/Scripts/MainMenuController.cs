@@ -15,6 +15,7 @@ public class MainMenuController : MonoBehaviour
     public Slider xpSlider;
     public Text lvlText;
     public Text xpText;
+    public GameObject VersionPanel;
     #endregion
 
     [Header("Settings")]
@@ -52,9 +53,8 @@ public class MainMenuController : MonoBehaviour
     public GameObject LoadingPanel;
     public Text loadingTimer;
     public GameObject ExitPrompt;
-    public GameObject DifficultyPrompt;
-    public GameObject LoginSecondPlayer;
-    public GameObject usernameText;
+    public GameObject NoMatchesFound;
+    private bool keepWaiting = false;
     #endregion
     public static MainMenuController i;
     #region Internal Varibales
@@ -67,12 +67,18 @@ public class MainMenuController : MonoBehaviour
     private float totalElapsed = 0f;
     private float elapsed = 0f;
     private bool LookingForGame = false;
+    public List<Sprite> diceSprites;
+    public List<Sprite> ingSprites;
+    private int tick = 10;
+
     #endregion
     void Awake()
     {
         i = this;
         sql = new SqlController();
         Settings.OnlineGameId = 0;
+        Settings.FakeOnlineGame = false;
+        Settings.HardMode = true;
         wineToggle.isOn = Settings.LoggedInPlayer.WineMenu;
         d8Toggle.isOn = Settings.LoggedInPlayer.UseD8s;
         doubleToggle.isOn = Settings.LoggedInPlayer.DisableDoubles;
@@ -90,6 +96,42 @@ public class MainMenuController : MonoBehaviour
             alertText.text = $"If you enjoyed the game make an account! You can unlock new pieces and dice to play with and compete on the leaderboard.";
             alert.SetActive(true);
             Settings.EnteredGame = false;
+        } else if (Settings.JustWonOnline) {
+            Settings.JustWonOnline = false;
+            alertText.text = $"You earned a reward for winning your match. \n \n Check the reward tab at the bottom to claim it!";
+            alert.SetActive(true);
+        }
+    }
+  
+    private void Update()
+    {
+        elapsed += Time.deltaTime;
+        if (elapsed >= 1f)
+        {
+            elapsed = elapsed % 1f;
+            tick++;
+            if (LookingForGame)
+            {
+                totalElapsed++;
+                TimeSpan time = TimeSpan.FromSeconds(totalElapsed);
+                loadingTimer.text = "Time in queue: " + time.ToString(@"m\:ss");
+                StartCoroutine(sql.RequestRoutine($"analytic/LookforGame?UserId={Settings.LoggedInPlayer.UserId}", GetGameUpdate));
+                if (!keepWaiting && totalElapsed > 30)
+                {
+                    NoMatchesFound.SetActive(true);
+                }
+            }
+            else
+            {
+                totalElapsed = 0;
+                loadingTimer.text = "Time in queue: 0:00";
+            }
+
+            if (tick > 10)
+            {
+                tick = 0;
+                StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
+            }
         }
     }
     private void GetGameUpdate(string data)
@@ -98,41 +140,61 @@ public class MainMenuController : MonoBehaviour
         if (Settings.OnlineGameId != 0)
         {
             LookingForGame = false;
-            Settings.HardMode = false;
             SceneManager.LoadScene("PlayScene");
         }
     }
-    private void Update()
+
+    private void StartFakeOnlineGame()
     {
-        if (LookingForGame)
+        StopMatchmaking();
+        Settings.SecondPlayer = new Player() { Username = "Ethan", IsCPU = true, UserId = 42 };
+        Settings.FakeOnlineGame = true;
+        SceneManager.LoadScene("PlayScene");
+    }
+
+    private void GetAppVersionCallback(string data)
+    {
+        var version = sql.jsonConvert<double>(data);
+        if (Settings.AppVersion < version)
         {
-            elapsed += Time.deltaTime;
-            totalElapsed += Time.deltaTime;
-            if (elapsed >= 1f)
-            {
-                TimeSpan time = TimeSpan.FromSeconds(totalElapsed);
-                loadingTimer.text = "Time in queue: " + time.ToString(@"mm\:ss");
-                elapsed = elapsed % 1f;
-                if(sql == null)
-                    sql = new SqlController();
-                StartCoroutine(sql.RequestRoutine($"analytic/LookforGame?UserId={Settings.LoggedInPlayer.UserId}", GetGameUpdate));
-            }
+            StopMatchmaking();
+            VersionPanel.SetActive(true);
         }
-        else
-        {
-            totalElapsed = 0;
-        }
-       
     }
     public void Matchmaking(bool start)
     {
-        LookingForGame = start;
-        LoadingPanel.SetActive(start);
-        if (!start)
+        if (Settings.LoggedInPlayer.IsGuest) 
         {
-            StartCoroutine(sql.RequestRoutine($"analytic/StopLookingforGame?UserId={Settings.LoggedInPlayer.UserId}"));
+            alertText.text = "Guests can only play vs the computer, try that or create an account!";
+            alert.SetActive(true);
+        }
+        else if (Settings.LoggedInPlayer.Stars < 150)
+        {
+            alertText.text = "You need 150 calories to play online!";
+            alert.SetActive(true);
+        }
+        else
+        {
+            if (start)
+            {
+                LookingForGame = start;
+                LoadingPanel.SetActive(start);
+            }
+            else
+            {
+                StopMatchmaking();
+            }
         }
     }
+
+    private void StopMatchmaking()
+    {
+        LookingForGame = false;
+        keepWaiting = false;
+        LoadingPanel.SetActive(false);
+        StartCoroutine(sql.RequestRoutine($"analytic/StopLookingforGame?UserId={Settings.LoggedInPlayer.UserId}"));
+    }
+
     public void showSettings()
     {
         if (!Settings.IsConnected)
@@ -190,10 +252,6 @@ public class MainMenuController : MonoBehaviour
         ExitPrompt.SetActive(open);
     } 
 
-    public void exitLogin()
-    {
-        LoginSecondPlayer.SetActive(false);
-    }
     public void hideAlert()
     {
         alert.SetActive(false);
@@ -209,7 +267,7 @@ public class MainMenuController : MonoBehaviour
     }
 
     public void UpdateLvlText() {
-        float xpNeeded = (300 + (Settings.LoggedInPlayer.Level * 25));
+        float xpNeeded = (100 + (Settings.LoggedInPlayer.Level * 50));
         lvlText.text = $"Current Level: {Settings.LoggedInPlayer.Level}";
         xpText.text = $"XP To Next Level: {Settings.LoggedInPlayer.Xp}/{xpNeeded}";
         xpSlider.value = ((float)Settings.LoggedInPlayer.Xp / xpNeeded);
@@ -392,6 +450,17 @@ public class MainMenuController : MonoBehaviour
         Settings.EnteredGame = true;
         SceneManager.LoadScene("PlayScene");
     }
-
-
+    
+    public void OnlineWaitingChoice(bool wait)
+    {
+        if (wait)
+        {
+            keepWaiting = true;
+        }
+        else
+        {
+            StartFakeOnlineGame();
+        }
+        NoMatchesFound.SetActive(false);
+    }
 }

@@ -22,6 +22,10 @@ public class CpuLogic : MonoBehaviour
     public IEnumerator FindCPUIngredientMoves()
     {
         yield return new WaitForSeconds(.5f);
+
+        //if (Settings.FakeOnlineGame)
+        //    yield return new WaitForSeconds(Random.Range(.5f, 2.5f));
+
         yield return StartCoroutine(FindBestMove());
 
         if (GameManager.i.DoublesRolled())
@@ -29,6 +33,9 @@ public class CpuLogic : MonoBehaviour
             IngredientMovedWithHigher = null;
             IngredientMovedWithLower = null;
         }
+
+        //if(Settings.FakeOnlineGame)
+        //    yield return new WaitForSeconds(Random.Range(.5f, 2.5f));
 
         if (!GameManager.i.GameOver && GameManager.i.IsCPUTurn() && (IngredientMovedWithLower == null || IngredientMovedWithHigher == null))
             yield return StartCoroutine(FindBestMove());
@@ -131,12 +138,12 @@ public class CpuLogic : MonoBehaviour
             ?? MoveFrontMostEnemy()
             ?? Slide(true)
             ?? StackEnemy(true)
-            ?? StackEnemy(false)
             ?? MoveOffStack(false)
             ?? MoveFrontMostIngredient(false, false)
             ?? MoveOffStack(true)
             ?? MoveFrontMostIngredient(true, false)
             ?? MoveFrontMostIngredient(false, true)
+            ?? StackEnemy(false)
             ?? MoveNotPastPrep()
             ?? MoveCookedPastPrep()
             ?? MoveEnemyIngredient()
@@ -159,7 +166,7 @@ public class CpuLogic : MonoBehaviour
     }
     internal void ActivateShitTalk()
     {
-        if (Settings.OnlineGameId != 0)
+        if (Settings.OnlineGameId != 0 || Settings.FakeOnlineGame)
             return;
 
         if (!string.IsNullOrEmpty(GameManager.i.talkShitText.text) && !GameManager.i.TalkShitPanel.activeInHierarchy)
@@ -170,10 +177,7 @@ public class CpuLogic : MonoBehaviour
     }
     internal void PrepShitTalk(TalkType talk)
     {
-        if (!GameManager.i.playerList.Any(x => x.IsCPU))
-            return;
-
-        if (Settings.OnlineGameId != 0 || !string.IsNullOrEmpty(GameManager.i.talkShitText.text))
+        if (Settings.OnlineGameId != 0 || Settings.FakeOnlineGame || !string.IsNullOrEmpty(GameManager.i.talkShitText.text) || !GameManager.i.playerList.Any(x => x.IsCPU))
             return;
 
         var username = GameManager.i.GetActivePlayer().Username;
@@ -182,7 +186,7 @@ public class CpuLogic : MonoBehaviour
             case TalkType.MoveRandomly:
                 switch (username)
                 {
-                    case "Zach":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "Hmm, you stumped me!";
                         break;
                     case "Joe":
@@ -201,7 +205,7 @@ public class CpuLogic : MonoBehaviour
             case TalkType.Trash:
                 switch (username)
                 {
-                    case "Zach":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "My pa paw taught me to take out the trash.";
                         break;
                     case "Joe":
@@ -220,7 +224,7 @@ public class CpuLogic : MonoBehaviour
             case TalkType.Stomped:
                 switch (username)
                 {
-                    case "Zach":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "Stomped!";
                         break;
                     case "Joe":
@@ -239,7 +243,7 @@ public class CpuLogic : MonoBehaviour
             case TalkType.StompedBySelf:
                 switch (username)
                 {
-                    case "Zach":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "Self Stomp!";
                         break;
                     case "Joe":
@@ -258,7 +262,7 @@ public class CpuLogic : MonoBehaviour
             case TalkType.SafeZoned:
                 switch (username)
                 {
-                    case "Zach":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "Safe for me, not you!";
                         break;
                     case "Joe":
@@ -277,7 +281,7 @@ public class CpuLogic : MonoBehaviour
             case TalkType.Cook:
                 switch (username)
                 {
-                    case "Zach":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "My me maw taught me to cook like this.";
                         break;
                     case "Joe":
@@ -296,7 +300,7 @@ public class CpuLogic : MonoBehaviour
             case TalkType.HelpCook:
                 switch (username)
                 {
-                    case "Zach":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "Alley Oop!";
                         break;
                     case "Joe":
@@ -315,7 +319,7 @@ public class CpuLogic : MonoBehaviour
             case TalkType.MovePastPrep:
                 switch (username)
                 {
-                    case "Zach":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "You know what they say...";
                         break;
                     case "Joe":
@@ -334,14 +338,14 @@ public class CpuLogic : MonoBehaviour
             case TalkType.SentBack:
                 username = GameManager.i.playerList.FirstOrDefault(x => x.IsCPU).Username;
 
-                var ZachOptions = new List<string>() { "", "Man it sucks to suck...", "Dag Nabbit!", "What do you think your doing!?" };
+                var EthanOptions = new List<string>() { "", "Man it sucks to suck...", "Dag Nabbit!", "What do you think your doing!?" };
                 var JoeOptions = new List<string>() { "", "Wait, you can't do that to me!!", "Watch your back!", "I'll remember that!" };
                 var JennOptions = new List<string>() { "", "#Oooof", "#Toxic", "#OhNoYouDidnt" };
                 var ChrissyOptions = new List<string>() { "", "Well that wasn't very nice!", "Hey, quit doing that!", "Treat others how you want to be treated..." };
                 switch (username)
                 {
-                    case "Zach":
-                        GameManager.i.talkShitText.text = ZachOptions[Random.Range(0, ZachOptions.Count())];
+                    case "Ethan":
+                        GameManager.i.talkShitText.text = EthanOptions[Random.Range(0, EthanOptions.Count())];
                         break;
                     case "Joe":
                         GameManager.i.talkShitText.text = JoeOptions[Random.Range(0, JoeOptions.Count())];

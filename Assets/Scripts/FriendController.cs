@@ -51,7 +51,7 @@ public class FriendController : MonoBehaviour
     {
         sql = new SqlController();
     }
-    private void Start()
+    private void OnEnable()
     {
         StartCoroutine(sql.RequestRoutine($"player/GetFriends?userId={Settings.LoggedInPlayer.UserId}", GetFriendCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetMessages?userId={Settings.LoggedInPlayer.UserId}", GetMessageCallback));

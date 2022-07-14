@@ -28,10 +28,8 @@ public class TabController : MonoBehaviour
     {
         if (Settings.LoggedInPlayer.IsGuest)
         {
-            return;
-        }
-        else if (lastSelected == 5 && !CollectionController.i.CheckValid())
-        {
+            MainMenuController.i.alertText.text = "Create an account to access the tabs!";
+            MainMenuController.i.alert.SetActive(true);
             return;
         }
         else

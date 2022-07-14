@@ -47,6 +47,7 @@ public class Ingredient : MonoBehaviour
         {
             yield return new WaitForSeconds(.5f);
         }
+
         GameManager.i.isMoving = true;
 
         yield return StartCoroutine(BeforeMoving());
@@ -311,7 +312,7 @@ public class Ingredient : MonoBehaviour
     private IEnumerator MoveSelectedIngredient()
     {
         if (Settings.OnlineGameId != 0)
-            yield return StartCoroutine(sql.RequestRoutine($"analytic/UpdateTurn?GameId={Settings.OnlineGameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
+            yield return StartCoroutine(sql.RequestRoutine($"analytic/UpdateTurn?UserId={Settings.LoggedInPlayer.UserId}&GameId={Settings.OnlineGameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
 
         yield return StartCoroutine(Move());
     }

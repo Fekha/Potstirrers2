@@ -12,18 +12,23 @@ using Assets.Models;
 public class LoginController : MonoBehaviour
 {
     public GameObject alert;
+    public GameObject VersionPanel;
     public GameObject password;
     public GameObject username;
     public Text alertText;
+    public Text AppVersion;
     private Guid deviceId;
     private bool rememberMe = false; 
     public Toggle rememberToggle;
     private EventSystem system;
     Player Player;
     private SqlController sql;
+    private float elapsed;
+    private int tick = 10;
 
     private void Start()
     {
+        AppVersion.text = "Ver. " + Settings.AppVersion.ToString();
         sql = new SqlController();
         system = EventSystem.current;
         //alertText.text = "Sorry, I messed up.. \n \n Until July 1st only playing as guest will work..";
@@ -47,8 +52,7 @@ public class LoginController : MonoBehaviour
                 }
             }
         
-            var url = "player/GetDevice?deviceId=" + deviceId;
-            StartCoroutine(sql.RequestRoutine(url, GetDeviceCallback, true));
+            StartCoroutine(sql.RequestRoutine($"player/GetDevice?deviceId={deviceId}", GetDeviceCallback, true));
         }
         catch(Exception ex){}
 
@@ -56,6 +60,40 @@ public class LoginController : MonoBehaviour
         username.GetComponent<InputField>().text = "feca";
         password.GetComponent<InputField>().text = "1234";
 #endif
+
+    }
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Mouse0) && alert.activeInHierarchy)
+        {
+            alert.SetActive(false);
+        }
+
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            Selectable next = system.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnDown();
+
+            if (next != null)
+            {
+                InputField inputfield = next.GetComponent<InputField>();
+                if (inputfield != null)
+                    inputfield.OnPointerClick(new PointerEventData(system));
+
+                system.SetSelectedGameObject(next.gameObject, new BaseEventData(system));
+            }
+        }
+        elapsed += Time.deltaTime;
+        if (elapsed >= 1f)
+        {
+            elapsed = elapsed % 1f;
+            tick++;
+            if (tick > 10)
+            {
+                tick = 0;
+                StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
+            }
+        }
 
     }
     public void RememberMe()
@@ -72,6 +110,14 @@ public class LoginController : MonoBehaviour
             password.GetComponent<InputField>().text = Decrypt(Player.Password);
             rememberToggle.isOn = true;
             rememberMe = true;
+        }
+    } 
+    private void GetAppVersionCallback(string data)
+    {
+        var version = sql.jsonConvert<double>(data);
+        if (Settings.AppVersion < version)
+        {
+            VersionPanel.SetActive(true);
         }
     } 
     
@@ -115,7 +161,7 @@ public class LoginController : MonoBehaviour
     }
     public void GuestButton()
     {
-        Settings.LoggedInPlayer = new Player() { Username = "Guest" };
+        Settings.LoggedInPlayer = new Player() { Username = "Guest" + UnityEngine.Random.Range(1000, 10000) };
         Settings.LoggedInPlayer.IsGuest = true;
         SceneManager.LoadScene("MainMenu");
     }
@@ -126,7 +172,7 @@ public class LoginController : MonoBehaviour
         yield return StartCoroutine(sql.RequestRoutine(url, GetPlayerCallback, true));  
     }
 
-    private void RegisterButton()
+    public void RegisterButton()
     {
         if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
         {
@@ -161,27 +207,7 @@ public class LoginController : MonoBehaviour
             alert.SetActive(true);
         }
     }
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Mouse0) && alert.activeInHierarchy)
-        {
-            alert.SetActive(false);
-        }
-
-        if (Input.GetKeyDown(KeyCode.Tab))
-        {
-            Selectable next = system.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnDown();
-
-            if (next != null)
-            {
-                InputField inputfield = next.GetComponent<InputField>();
-                if (inputfield != null)
-                    inputfield.OnPointerClick(new PointerEventData(system));
-
-                system.SetSelectedGameObject(next.gameObject, new BaseEventData(system));
-            }
-        }
-    }
+ 
 
     public static string Encrypt(string encryptString)
     {
@@ -232,3 +258,4 @@ public class LoginController : MonoBehaviour
         return cipherText;
     }
 }
+

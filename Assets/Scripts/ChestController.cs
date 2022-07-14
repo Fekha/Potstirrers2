@@ -2,6 +2,7 @@ using Assets.Scripts.Models;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -23,6 +24,8 @@ public class ChestController : MonoBehaviour
     public Sprite SmallPack;
     public Sprite MediumPack;
     public Sprite LargePack;
+    public Sprite EpicBackground;
+    public Sprite RareBackground;
     public class Chest
     {
         public int ChestId { get; set; }
@@ -36,7 +39,6 @@ public class ChestController : MonoBehaviour
     {
         sql = new SqlController();
         defualtText = HelpText.text;
-        
     }
     private void OnEnable()
     {
@@ -55,14 +57,29 @@ public class ChestController : MonoBehaviour
         ClearChests();
         var j = 0;
         PlayerChests.ForEach(x => { CreateChests(x,j); j++; });
-        UnlockPanel.SetActive(true);
-        unlocks.ForEach(x => { ShowUnlocks(x); });
+        unlocks.ToList().ForEach(x => { ShowUnlocks(x); });
     }
 
     private void ShowUnlocks(Skin x)
     {
-        DiePrefab.GetComponent<Image>().sprite = CollectionController.i.diceSprites[x.SkinId];
-        DiePrefab.GetComponentInChildren<Text>().text = x.UnlockedQty.ToString();
+        DiePrefab.transform.Find("DieImage").GetComponent<Image>().sprite = MainMenuController.i.diceSprites[x.SkinId-1];
+        DiePrefab.transform.Find("DieImage").transform.Find("DieNumber").GetComponent<Text>().text = x.UnlockedQty.ToString();
+        if (x.Rarity == 3)
+        {
+            DiePrefab.transform.Find("Rarity").GetComponent<Image>().sprite = EpicBackground;
+            DiePrefab.transform.Find("RarityText").GetComponent<Text>().text = "Epic!";
+        }
+        else if (x.Rarity == 2)
+        {
+            DiePrefab.transform.Find("Rarity").GetComponent<Image>().sprite = RareBackground;
+            DiePrefab.transform.Find("RarityText").GetComponent<Text>().text = "Rare!";
+        }
+        else
+        {
+            DiePrefab.transform.Find("Rarity").GetComponent<Image>().sprite = EmptySlot;
+            DiePrefab.transform.Find("RarityText").GetComponent<Text>().text = "";
+        }
+
         var die = Instantiate(DiePrefab, DieContent.transform);
         DieLog.Add(die);
     }
@@ -92,6 +109,7 @@ public class ChestController : MonoBehaviour
 
     public void PressChest(int slotSelected)
     {
+        HideUnlocks();
         HelpText.text = $"Press to open your {(PlayerChests[slotSelected].ChestSize == 3 ? "large" : PlayerChests[slotSelected].ChestSize == 2 ? "medium" : "small")} dice pack!";
         SlotSelected = slotSelected;
         SelectedChestId = PlayerChests[slotSelected].ChestId;
@@ -104,13 +122,23 @@ public class ChestController : MonoBehaviour
     {
         if (SlotSelected != null)
         {
-            StartCoroutine(sql.RequestRoutine($"purchase/OpenMyChest?UserId={Settings.LoggedInPlayer.UserId}&ChestId={SelectedChestId}", OpenChestsCallback));
-            HelpText.text = defualtText;
+            Slots.ForEach(x => x.GetComponent<Button>().interactable = false);
+            StartCoroutine(OpenChest());
             PlayerChests.RemoveAt((int)SlotSelected);
             SelectedChestId = 0;
             Slots.ForEach(x => x.GetComponent<Image>().sprite = UnselectedChest);
-            ChestToOpenSlot.sprite = EmptySlot;
             SlotSelected = null;
         }
+    }
+
+    private IEnumerator OpenChest()
+    {
+        HelpText.text = "";
+        ChestToOpenSlot.gameObject.GetComponent<Animation>().Play("DiceShaker");
+        yield return StartCoroutine(sql.RequestRoutine($"purchase/OpenMyChest?UserId={Settings.LoggedInPlayer.UserId}&ChestId={SelectedChestId}", OpenChestsCallback));
+        yield return new WaitForSeconds(1.25f);
+        ChestToOpenSlot.sprite = EmptySlot;
+        UnlockPanel.SetActive(true);
+        HelpText.text = defualtText;
     }
 }
