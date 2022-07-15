@@ -21,14 +21,14 @@ public class CollectionController : MonoBehaviour
     public Button IngPrefabObj;
     private List<SkinData> AllIngSkins = new List<SkinData>();
     private List<SkinData> MyIngSkins = new List<SkinData>();
-    internal List<int> SelectedIngSkins = new List<int>();  
+    private List<Button> IngButtonLog = new List<Button>();
+
 
     [Header("Dice")]
     public GameObject DiceButtonContent;
     public Button DicePrefabObj;
     private List<SkinData> AllDiceSkins = new List<SkinData>();
     private List<SkinData> MyDiceSkins = new List<SkinData>();
-    private List<int> SelectedDiceSkins = new List<int>();
     private List<Button> DiceButtonLog = new List<Button>();
 
 
@@ -36,8 +36,6 @@ public class CollectionController : MonoBehaviour
     public GameObject alert;
     public Text alertText;
     private SqlController sql;
-    private bool hasBeenIngChange = false;
-    private bool hasBeenDiceChange = false;
     public static CollectionController i;
     private class SkinData : Skin
     {
@@ -51,12 +49,13 @@ public class CollectionController : MonoBehaviour
 
     private void OnEnable()
     {
-        StartCoroutine(sql.RequestRoutine($"purchase/GetMyIngredientSkins?UserId={Settings.LoggedInPlayer.UserId}", GetMyIngredientCallback));
-        StartCoroutine(sql.RequestRoutine($"purchase/GetMyDiceSkins?UserId={Settings.LoggedInPlayer.UserId}", GetMyDiceCallback));
+        StartCoroutine(sql.RequestRoutine($"skin/GetMyIngredientSkins?UserId={Settings.LoggedInPlayer.UserId}", GetMyIngredientCallback));
+        StartCoroutine(sql.RequestRoutine($"skin/GetMyDiceSkins?UserId={Settings.LoggedInPlayer.UserId}", GetMyDiceCallback));
     }
     private void GetMyIngredientCallback(string data)
     {
         MyIngSkins = sql.jsonConvert<List<SkinData>>(data);
+        ClearIngs();
         var j = 0;
         MainMenuController.i.ingSprites.ForEach(x => { j++; CreateIng(x, j); });
     }
@@ -69,6 +68,19 @@ public class CollectionController : MonoBehaviour
         MainMenuController.i.diceSprites.ForEach(x => { j++; CreateDice(x, j); });
     }
 
+    private void ClearIngs()
+    {
+        if (IngButtonLog.Count() > 0)
+        {
+            AllIngSkins.Clear();
+            for (int i = IngButtonLog.Count() - 1; i >= 0; i--)
+            {
+                Destroy(IngButtonLog[i].gameObject);
+                IngButtonLog.Remove(IngButtonLog[i]);
+            }
+            IngButtonLog.Clear();
+        }
+    }
     private void ClearDice()
     {
         if (DiceButtonLog.Count() > 0)
@@ -86,10 +98,9 @@ public class CollectionController : MonoBehaviour
     private void CreateIng(Sprite item, int skinId)
     {
         bool isSelected = false;
-        if (Settings.LoggedInPlayer.SelectedMeat == skinId || Settings.LoggedInPlayer.SelectedVeggie == skinId || Settings.LoggedInPlayer.SelectedFruit == skinId || Settings.LoggedInPlayer.SelectedFourth == skinId)
+        if (Settings.LoggedInPlayer.SelectedIngs.Contains(skinId))
         {
             IngPrefabObj.transform.Find("Selected").gameObject.SetActive(true);
-            SelectedIngSkins.Add(skinId);
             isSelected = true;
         }
         else
@@ -102,14 +113,16 @@ public class CollectionController : MonoBehaviour
         if (MyIngSkins.Any(x => x.SkinId == skinId))
         {
             skin = MyIngSkins.FirstOrDefault(x => x.SkinId == skinId);
+            IngPrefabObj.GetComponentInChildren<Text>().text = "0";
         }
-        else if (skinId >= 0 && skinId <= 4)
+        else if (skinId >= 0 && skinId <= 6)
         {
             skin = new SkinData()
             {
                 SkinId = skinId,
                 IsUnlocked = true,
             };
+            IngPrefabObj.GetComponentInChildren<Text>().text = "";
         }
         else
         {
@@ -118,43 +131,38 @@ public class CollectionController : MonoBehaviour
                 SkinId = skinId,
                 IsUnlocked = false,
             };
+            IngPrefabObj.GetComponentInChildren<Text>().text = "0";
         }
+        if (Settings.IsDebug)
+            skin.IsUnlocked = true;
+        
         IngPrefabObj.transform.Find("Lock").gameObject.SetActive(!skin.IsUnlocked);
         Button newButton = Instantiate(IngPrefabObj, IngButtonContent.transform);
         newButton.onClick.AddListener(() => SelectIng(skinId));
         skin.SkinButton = newButton;
         skin.IsSelected = isSelected;
         AllIngSkins.Add(skin);
+        IngButtonLog.Add(newButton);
+
     }
     private void SelectIng(int skinId)
     {
-        hasBeenIngChange = true;
-
         SkinData item = AllIngSkins.FirstOrDefault(x => x.SkinId == skinId);
-        
         if (item.IsSelected)
         {
             item.SkinButton.transform.Find("Selected").gameObject.SetActive(false);
             item.IsSelected = false;
-            SelectedIngSkins.Remove(item.SkinId);
+            Settings.LoggedInPlayer.SelectedIngs.Remove(item.SkinId);
+            StartCoroutine(sql.RequestRoutine($"skin/UpdateIngredientSkins?UserId={Settings.LoggedInPlayer.UserId}&skinId={item.SkinId}&add=false"));
         }
-        else if (SelectedIngSkins.Count < 4)
+        else
         {
             if (item.IsUnlocked)
             {
                 item.SkinButton.transform.Find("Selected").gameObject.SetActive(true);
                 item.IsSelected = true;
-                SelectedIngSkins.Add(item.SkinId);
-                var skin1 = SelectedIngSkins.Count > 0 ? SelectedIngSkins[0] : 0;
-                var skin2 = SelectedIngSkins.Count > 1 ? SelectedIngSkins[1] : 0;
-                var skin3 = SelectedIngSkins.Count > 2 ? SelectedIngSkins[2] : 0;
-                var skin4 = SelectedIngSkins.Count > 3 ? SelectedIngSkins[3] : 0;
-                Settings.LoggedInPlayer.SelectedMeat = skin1;
-                Settings.LoggedInPlayer.SelectedVeggie = skin2;
-                Settings.LoggedInPlayer.SelectedFruit = skin3;
-                Settings.LoggedInPlayer.SelectedFourth = skin4;
-
-                StartCoroutine(sql.RequestRoutine($"purchase/UpdateIngredientSkins?UserId={Settings.LoggedInPlayer.UserId}&SelectedMeat={skin1}&SelectedVeggie={skin2}&SelectedFruit={skin3}&SelectedFourth={skin4}"));
+                Settings.LoggedInPlayer.SelectedIngs.Add(item.SkinId);
+                StartCoroutine(sql.RequestRoutine($"skin/UpdateIngredientSkins?UserId={Settings.LoggedInPlayer.UserId}&skinId={item.SkinId}&add=true"));
             }
             else
             {
@@ -162,11 +170,7 @@ public class CollectionController : MonoBehaviour
                 alert.SetActive(true);
             }
         }
-        else
-        {
-            alertText.text = "Only 4 Ingredients may be active at a time.";
-            alert.SetActive(true);
-        }
+
     }
     #endregion
 
@@ -174,10 +178,9 @@ public class CollectionController : MonoBehaviour
     private void CreateDice(Sprite item, int skinId)
     {
         bool isSelected = false;
-        if (Settings.LoggedInPlayer.SelectedDie.Contains(skinId))
+        if (Settings.LoggedInPlayer.SelectedDice.Contains(skinId))
         {
             DicePrefabObj.transform.Find("Selected").gameObject.SetActive(true);
-            SelectedDiceSkins.Add(skinId);
             isSelected = true;
         }
         else
@@ -199,6 +202,8 @@ public class CollectionController : MonoBehaviour
                 UnlockedQty = 0
             };
         }
+        if(Settings.IsDebug)
+            skin.IsUnlocked = true;
         DicePrefabObj.GetComponentInChildren<Text>().text = skin.UnlockedQty.ToString();
         DicePrefabObj.transform.Find("Lock").gameObject.SetActive(!skin.IsUnlocked);
         Button newButton = Instantiate(DicePrefabObj, DiceButtonContent.transform);
@@ -212,14 +217,12 @@ public class CollectionController : MonoBehaviour
     private void SelectDice(int skinId)
     {
         SkinData item = AllDiceSkins.FirstOrDefault(x=>x.SkinId == skinId);
-        hasBeenDiceChange = true;
         if (item.IsSelected)
         {
             item.SkinButton.transform.Find("Selected").gameObject.SetActive(false);
             item.IsSelected = false;
-            SelectedDiceSkins.Remove(item.SkinId);
-            Settings.LoggedInPlayer.SelectedDie.Remove(item.SkinId);
-            StartCoroutine(sql.RequestRoutine($"purchase/UpdateDiceSkins?UserId={Settings.LoggedInPlayer.UserId}&dieId={item.SkinId}&add=false"));
+            Settings.LoggedInPlayer.SelectedDice.Remove(item.SkinId);
+            StartCoroutine(sql.RequestRoutine($"skin/UpdateDiceSkins?UserId={Settings.LoggedInPlayer.UserId}&dieId={item.SkinId}&add=false"));
         }
         else
         {
@@ -227,9 +230,8 @@ public class CollectionController : MonoBehaviour
             {
                 item.SkinButton.transform.Find("Selected").gameObject.SetActive(true);
                 item.IsSelected = true;
-                SelectedDiceSkins.Add(item.SkinId);
-                Settings.LoggedInPlayer.SelectedDie.Add(item.SkinId);
-                StartCoroutine(sql.RequestRoutine($"purchase/UpdateDiceSkins?UserId={Settings.LoggedInPlayer.UserId}&dieId={item.SkinId}&add=true"));
+                Settings.LoggedInPlayer.SelectedDice.Add(item.SkinId);
+                StartCoroutine(sql.RequestRoutine($"skin/UpdateDiceSkins?UserId={Settings.LoggedInPlayer.UserId}&dieId={item.SkinId}&add=true"));
             }
             else
             {

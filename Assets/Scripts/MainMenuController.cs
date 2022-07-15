@@ -16,6 +16,7 @@ public class MainMenuController : MonoBehaviour
     public Text lvlText;
     public Text xpText;
     public GameObject VersionPanel;
+    public Text Seachingtext;
     #endregion
 
     [Header("Settings")]
@@ -50,6 +51,7 @@ public class MainMenuController : MonoBehaviour
     #region ConfirmationPopups
     public GameObject alert;
     public Text alertText;
+    public GameObject rewardAlert;
     public GameObject LoadingPanel;
     public Text loadingTimer;
     public GameObject ExitPrompt;
@@ -66,6 +68,7 @@ public class MainMenuController : MonoBehaviour
 
     private float totalElapsed = 0f;
     private float elapsed = 0f;
+    private float elapsed2 = 0f;
     private bool LookingForGame = false;
     public List<Sprite> diceSprites;
     public List<Sprite> ingSprites;
@@ -79,6 +82,10 @@ public class MainMenuController : MonoBehaviour
         Settings.OnlineGameId = 0;
         Settings.FakeOnlineGame = false;
         Settings.HardMode = true;
+        Settings.IsDebug = false;
+#if UNITY_EDITOR
+        Settings.IsDebug = true;
+#endif
         wineToggle.isOn = Settings.LoggedInPlayer.WineMenu;
         d8Toggle.isOn = Settings.LoggedInPlayer.UseD8s;
         doubleToggle.isOn = Settings.LoggedInPlayer.DisableDoubles;
@@ -93,21 +100,39 @@ public class MainMenuController : MonoBehaviour
         StartCoroutine(SetPlayer());
         if (Settings.LoggedInPlayer.IsGuest && Settings.EnteredGame)
         {
-            alertText.text = $"If you enjoyed the game make an account! You can unlock new pieces and dice to play with and compete on the leaderboard.";
+            alertText.text = $"Still a guest!? If you make an account you will get xp, calories, and unlock new rewards!";
             alert.SetActive(true);
             Settings.EnteredGame = false;
         } else if (Settings.JustWonOnline) {
             Settings.JustWonOnline = false;
-            alertText.text = $"You earned a reward for winning your match. \n \n Check the reward tab at the bottom to claim it!";
-            alert.SetActive(true);
+            rewardAlert.transform.Find("RewardText").GetComponent<Text>().text = $"You earned a reward for winning your match. \n \n Check the reward tab at the bottom to claim it!";
+            rewardAlert.SetActive(true);
         }
     }
   
     private void Update()
     {
+        
         elapsed += Time.deltaTime;
+        
+        if (LoadingPanel.activeInHierarchy) {
+            elapsed2 += Time.deltaTime;
+            if (elapsed2 >= .5f)
+            {
+                elapsed2 = elapsed2 % .5f;
+                if (Seachingtext.text == "Searching for match.")
+                    Seachingtext.text = "Searching for match..";
+                else if (Seachingtext.text == "Searching for match..")
+                    Seachingtext.text = "Searching for match...";
+                else if (Seachingtext.text == "Searching for match...")
+                    Seachingtext.text = "Searching for match....";
+                else
+                    Seachingtext.text = "Searching for match.";
+            }
+        }
         if (elapsed >= 1f)
         {
+            
             elapsed = elapsed % 1f;
             tick++;
             if (LookingForGame)
@@ -115,7 +140,7 @@ public class MainMenuController : MonoBehaviour
                 totalElapsed++;
                 TimeSpan time = TimeSpan.FromSeconds(totalElapsed);
                 loadingTimer.text = "Time in queue: " + time.ToString(@"m\:ss");
-                StartCoroutine(sql.RequestRoutine($"analytic/LookforGame?UserId={Settings.LoggedInPlayer.UserId}", GetGameUpdate));
+                StartCoroutine(sql.RequestRoutine($"multiplayer/LookforGame?UserId={Settings.LoggedInPlayer.UserId}", GetGameUpdate));
                 if (!keepWaiting && totalElapsed > 30)
                 {
                     NoMatchesFound.SetActive(true);
@@ -130,7 +155,10 @@ public class MainMenuController : MonoBehaviour
             if (tick > 10)
             {
                 tick = 0;
-                StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
+                try
+                {
+                    StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
+                } catch (Exception ex) { }
             }
         }
     }
@@ -168,7 +196,7 @@ public class MainMenuController : MonoBehaviour
             alertText.text = "Guests can only play vs the computer, try that or create an account!";
             alert.SetActive(true);
         }
-        else if (Settings.LoggedInPlayer.Stars < 150)
+        else if (Settings.LoggedInPlayer.Calories < 150)
         {
             alertText.text = "You need 150 calories to play online!";
             alert.SetActive(true);
@@ -192,7 +220,7 @@ public class MainMenuController : MonoBehaviour
         LookingForGame = false;
         keepWaiting = false;
         LoadingPanel.SetActive(false);
-        StartCoroutine(sql.RequestRoutine($"analytic/StopLookingforGame?UserId={Settings.LoggedInPlayer.UserId}"));
+        StartCoroutine(sql.RequestRoutine($"multiplayer/StopLookingforGame?UserId={Settings.LoggedInPlayer.UserId}"));
     }
 
     public void showSettings()
@@ -263,7 +291,6 @@ public class MainMenuController : MonoBehaviour
         yield return StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Settings.LoggedInPlayer.Username}", GetPlayerCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetProfile?username={Settings.LoggedInPlayer.Username}", GetProfileCallback));
-
     }
 
     public void UpdateLvlText() {
@@ -275,7 +302,7 @@ public class MainMenuController : MonoBehaviour
     private void GetPlayerCallback(string data)
     {
         var player = sql.jsonConvert<Player>(data);
-        Settings.LoggedInPlayer.Stars = player.Stars;
+        Settings.LoggedInPlayer.Calories = player.Calories;
         Settings.LoggedInPlayer.Level = player.Level;
         Settings.LoggedInPlayer.Xp = player.Xp;
         UpdateLvlText();
@@ -390,7 +417,7 @@ public class MainMenuController : MonoBehaviour
 
     public void TryCode()
     {
-       StartCoroutine(sql.RequestRoutine($"purchase/UseKey?key={CodeText.GetComponent<InputField>().text}&userId={Settings.LoggedInPlayer.UserId}", this.GetCodeCallback));
+       StartCoroutine(sql.RequestRoutine($"skin/UseKey?key={CodeText.GetComponent<InputField>().text}&userId={Settings.LoggedInPlayer.UserId}", this.GetCodeCallback));
     }
 
     private void GetCodeCallback(string data)
@@ -447,7 +474,6 @@ public class MainMenuController : MonoBehaviour
     public void StartCPUGame(bool hardMode)
     {
         Settings.HardMode = true;
-        Settings.EnteredGame = true;
         SceneManager.LoadScene("PlayScene");
     }
     

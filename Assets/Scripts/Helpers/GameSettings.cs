@@ -12,7 +12,7 @@ public static class Settings
     public static bool EnteredGame = false;
     public static bool JustWonOnline = false;
     public static int OnlineGameId = 0;
-    public static double AppVersion = 1.03;
+    public static double AppVersion = 1.07;
     public static bool FakeOnlineGame = false;
 
     //public static List<Player> CPUPlayers = new List<Player>() { 
@@ -45,24 +45,20 @@ You also skip spaces cooked ingredients are on while moving, which gives you a b
 
 Roll both of your dice and move two different ingredients.
 
-Rules for moving:
-
 You may move one of your ingredients with either roll.
 
-With your lower roll you may also move an ingredient from the other team.
+You may move one of the other teams ingredients with your lower roll.
 
-If you rolled doubles, they both count as a lower roll, and you may move the same ingredient twice.
+If you roll doubles, you may move the same ingredient twice and you may move ingredients from either team.
 
-You may not move an ingredient that has been stacked on.
-
-You must always move an ingredient if possible.
+You may not move an ingredient that has been stacked on and you must always move an ingredient if possible.
 ",
 
 @"Landing on an ingredient:
 
 If an ingredient is landed on, it stacks on top of it, unless it is in a danger zone.
 
-If it was in a danger zone, you do not stack but instead, send the ingredient that was landed on to Prep.
+If it was in a danger zone, you do not stack, you instead send the ingredient that was landed on to Prep.
 
 An ingredient that has been stacked on may not be moved until the pieces above it are moved.
 
@@ -72,9 +68,7 @@ Note: Cooked ingredients can't be landed on because you never count the space th
 
 There are three spaces labeled Exact.
 
-Landing on them does NOTHING. 
-
-They signal a split in the path that may be taken if you have exactly one move left.
+Landing on them does NOTHING, instead they signal a split in the path that may be taken if you have exactly one move left.
 
 The first two you come across lead the ingredient to a trash can that sends it back to Prep.
 
@@ -88,11 +82,10 @@ Note: If there is a cooked ingredient on the other side of the utensil, skip ove
 
 @"Prep:
 
-All ingredients start on Prep, and return here after being cooked, being landed on in a danger zone, or moving onto a trash can.
+All ingredients start on Prep, and return there after being cooked, being landed on in a danger zone, or moving onto a trash can.
 
-Ingredients all share Prep and do not stack.
+Ingredients do not stack on Prep and Prep may never be skipped regadless of the amount of cooked ingredients on it.
 
-Prep is not skipped if there is a cooked ingredient on it when being sent there or when getting moved onto it from the end of the board.
 ",
 
 @"Conclusion:

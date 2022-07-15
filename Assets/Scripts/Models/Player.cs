@@ -14,11 +14,9 @@ namespace Assets.Models
         public bool IsCPU = false;
         public int Wins = 0;
         public int LocalWins = 0;
-        public List<int> SelectedDie = new List<int>();
-        public int SelectedMeat = 1;
-        public int SelectedVeggie = 2;
-        public int SelectedFruit = 3;
-        public int SelectedFourth = 4;
+        public List<int> SelectedDice = new List<int>();
+        public List<int> SelectedIngs = new List<int>();
+        public int Calories = 0;
         public int Stars = 0;
         public int Cooked = 0;
         public int Xp = 0;
@@ -29,6 +27,4 @@ namespace Assets.Models
         public bool DisableDoubles = false;
         public bool PlayAsPurple = false;
     }
-
-   
 }

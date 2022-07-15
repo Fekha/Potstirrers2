@@ -42,7 +42,7 @@ public class ChestController : MonoBehaviour
     }
     private void OnEnable()
     {
-        StartCoroutine(sql.RequestRoutine($"purchase/GetMyChests?UserId={Settings.LoggedInPlayer.UserId}", GetMyChestsCallback));
+        StartCoroutine(sql.RequestRoutine($"skin/GetMyChests?UserId={Settings.LoggedInPlayer.UserId}", GetMyChestsCallback));
     }
     private void GetMyChestsCallback(string data)
     {
@@ -135,7 +135,7 @@ public class ChestController : MonoBehaviour
     {
         HelpText.text = "";
         ChestToOpenSlot.gameObject.GetComponent<Animation>().Play("DiceShaker");
-        yield return StartCoroutine(sql.RequestRoutine($"purchase/OpenMyChest?UserId={Settings.LoggedInPlayer.UserId}&ChestId={SelectedChestId}", OpenChestsCallback));
+        yield return StartCoroutine(sql.RequestRoutine($"skin/OpenMyChest?UserId={Settings.LoggedInPlayer.UserId}&ChestId={SelectedChestId}", OpenChestsCallback));
         yield return new WaitForSeconds(1.25f);
         ChestToOpenSlot.sprite = EmptySlot;
         UnlockPanel.SetActive(true);

@@ -88,12 +88,12 @@ public class Ingredient : MonoBehaviour
 
             if (GameManager.i.Steps == 1 && (routePosition == 9 || routePosition == 17))
             {
-                if (!GameManager.i.IsCPUTurn() && isCooked && !GameManager.i.BlockPlayerActionPanel.activeInHierarchy)
+                if (!GameManager.i.IsCPUTurn() && isCooked && !GameManager.i.Automating)
                     yield return StartCoroutine(GameManager.i.AskShouldTrash());
 
                 if (Team != GameManager.i.activePlayer || GameManager.i.ShouldTrash == true) 
                 {
-                    if (!isCooked || GameManager.i.ShouldTrash == true || GameManager.i.IsCPUTurn() || GameManager.i.BlockPlayerActionPanel.activeInHierarchy)
+                    if (!isCooked || GameManager.i.ShouldTrash == true || GameManager.i.IsCPUTurn() || GameManager.i.Automating)
                     {
                         if (routePosition == 9)
                         {
@@ -281,7 +281,7 @@ public class Ingredient : MonoBehaviour
             return;
         }
 
-        if (IsMovableBy == Settings.LoggedInPlayer.UserId && !GameManager.i.isMoving && !GameManager.i.IsCPUTurn() && !GameManager.i.BlockPlayerActionPanel.activeInHierarchy)
+        if (IsMovableBy == Settings.LoggedInPlayer.UserId && !GameManager.i.isMoving && !GameManager.i.IsCPUTurn() && !GameManager.i.Automating)
         {
         //    if (GameManager.i.firstIngredientMoved != null)
         //    {
@@ -312,7 +312,7 @@ public class Ingredient : MonoBehaviour
     private IEnumerator MoveSelectedIngredient()
     {
         if (Settings.OnlineGameId != 0)
-            yield return StartCoroutine(sql.RequestRoutine($"analytic/UpdateTurn?UserId={Settings.LoggedInPlayer.UserId}&GameId={Settings.OnlineGameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
+            yield return StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateTurn?UserId={Settings.LoggedInPlayer.UserId}&GameId={Settings.OnlineGameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
 
         yield return StartCoroutine(Move());
     }

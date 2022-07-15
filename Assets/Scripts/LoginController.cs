@@ -57,7 +57,7 @@ public class LoginController : MonoBehaviour
         catch(Exception ex){}
 
 #if UNITY_EDITOR
-        username.GetComponent<InputField>().text = "feca";
+        username.GetComponent<InputField>().text = "Feca";
         password.GetComponent<InputField>().text = "1234";
 #endif
 
@@ -91,7 +91,10 @@ public class LoginController : MonoBehaviour
             if (tick > 10)
             {
                 tick = 0;
-                StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
+                try{
+                    StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
+                }
+                catch (Exception ex) { }
             }
         }
 
