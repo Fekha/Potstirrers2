@@ -89,7 +89,8 @@ public class FriendController : MonoBehaviour
         }
         else
         {
-            alertText.text = $"You have removed {YourFriend.Username} as a friend :(";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = $"You have removed {YourFriend.Username} as a friend :(";
             alert.SetActive(true);
             MainMenuController.i.ShowProfile(false);
             StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Settings.LoggedInPlayer.UserId}&username={YourFriend.Username}&add={add}", GetFriendCallback));
@@ -109,7 +110,8 @@ public class FriendController : MonoBehaviour
             sendMessagePanel.SetActive(open);
         else
         {
-            alertText.text = "You must have friends that are friends with you to be able to send a message! Why did you remove poor feca :(";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "You must have friends that are friends with you to be able to send a message! Why did you remove poor feca :(";
             alert.SetActive(true);
         }
     }
@@ -120,11 +122,13 @@ public class FriendController : MonoBehaviour
         {
             StartCoroutine(sql.RequestRoutine($"player/SendMessage?userId={Settings.LoggedInPlayer.UserId}&toName={ToInput.text}&subject={SubjectInput.GetComponent<InputField>().text}&body={BodyInput.GetComponent<InputField>().text}"));
             sendMessagePanel.SetActive(false);
-            alertText.text = "Message sent to " + ToInput.text;
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = $"Message sent to {ToInput.text}";
         }
         else
         {
-            alertText.text = "Can not send a message without a friend selected!";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "Can not send a message without a friend selected!";
         }
         alert.SetActive(true);
     }
@@ -152,7 +156,8 @@ public class FriendController : MonoBehaviour
     public void deleteMessage()
     {
         messageChoice.SetActive(false);
-        alertText.text = "Message Deleted!";
+        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
+        alert.transform.Find("AlertText").GetComponent<Text>().text = "Message Deleted!";
         alert.SetActive(true);
         StartCoroutine(sql.RequestRoutine($"player/DeleteMessage?MessageId={CurrentMessage.MessageId}", GetMessageCallback));
     }
@@ -224,12 +229,14 @@ public class FriendController : MonoBehaviour
         var player = sql.jsonConvert<Player>(data);
         if (player == null)
         {
-            alertText.text = "Player not found.";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "Player not found.";
             alert.SetActive(true);
         }
         else
         {
-            alertText.text = $"You have added {player.Username} as a friend :)";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = $"You have added {player.Username} as a friend :)";
             alert.SetActive(true);
             FriendText.GetComponent<InputField>().text = "";
             StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Settings.LoggedInPlayer.UserId}&username={player.Username}&add={true}", GetFriendCallback));

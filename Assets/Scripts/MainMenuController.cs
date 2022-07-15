@@ -50,7 +50,6 @@ public class MainMenuController : MonoBehaviour
     [Header("ConfirmationPopups")]
     #region ConfirmationPopups
     public GameObject alert;
-    public Text alertText;
     public GameObject rewardAlert;
     public GameObject LoadingPanel;
     public Text loadingTimer;
@@ -84,7 +83,7 @@ public class MainMenuController : MonoBehaviour
         Settings.HardMode = true;
         Settings.IsDebug = false;
 #if UNITY_EDITOR
-        Settings.IsDebug = true;
+        //Settings.IsDebug = true;
 #endif
         wineToggle.isOn = Settings.LoggedInPlayer.WineMenu;
         d8Toggle.isOn = Settings.LoggedInPlayer.UseD8s;
@@ -100,7 +99,8 @@ public class MainMenuController : MonoBehaviour
         StartCoroutine(SetPlayer());
         if (Settings.LoggedInPlayer.IsGuest && Settings.EnteredGame)
         {
-            alertText.text = $"Still a guest!? If you make an account you will get xp, calories, and unlock new rewards!";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Still a guest?";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = $"If you make an account you will get xp, calories, and unlock new rewards!";
             alert.SetActive(true);
             Settings.EnteredGame = false;
         } else if (Settings.JustWonOnline) {
@@ -152,13 +152,19 @@ public class MainMenuController : MonoBehaviour
                 loadingTimer.text = "Time in queue: 0:00";
             }
 
-            if (tick > 10)
+            if (tick > 4)
             {
                 tick = 0;
                 try
                 {
-                    StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
-                } catch (Exception ex) { }
+                    StartCoroutine(sql.RequestRoutine($"player/GetAppVersion?UserId={Settings.LoggedInPlayer.UserId}", GetAppVersionCallback, true));
+                }
+                catch (Exception ex)
+                {
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Network Failure";
+                    alert.transform.Find("AlertText").GetComponent<Text>().text = "Can not connect to server.";
+                    alert.SetActive(true);
+                }
             }
         }
     }
@@ -182,23 +188,28 @@ public class MainMenuController : MonoBehaviour
 
     private void GetAppVersionCallback(string data)
     {
-        var version = sql.jsonConvert<double>(data);
-        if (Settings.AppVersion < version)
+        if (!string.IsNullOrEmpty(data))
         {
-            StopMatchmaking();
-            VersionPanel.SetActive(true);
+            var version = sql.jsonConvert<double>(data);
+            if (Settings.AppVersion < version)
+            {
+                StopMatchmaking();
+                VersionPanel.SetActive(true);
+            }
         }
     }
     public void Matchmaking(bool start)
     {
         if (Settings.LoggedInPlayer.IsGuest) 
         {
-            alertText.text = "Guests can only play vs the computer, try that or create an account!";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "Guests can only play vs the computer, try that or create an account!";
             alert.SetActive(true);
         }
         else if (Settings.LoggedInPlayer.Calories < 150)
         {
-            alertText.text = "You need 150 calories to play online!";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Insufficent Funds";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "You need 150 calories to play online!";
             alert.SetActive(true);
         }
         else
@@ -227,19 +238,22 @@ public class MainMenuController : MonoBehaviour
     {
         if (!Settings.IsConnected)
         {
-            alertText.text = "Unable to connect! \n \n This feature requires an active connection to the game server.";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unable to Connect";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "This feature requires an active connection to the game server.";
             alert.SetActive(true);
         }
         else
         {
             if (Settings.LoggedInPlayer.IsGuest)
             {
-                alertText.text = "Log in to edit settings!";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
+                alert.transform.Find("AlertText").GetComponent<Text>().text = "Log in to edit settings!";
                 alert.SetActive(true);
             }
             else if (Settings.LoggedInPlayer.Wins == 0)
             {
-                alertText.text = "Win a game to access additional settings!";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Get Gewd";
+                alert.transform.Find("AlertText").GetComponent<Text>().text = "Win a game to access additional settings!";
                 alert.SetActive(true);
             }
             else if (!settings.activeInHierarchy)
@@ -253,14 +267,16 @@ public class MainMenuController : MonoBehaviour
     {
         if (!Settings.IsConnected)
         {
-            alertText.text = "Unable to connect! \n \n This feature requires an active connection to the game server.";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unable to Connect";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "This feature requires an active connection to the game server.";
             alert.SetActive(true);
         }
         else
         {
             if (Settings.LoggedInPlayer.IsGuest)
             {
-                alertText.text = "Log in to create a profile!";
+                alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
+                alert.transform.Find("AlertText").GetComponent<Text>().text = "Log in to create a profile!";
                 alert.SetActive(true);
             }
             else
@@ -400,7 +416,8 @@ public class MainMenuController : MonoBehaviour
         var rewardText = sql.jsonConvert<string>(data);      
         if (!String.IsNullOrEmpty(rewardText))
         {
-            alertText.text = rewardText;
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Congrats!";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = rewardText;
             alert.SetActive(true);
         }
     }
@@ -425,12 +442,14 @@ public class MainMenuController : MonoBehaviour
         var reward = sql.jsonConvert<int>(data);
         if (reward == 0)
         {
-            alertText.text = "This code is invalid or already used!";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Error";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "This code is invalid or already used!";
             alert.SetActive(true);
         }
         else
         {
-            alertText.text = $"Your code was valid! \n \n you have recieved {reward} Calories!";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = $"Your code was valid! \n \n you have recieved {reward} Calories!";
             alert.SetActive(true);
             StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Settings.LoggedInPlayer.Username}", GetPlayerCallback));
         }
@@ -463,7 +482,8 @@ public class MainMenuController : MonoBehaviour
     {
         if (!Settings.IsConnected && (sceneName == "Skins" || sceneName == "LeaderboardScene"))
         {
-            alertText.text = "Unable to connect! \n \n This feature requires an active connection to the game server.";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unable to Connect";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "This feature requires an active connection to the game server.";
             alert.SetActive(true);
         }
         else

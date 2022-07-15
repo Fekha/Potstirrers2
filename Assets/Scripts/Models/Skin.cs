@@ -13,5 +13,7 @@ namespace Assets.Scripts.Models
         public bool IsUnlocked = false;
         public bool IsSelected = false;
         public int UnlockedQty = 0;
+        public string SkinName = "";
+        public string SkinDesc = "";
     }
 }

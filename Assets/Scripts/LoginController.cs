@@ -15,7 +15,6 @@ public class LoginController : MonoBehaviour
     public GameObject VersionPanel;
     public GameObject password;
     public GameObject username;
-    public Text alertText;
     public Text AppVersion;
     private Guid deviceId;
     private bool rememberMe = false; 
@@ -31,7 +30,7 @@ public class LoginController : MonoBehaviour
         AppVersion.text = "Ver. " + Settings.AppVersion.ToString();
         sql = new SqlController();
         system = EventSystem.current;
-        //alertText.text = "Sorry, I messed up.. \n \n Until July 1st only playing as guest will work..";
+        //alert.transform.Find("AlertText").GetComponent<Text>().text = "Sorry, I messed up.. \n \n Until July 1st only playing as guest will work..";
         //alert.SetActive(true);
         try {
             FileStream stream = File.Open("idbfs/PotstirrersDevice.json", FileMode.OpenOrCreate, FileAccess.ReadWrite);
@@ -92,9 +91,14 @@ public class LoginController : MonoBehaviour
             {
                 tick = 0;
                 try{
-                    StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
+                StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
                 }
-                catch (Exception ex) { }
+                catch (Exception ex)
+                {
+                    alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Network Failure";
+                    alert.transform.Find("AlertText").GetComponent<Text>().text = "Can't connect to the server.";
+                    alert.SetActive(true);
+                }
             }
         }
 
@@ -117,10 +121,13 @@ public class LoginController : MonoBehaviour
     } 
     private void GetAppVersionCallback(string data)
     {
-        var version = sql.jsonConvert<double>(data);
-        if (Settings.AppVersion < version)
+        if (!string.IsNullOrEmpty(data))
         {
-            VersionPanel.SetActive(true);
+            var version = sql.jsonConvert<double>(data);
+            if (Settings.AppVersion < version)
+            {
+                VersionPanel.SetActive(true);
+            }
         }
     } 
     
@@ -130,7 +137,8 @@ public class LoginController : MonoBehaviour
         Settings.LoggedInPlayer = Player;
         if (Player == null)
         {
-            alertText.text = "Username and/or password do not match.";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "Username and/or password do not match.";
             alert.SetActive(true);
         }
         else
@@ -144,19 +152,21 @@ public class LoginController : MonoBehaviour
     {
         if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
         {
-            alertText.text = "Loading...";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Loading";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "Any second now...";
             alert.SetActive(true);
             StartCoroutine(Login());
         }
         else
         {
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Invalid";
             if (String.IsNullOrEmpty(username.GetComponent<InputField>().text))
             {
-                alertText.text = "Username may not be blank.";
+                alert.transform.Find("AlertText").GetComponent<Text>().text = "Username may not be blank.";
             }
             else
             {
-                alertText.text = "Password may not be blank.";
+                alert.transform.Find("AlertText").GetComponent<Text>().text = "Password may not be blank.";
             }
             alert.SetActive(true);
         }
@@ -183,13 +193,15 @@ public class LoginController : MonoBehaviour
         }
         else
         {
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Invalid";
+
             if (String.IsNullOrEmpty(username.GetComponent<InputField>().text))
             {
-                alertText.text = "Username may not be blank.";
+                alert.transform.Find("AlertText").GetComponent<Text>().text = "Username may not be blank.";
             }
             else
             {
-                alertText.text = "Password may not be blank.";
+                alert.transform.Find("AlertText").GetComponent<Text>().text = "Password may not be blank.";
             }
             alert.SetActive(true);
         }
@@ -206,7 +218,8 @@ public class LoginController : MonoBehaviour
         }
         else
         {
-            alertText.text = "Username already taken. Be unique, geez.";
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "Username already taken. Be unique, geez.";
             alert.SetActive(true);
         }
     }

@@ -16,6 +16,7 @@ namespace Assets.Models
         public int LocalWins = 0;
         public List<int> SelectedDice = new List<int>();
         public List<int> SelectedIngs = new List<int>();
+        public List<string> SelectedTitles = new List<string>();
         public int Calories = 0;
         public int Stars = 0;
         public int Cooked = 0;

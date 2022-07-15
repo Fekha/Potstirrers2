@@ -80,6 +80,7 @@ public class GameManager : MonoBehaviour
     public Button LowerRollButton1;
     public Text LowerRollText1;
     public Text ProfileText1;
+    public Text TitleText1;
     public GameObject RollButton1;
     public Image Timer1;
 
@@ -90,6 +91,7 @@ public class GameManager : MonoBehaviour
     public Button LowerRollImage2;
     public Text LowerRollText2;
     public Text ProfileText2;
+    public Text TitleText2;
     public Image Timer2;
 
     //[Header("Undo")]
@@ -127,7 +129,6 @@ public class GameManager : MonoBehaviour
         //rollDuration = 2;
         //turnDuration = 2;
 #endif
-
         if (Settings.OnlineGameId == 0)
         {
             activePlayer = Random.Range(0, 2);
@@ -322,8 +323,10 @@ public class GameManager : MonoBehaviour
         ProfileText1.text = Settings.LoggedInPlayer.Username;
         ProfileText2.text = Settings.SecondPlayer.Username;
         UpdateIngredientSkins();
-        UpdateDiceSkin(HigherRollImage1, LowerRollImage1, Settings.LoggedInPlayer);
-        UpdateDiceSkin(HigherRollImage2, LowerRollImage2, Settings.SecondPlayer);
+        UpdateDiceSkin(Settings.LoggedInPlayer);
+        UpdateDiceSkin(Settings.SecondPlayer);
+        UpdateTitle(Settings.LoggedInPlayer);
+        UpdateTitle(Settings.SecondPlayer);
     }
 
     private void UpdateIngredientSkins()
@@ -430,7 +433,6 @@ public class GameManager : MonoBehaviour
             tile.ingredients.Push(ing);
             AllIngredients.Add(ing);
         }
-
         SetSkins();
         TakeTurn();
     }
@@ -458,7 +460,6 @@ public class GameManager : MonoBehaviour
                 CpuLogic.i.IngredientMovedWithLower = ingToMove;
             StartCoroutine(CpuLogic.i.MoveCPUIngredient(ingToMove));
         }
-
     }
     private void CheckSelectedCallback(string data)
     {
@@ -530,9 +531,8 @@ public class GameManager : MonoBehaviour
             LowerRollImage2.interactable = true;
             Player1Turn = false;
         }
-        UpdateDiceSkin(activePlayer == 0 ? HigherRollImage1 : HigherRollImage2,
-            activePlayer == 0 ? LowerRollImage1 : LowerRollImage2,
-            GetActivePlayer());
+        UpdateDiceSkin();
+        UpdateTitle();
         if (Settings.OnlineGameId != 0 && GetActivePlayer().UserId != Settings.LoggedInPlayer.UserId)
         {
             OnlineDiceFound = false;
@@ -1003,8 +1003,12 @@ public class GameManager : MonoBehaviour
         } 
     }
 
-    private void UpdateDiceSkin(Button HigherRoll, Button LowerRoll, Player User)
+    private void UpdateDiceSkin(Player User = null)
     {
+        if (User == null)
+            User = GetActivePlayer();
+        var HigherRollToChange = User.UserId == playerList[0].UserId ? HigherRollImage1 : HigherRollImage2;
+        var LowerRollToChange = User.UserId == playerList[0].UserId ? LowerRollImage1 : LowerRollImage2;
         Sprite higherSprite = User.UserId == playerList[0].UserId ? yellowDie : purpleDie;
         Sprite lowerSprite = User.UserId == playerList[0].UserId ? yellowDie : purpleDie;
         if (User.IsCPU)
@@ -1020,8 +1024,36 @@ public class GameManager : MonoBehaviour
             higherSprite = allD10s[User.SelectedDice[index1]-1];
             lowerSprite = allD10s[User.SelectedDice[index2]-1];
         }
-        HigherRoll.gameObject.GetComponent<Image>().sprite = higherSprite;
-        LowerRoll.gameObject.GetComponent<Image>().sprite = lowerSprite;
+        HigherRollToChange.gameObject.GetComponent<Image>().sprite = higherSprite;
+        LowerRollToChange.gameObject.GetComponent<Image>().sprite = lowerSprite;
+    }    
+    
+    private void UpdateTitle(Player User = null)
+    {
+        if (User == null)
+            User = GetActivePlayer();
+
+        var textToChange = User.UserId == playerList[0].UserId ? TitleText1 : TitleText2;
+        
+        if (User.IsCPU)
+        {
+            textToChange.text = "CPU";
+        }
+        else if (User.IsGuest)
+        {
+            textToChange.text = "";
+        }
+        else if(User.SelectedIngs.Count > 0)
+        {
+            var random = new System.Random();
+            int index1 = random.Next(User.SelectedTitles.Count);
+            textToChange.text = User.SelectedTitles[index1];
+        }
+        else
+        {
+            textToChange.text = "Loser";
+        }
+
     }
 
     public void RollSelected(bool isHigher)
