@@ -224,7 +224,7 @@ public class ChestController : MonoBehaviour
                     }
                     else
                     {
-                        message += $"It'll cost you {getSpeedUpCost()} Calories.";
+                        message += $"It'll cost you {getSpeedUpCost()} of your {Settings.LoggedInPlayer.Calories} Calories.";
                     }
                     PurchaseSpeedPanel.transform.Find("PurchaseCost").GetComponent<Text>().text = message;
                     PurchaseSpeedPanel.SetActive(true);

@@ -24,8 +24,8 @@ public class GameManager : MonoBehaviour
     private float readingTimeStart;
     internal float talkingTimeStart;
     private float turnTime = 0;
-    private float rollDuration = 10;
-    private float turnDuration = 25;
+    private float rollDuration = 5;
+    private float turnDuration = 35;
     private bool? Player1Turn = null;
     internal bool GameOver = false;
     private bool? OnlineDiceFound = null;
@@ -125,7 +125,7 @@ public class GameManager : MonoBehaviour
         sql = new SqlController();
       
 #if UNITY_EDITOR
-        Settings.IsDebug = true;
+        //Settings.IsDebug = true;
         //Settings.LoggedInPlayer.Experimental = true;
         //rollDuration = 2;
         //turnDuration = 2;
@@ -160,7 +160,7 @@ public class GameManager : MonoBehaviour
 
             SetSkins();
 
-            if (!Settings.IsDebug && ((!Settings.LoggedInPlayer.IsGuest && !Settings.SecondPlayer.IsCPU) || Settings.FakeOnlineGame))
+            if ((!Settings.LoggedInPlayer.IsGuest && !Settings.SecondPlayer.IsCPU) || Settings.FakeOnlineGame)
             {
                 var url = $"multiplayer/GameStart?Player1={playerList[0].UserId}&Player2={playerList[1].UserId}&FakeOnlineGame={Settings.FakeOnlineGame}";
                 StartCoroutine(sql.RequestRoutine(url, GetNewGameCallback));
@@ -744,7 +744,7 @@ public class GameManager : MonoBehaviour
         else
         {
             checkingForTrash = false;
-            turnTime = Mathf.Min(turnTime + 10, turnDuration);
+            turnTime = Mathf.Min(turnTime + 5, turnDuration);
             if (GetActivePlayer().UserId != Settings.LoggedInPlayer.UserId)
             {
                 turnTime++;
@@ -829,7 +829,19 @@ public class GameManager : MonoBehaviour
     {
         if (willExit)
         {
-            StartCoroutine(sql.RequestRoutine($"multiplayer/EndGame?GameId={Settings.OnlineGameId}"));
+            var rageQuiterId = Settings.LoggedInPlayer.UserId;
+            var player1Count = (rageQuiterId == 0 || rageQuiterId == playerList[0].UserId) ? AllIngredients.Count(x => x.Team == 0 && x.isCooked) : 0;
+            if (Settings.OnlineGameId != 0 || Settings.FakeOnlineGame)
+            {
+                var player2Count = (rageQuiterId == 0 || rageQuiterId == playerList[1].UserId) ? AllIngredients.Count(x => x.Team == 1 && x.isCooked) : 0;
+                var player1Cooked = IsPlayer1Player1 ? player1Count : player2Count;
+                var player2Cooked = IsPlayer1Player1 ? player2Count : player1Count;
+                StartCoroutine(sql.RequestRoutine($"multiplayer/GameEnd?GameId={GameId}&Player1Cooked={player1Cooked}&Player2Cooked={player2Cooked}&TotalTurns={TurnNumber}&RageQuit={(rageQuiterId)}", EndGamePopupCallback));
+            }
+            else
+            {
+                StartCoroutine(sql.RequestRoutine($"multiplayer/CPUGameFinished?UserId={Settings.LoggedInPlayer.UserId}&Cooked={player1Count}"));
+            }
             SceneManager.LoadScene("MainMenu");
         }
         exitPanel.SetActive(false);
@@ -935,7 +947,7 @@ public class GameManager : MonoBehaviour
         }
         if (lowerMove == 0)
         {
-            turnTime = Mathf.Min(turnTime + 10, turnDuration);
+            turnTime = Mathf.Min(turnTime + 5, turnDuration);
             firstMoveTaken = true;
         }
         if (ZerosRolled())

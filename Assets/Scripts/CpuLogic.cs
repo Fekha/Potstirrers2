@@ -127,20 +127,20 @@ public class CpuLogic : MonoBehaviour
             ?? CookIngredientWithDoubleMove()
             ?? HelpScore()
             ?? MoveOffStackToScore()
-            ?? BeDumb()
+            //?? BeDumb()
             ?? MovePastPrep()
             ?? StompEnemy(true)
             ?? GoToTrash()
             ?? StompEnemy(false)
             ?? MoveIntoScoring()
             ?? Slide(false)
-            ?? BoostWithCookedIngredient()
             ?? MoveFrontMostEnemy()
             ?? Slide(true)
             ?? StackEnemy(true)
             ?? MoveOffStack(false)
             ?? MoveFrontMostIngredient(false, false)
             ?? MoveOffStack(true)
+            ?? BoostWithCookedIngredient()
             ?? MoveFrontMostIngredient(true, false)
             ?? MoveFrontMostIngredient(false, true)
             ?? StackEnemy(false)
@@ -423,7 +423,7 @@ public class CpuLogic : MonoBehaviour
     {
         if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 23
+            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 24
             && x.endLowerPosition > 16
             && !x.isCooked
             && x.distanceFromScore > 9
@@ -436,7 +436,7 @@ public class CpuLogic : MonoBehaviour
         }
         if (IngredientMovedWithHigher == null)
         {
-            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 23
+            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 24
             && x.endHigherPosition > 16
             && !x.isCooked
             && x.distanceFromScore > 9
@@ -562,7 +562,7 @@ public class CpuLogic : MonoBehaviour
             IngredientMovedWithHigher = UseableTeamIngredients.OrderByDescending(x => x.endHigherPosition).FirstOrDefault(x => x.endHigherPosition < 23 //Dont move past prep
             && (x.distanceFromScore > 9 || withCooked) //Dont move from scoring position unless cooked
             && x.isCooked == withCooked
-            && (moveStacked || Route.i.FullRoute[x.routePosition].ingredients.Count == 1)
+            && (moveStacked || x.routePosition == 0 || Route.i.FullRoute[x.routePosition].ingredients.Count == 1)
             && CanMoveSafely(x.endHigherPosition)); //Dont stomp on safe area
             if (IngredientMovedWithHigher != null)
             {
@@ -576,7 +576,7 @@ public class CpuLogic : MonoBehaviour
             IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.endLowerPosition).FirstOrDefault(x => x.endLowerPosition < 23 //Dont move past prep
             && (x.distanceFromScore > 9 || withCooked) //Dont move from scoring position unless cooked
             && x.isCooked == withCooked
-            && (moveStacked || Route.i.FullRoute[x.routePosition].ingredients.Count == 1)
+            && (moveStacked || x.routePosition == 0 || Route.i.FullRoute[x.routePosition].ingredients.Count == 1)
             && CanMoveSafely(x.endLowerPosition)); //Dont stomp on safe area
             if (IngredientMovedWithLower != null)
             {
@@ -824,7 +824,7 @@ public class CpuLogic : MonoBehaviour
     }
     private Ingredient HelpScore()
     {
-        if (!UseableIngredients.Any(x => x.isCooked))
+        if (!UseableIngredients.Any(x => x.isCooked) || IngredientMovedWithLower != null || IngredientMovedWithHigher != null)
             return null;
 
         Ingredient ScoreableIng = null;

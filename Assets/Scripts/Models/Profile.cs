@@ -18,6 +18,7 @@ namespace Assets.Scripts.Models
         public int Cooked { get; set; }
         public int Calories { get; set; }
         public int Stars { get; set; }
+        public int SeasonScore { get; set; }
         public bool IsOnline { get; set; }
         public Nullable<System.DateTime> LastLogin { get; set; }
     }

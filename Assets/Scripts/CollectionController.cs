@@ -65,6 +65,7 @@ public class CollectionController : MonoBehaviour
     public Button ItemPrefabObj;
     public GameObject alert;
     public GameObject UnlockPanel;
+    public GameObject AreYouSurePanel;
     private SqlController sql;
     private Skin DieToPurchase;
     private Skin IngToPurchase;
@@ -73,6 +74,7 @@ public class CollectionController : MonoBehaviour
     public GameObject hasNewDie;
     public GameObject hasNewTitle;
     private int lastSelected = 1;
+    private int CraftCost = 1000;
     private class SkinData : Skin
     {
         public Button SkinButton = null;
@@ -214,57 +216,27 @@ public class CollectionController : MonoBehaviour
         }
 
         SetSkinData();
+    }
+    public void TryToCraftDie()
+    {
+        if (Settings.LoggedInPlayer.Calories >= CraftCost)
+        {
+            AreYouSurePanel.transform.Find("Question").GetComponent<Text>().text = $"Are you sure you want to spend {CraftCost} of your {Settings.LoggedInPlayer.Calories} Calories to craft this skin?";
+            AreYouSurePanel.SetActive(true);
+        }
+        else
+        {
+            DisplayAlert($"To craft this it costs {CraftCost} Calories, but you only have {Settings.LoggedInPlayer.Calories} :(","Insufficent Funds");
+        }
 
-        //if (currentDestroyItem.Rarity == 1)
-        //{
-        //    AmountToCraft = 1;
-        //    if (currentCraftItem.Rarity == 1)
-        //    {
-        //        AmountToDestroy = 1;
-        //    }
-        //    else if (currentCraftItem.Rarity == 2)
-        //    {
-        //        AmountToDestroy = 5;
-        //    }
-        //    else if (currentCraftItem.Rarity == 3)
-        //    {
-        //        AmountToDestroy = 25;
-        //    }
-        //}
-        //else if (currentDestroyItem.Rarity == 2)
-        //{
-        //    if (currentCraftItem.Rarity == 1)
-        //    {
-        //        AmountToCraft = 3;
-        //        AmountToDestroy = 1;
-        //    }
-        //    else if (currentCraftItem.Rarity == 2)
-        //    {
-        //        AmountToCraft = 1;
-        //        AmountToDestroy = 1;
-        //    }
-        //    else if (currentCraftItem.Rarity == 3)
-        //    {
-        //        AmountToCraft = 1;
-        //        AmountToDestroy = 5;
-        //    }
-        //} 
-        //else if (currentDestroyItem.Rarity == 3)
-        //{
-        //    AmountToDestroy = 1;
-        //    if (currentCraftItem.Rarity == 1)
-        //    {
-        //        AmountToCraft = 9;
-        //    }
-        //    else if (currentCraftItem.Rarity == 2)
-        //    {
-        //        AmountToCraft = 3;
-        //    }
-        //    else if (currentCraftItem.Rarity == 3)
-        //    {
-        //        AmountToCraft = 1;
-        //    }
-        //}
+    }
+
+    public void CraftDie()
+    {
+        AreYouSurePanel.SetActive(false);
+        CraftPanel.SetActive(false);
+        Settings.LoggedInPlayer.Calories -= CraftCost;
+        StartCoroutine(sql.RequestRoutine($"skin/CraftSkins?UserId={Settings.LoggedInPlayer.UserId}&ToDeleteSkinId={currentDestroyItem.SkinId}&ToCraftSkinId={currentCraftItem.SkinId}&isDie={isCraftingDie}", RefreshSkinsCallback));
     }
 
     private void SetSkinData()
@@ -289,7 +261,8 @@ public class CollectionController : MonoBehaviour
         SetCraftCosts(currentDestroyItem.Rarity);
         AmountToCraftText.text = AmountToCraft.ToString();
         AmountToDestroyText.text = AmountToDestroy.ToString();
-        CostText.text = $"Cost to Craft: " + ((AmountToCraft + AmountToDestroy) * (isCraftingDie ? 50 : 100)).ToString() + " Calories";
+        CraftCost = (AmountToCraft + AmountToDestroy) * (isCraftingDie ? 50 : 100);
+        CostText.text = $"Cost to Craft: " + CraftCost.ToString() + " Calories";
     }
 
     private int SetCraftCosts(int deleteRarity)
@@ -383,7 +356,7 @@ public class CollectionController : MonoBehaviour
             {
                 IngToPurchase = item;
                 DieToPurchase = null;
-                if (item.UnlockedQty > 9)
+                if (item.UnlockedQty > 3)
                 {
                     UnlockPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unlock Ingredient?";
                     UnlockPanel.transform.Find("Question").GetComponent<Text>().text = $"Do you want to spend 4 of these Ingredient skins, representing the 4 playing pieces on your team, to unlock this?";

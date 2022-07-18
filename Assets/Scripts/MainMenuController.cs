@@ -51,11 +51,15 @@ public class MainMenuController : MonoBehaviour
     #region ConfirmationPopups
     public GameObject alert;
     public GameObject rewardAlert;
+    public GameObject rewardAlert2;
+    public GameObject rewardAlert3;
+    public GameObject rewardAlert4;
     public GameObject LoadingPanel;
     public Text loadingTimer;
     public GameObject ExitPrompt;
     public GameObject NoMatchesFound;
     private bool keepWaiting = false;
+    private int wager = 100;
     #endregion
     public static MainMenuController i;
     #region Internal Varibales
@@ -111,9 +115,9 @@ public class MainMenuController : MonoBehaviour
         else if (Settings.JustWonOnline) 
         {
             Settings.JustWonOnline = false;
-            rewardAlert.transform.Find("RewardText").GetComponent<Text>().text = $"You earned a reward for winning your match. Check the reward tab at the bottom to claim it! \n \n";
+            rewardAlert2.transform.Find("RewardText").GetComponent<Text>().text = $"You earned a reward for winning your match. Check the reward tab at the bottom to claim it! \n \n";
             HasChest.SetActive(true);
-            rewardAlert.SetActive(true);
+            rewardAlert2.SetActive(true);
         }
     }
   
@@ -147,7 +151,7 @@ public class MainMenuController : MonoBehaviour
                 totalElapsed++;
                 TimeSpan time = TimeSpan.FromSeconds(totalElapsed);
                 loadingTimer.text = "Time in queue: " + time.ToString(@"m\:ss");
-                StartCoroutine(sql.RequestRoutine($"multiplayer/LookforGame?UserId={Settings.LoggedInPlayer.UserId}", GetGameUpdate));
+                StartCoroutine(sql.RequestRoutine($"multiplayer/LookforGame?UserId={Settings.LoggedInPlayer.UserId}&Wager={wager}", GetGameUpdate));
                 if (!keepWaiting && totalElapsed > 30)
                 {
                     NoMatchesFound.SetActive(true);
@@ -216,15 +220,17 @@ public class MainMenuController : MonoBehaviour
         else if (Settings.LoggedInPlayer.Calories < 150)
         {
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Insufficent Funds";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "You need 150 calories to play online!";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "You need 100 calories to play online!";
             alert.SetActive(true);
         }
         else
         {
             if (start)
             {
-                LookingForGame = start;
                 LoadingPanel.SetActive(start);
+                Seachingtext.gameObject.SetActive(false);
+                LookingForGame = false;
+                LoadingPanel.transform.Find("StartSearching").gameObject.SetActive(true);
             }
             else
             {
@@ -233,6 +239,40 @@ public class MainMenuController : MonoBehaviour
         }
     }
 
+    public void LookForGame()
+    {
+        LoadingPanel.transform.Find("StartSearching").gameObject.SetActive(false);
+        Seachingtext.gameObject.SetActive(true);
+        LookingForGame = true;
+    }
+    private void DisplayAlert(string skinDesc, string bannerText)
+    {
+        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = bannerText;
+        alert.transform.Find("AlertText").GetComponent<Text>().text = skinDesc;
+        alert.SetActive(true);
+    }
+    public void EditWager(bool more)
+    {
+        if (more) 
+        {
+            if (Settings.LoggedInPlayer.Calories >= wager + 100)
+            {
+                wager = wager + 100;
+            }
+            else
+            {
+                DisplayAlert("You don't have that much money, you addict!","Insufficent Funds");
+            }
+        } 
+        else 
+        {
+            if (wager > 100)
+            {
+                wager -= 100;
+            }
+        }
+        LoadingPanel.transform.Find("WagerText").GetComponent<Text>().text = wager.ToString();
+    }
     private void StopMatchmaking()
     {
         LookingForGame = false;
@@ -304,7 +344,7 @@ public class MainMenuController : MonoBehaviour
     } 
     internal void SetPlayer()
     {
-        StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
+        StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Settings.LoggedInPlayer.UserId}", GetLevelUpdateCallback));
         StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
         StartCoroutine(sql.RequestRoutine($"skin/CheckForUnlocks?UserId={Settings.LoggedInPlayer.UserId}", GetTitleUnlockCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Settings.LoggedInPlayer.Username}", GetPlayerCallback));
@@ -427,9 +467,19 @@ public class MainMenuController : MonoBehaviour
         var rewardText = sql.jsonConvert<string>(data);      
         if (!String.IsNullOrEmpty(rewardText))
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Congrats!";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = rewardText;
-            alert.SetActive(true);
+            rewardAlert3.transform.Find("Banner").GetComponentInChildren<Text>().text = "Congrats!";
+            rewardAlert3.transform.Find("RewardText").GetComponent<Text>().text = rewardText;
+            rewardAlert3.SetActive(true);
+        }
+    } 
+    private void GetLevelUpdateCallback(string data)
+    {
+        var rewardText = sql.jsonConvert<string>(data);      
+        if (!String.IsNullOrEmpty(rewardText))
+        {
+            rewardAlert4.transform.Find("Banner").GetComponentInChildren<Text>().text = "Congrats!";
+            rewardAlert4.transform.Find("RewardText").GetComponent<Text>().text = rewardText;
+            rewardAlert4.SetActive(true);
         }
     }
     
@@ -440,9 +490,9 @@ public class MainMenuController : MonoBehaviour
         {
             HasUnlock.SetActive(true);
             Settings.hasNewTitle = true;
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Congrats!";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = rewardText;
-            alert.SetActive(true);
+            rewardAlert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Congrats!";
+            rewardAlert.transform.Find("RewardText").GetComponent<Text>().text = rewardText;
+            rewardAlert.SetActive(true);
         }
     }
 

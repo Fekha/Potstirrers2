@@ -12,7 +12,7 @@ public static class Settings
     public static bool EnteredGame = false;
     public static bool JustWonOnline = false;
     public static int OnlineGameId = 0;
-    public static double AppVersion = 1.11;
+    public static double AppVersion = 1.12;
     public static bool FakeOnlineGame = false;
     public static bool hasNewIng = false;
     public static bool hasNewDie = false;

@@ -23,8 +23,8 @@ public class LeaderboardController : MonoBehaviour
     private List<LeaderboardMessage> eventLogList = new List<LeaderboardMessage>();
     public List<Profile> leaderData;
     private SqlController sql;
-    private int numLeaderboards = 2;
-    private int currentShowing = 1; 
+    private int numLeaderboards = 3;
+    private int currentShowing = 0; 
     private float elapsed;
     private void Start()
     {
@@ -69,7 +69,7 @@ public class LeaderboardController : MonoBehaviour
     private void leaderboardCallback(string jdata)
     {
         leaderData = sql.jsonConvert<List<Profile>>(jdata);
-        currentShowing = 1;// Random.Range(0, numLeaderboards);
+        currentShowing = 0;// Random.Range(0, numLeaderboards);
         ShowLeaderboard();
         alert.SetActive(false);
     }
@@ -80,11 +80,11 @@ public class LeaderboardController : MonoBehaviour
         //{
         //    ShowDailyWins();
         //}
-        //else if (currentShowing == 1)
-        //{
-        //    ShowWeeklyWins();
-        //} 
         if (currentShowing == 0)
+        {
+            ShowSeasonScore();
+        }
+        else if (currentShowing == 1)
         {
             ShowWins();
         }
@@ -136,14 +136,14 @@ public class LeaderboardController : MonoBehaviour
         }
     }
     
-    private void ShowWeeklyWins()
+    private void ShowSeasonScore()
     {
-        headerText.text = "Weekly Wins vs CPU";
+        headerText.text = "Season Score \n (Calories Earned Online)";
         ClearMessages();
         var i = 0;
-        foreach (var d in leaderData.Where(x => x.WeeklyWins > 0).OrderByDescending(x => x.WeeklyWins))
+        foreach (var d in leaderData.Where(x => x.SeasonScore > 0).OrderByDescending(x => x.SeasonScore))
         {
-            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.WeeklyWins;
+            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.SeasonScore;
             SendEventToLog(evenetDesc);
             i++;
         }
