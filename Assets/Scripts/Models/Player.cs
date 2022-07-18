@@ -23,6 +23,8 @@ namespace Assets.Models
         public int Xp = 0;
         public int Level = 1;
         public bool IsGuest = true;
+        public bool HasNewMessage = false;
+        public bool HasNewChest = false;
         public bool WineMenu = false;
         public bool UseD8s = false;
         public bool DisableDoubles = false;

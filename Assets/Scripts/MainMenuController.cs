@@ -69,9 +69,13 @@ public class MainMenuController : MonoBehaviour
     private float elapsed = 0f;
     private float elapsed2 = 0f;
     private bool LookingForGame = false;
-    public List<Sprite> diceSprites;
-    public List<Sprite> ingSprites;
+    public List<Sprite> DieSprites;
+    public List<Sprite> IngSprites;
     private int tick = 10;
+    public Profile YourFriend;
+    public GameObject HasMessage;
+    public GameObject HasChest;
+    public GameObject HasUnlock;
 
     #endregion
     void Awake()
@@ -96,16 +100,19 @@ public class MainMenuController : MonoBehaviour
         loadingToggle = false;
         toggleActivated = false;
         Settings.SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
-        StartCoroutine(SetPlayer());
+        SetPlayer();
         if (Settings.LoggedInPlayer.IsGuest && Settings.EnteredGame)
         {
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Still a guest?";
             alert.transform.Find("AlertText").GetComponent<Text>().text = $"If you make an account you will get xp, calories, and unlock new rewards!";
             alert.SetActive(true);
             Settings.EnteredGame = false;
-        } else if (Settings.JustWonOnline) {
+        } 
+        else if (Settings.JustWonOnline) 
+        {
             Settings.JustWonOnline = false;
-            rewardAlert.transform.Find("RewardText").GetComponent<Text>().text = $"You earned a reward for winning your match. \n \n Check the reward tab at the bottom to claim it!";
+            rewardAlert.transform.Find("RewardText").GetComponent<Text>().text = $"You earned a reward for winning your match. Check the reward tab at the bottom to claim it! \n \n";
+            HasChest.SetActive(true);
             rewardAlert.SetActive(true);
         }
     }
@@ -152,7 +159,7 @@ public class MainMenuController : MonoBehaviour
                 loadingTimer.text = "Time in queue: 0:00";
             }
 
-            if (tick > 4)
+            if (tick > 5)
             {
                 tick = 0;
                 try
@@ -246,7 +253,7 @@ public class MainMenuController : MonoBehaviour
         {
             if (Settings.LoggedInPlayer.IsGuest)
             {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
+                alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
                 alert.transform.Find("AlertText").GetComponent<Text>().text = "Log in to edit settings!";
                 alert.SetActive(true);
             }
@@ -295,18 +302,13 @@ public class MainMenuController : MonoBehaviour
     {
         ExitPrompt.SetActive(open);
     } 
-
-    public void hideAlert()
+    internal void SetPlayer()
     {
-        alert.SetActive(false);
-    } 
-
-    private IEnumerator SetPlayer()
-    {
-        yield return StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
-        yield return StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
+        StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
+        StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
+        StartCoroutine(sql.RequestRoutine($"skin/CheckForUnlocks?UserId={Settings.LoggedInPlayer.UserId}", GetTitleUnlockCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Settings.LoggedInPlayer.Username}", GetPlayerCallback));
-        StartCoroutine(sql.RequestRoutine($"player/GetProfile?username={Settings.LoggedInPlayer.Username}", GetProfileCallback));
+        StartCoroutine(sql.RequestRoutine($"player/GetProfile?UserId={Settings.LoggedInPlayer.UserId}", GetProfileCallback));
     }
 
     public void UpdateLvlText() {
@@ -318,6 +320,13 @@ public class MainMenuController : MonoBehaviour
     private void GetPlayerCallback(string data)
     {
         var player = sql.jsonConvert<Player>(data);
+
+        if (player.HasNewMessage)
+            HasMessage.SetActive(true);
+        
+        if (player.HasNewChest)
+            HasChest.SetActive(true);
+
         Settings.LoggedInPlayer.Calories = player.Calories;
         Settings.LoggedInPlayer.Level = player.Level;
         Settings.LoggedInPlayer.Xp = player.Xp;
@@ -349,13 +358,14 @@ public class MainMenuController : MonoBehaviour
         AllCPUWinsText.text = $"All CPU Wins: {CurrentPlayer.AllWins}";
         AllPVPWinsText.text = $"All PVP Wins: {CurrentPlayer.AllPVPWins}";
         CookedIngredientsText.text = $"Cooked Ingredients: {CurrentPlayer.Cooked}";
-        CaloriesText.text = $"Calories: {CurrentPlayer.Stars}";
-        LastLoginText.text = $"";
+        CaloriesText.text = $"Calories: {CurrentPlayer.Calories}";
+        LastLoginText.text = $"Online Status: Online";
+        //removeFriend.SetActive(false);
     }
 
     public void GetFriendProfileCallback(string data)
     {
-        var YourFriend = sql.jsonConvert<Profile>(data);
+        YourFriend = sql.jsonConvert<Profile>(data);
 
         CurrentLevelText.color = Color.white;
         DailyWinsText.color = Color.white;
@@ -397,17 +407,18 @@ public class MainMenuController : MonoBehaviour
         else if (YourFriend.Cooked < CurrentPlayer.Cooked)
             CookedIngredientsText.color = Color.green;
         CookedIngredientsText.text = $"Cooked Ingredients: {YourFriend.Cooked}";
-        if (YourFriend.Stars > CurrentPlayer.Stars)
+        if (YourFriend.Calories > CurrentPlayer.Calories)
             CaloriesText.color = Color.red;
-        else if (YourFriend.Stars < CurrentPlayer.Stars)
+        else if (YourFriend.Calories < CurrentPlayer.Calories)
             CaloriesText.color = Color.green;
-        CaloriesText.text = $"Calories: {YourFriend.Stars}";
-        if (YourFriend.LastLogin < CurrentPlayer.LastLogin)
+        CaloriesText.text = $"Calories: {YourFriend.Calories}";
+        if (!YourFriend.IsOnline)
             LastLoginText.color = Color.red;
-        else if (YourFriend.LastLogin > CurrentPlayer.LastLogin)
+        else if (YourFriend.IsOnline)
             LastLoginText.color = Color.green;
-        LastLoginText.text = YourFriend.LastLogin.HasValue ? $"Last Login: {YourFriend.LastLogin.Value.ToShortDateString()} {YourFriend.LastLogin.Value.ToShortTimeString()}" : "";
+        LastLoginText.text = $"Online Status: {(YourFriend.IsOnline ? "Online" : "Offline")}";
 
+        //removeFriend.SetActive(true);
         profilePanel.SetActive(true);
     }  
 
@@ -416,6 +427,19 @@ public class MainMenuController : MonoBehaviour
         var rewardText = sql.jsonConvert<string>(data);      
         if (!String.IsNullOrEmpty(rewardText))
         {
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Congrats!";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = rewardText;
+            alert.SetActive(true);
+        }
+    }
+    
+    private void GetTitleUnlockCallback(string data)
+    {
+        var rewardText = sql.jsonConvert<string>(data);      
+        if (!String.IsNullOrEmpty(rewardText))
+        {
+            HasUnlock.SetActive(true);
+            Settings.hasNewTitle = true;
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Congrats!";
             alert.transform.Find("AlertText").GetComponent<Text>().text = rewardText;
             alert.SetActive(true);

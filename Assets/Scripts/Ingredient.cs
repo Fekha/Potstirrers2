@@ -41,32 +41,31 @@ public class Ingredient : MonoBehaviour
 
     public IEnumerator Move()
     {
-        GameManager.i.AllIngredients.ForEach(x => x.SetSelector(false));
-
-        while (GameManager.i.isMoving)
+        if (!GameManager.i.isMoving || GameManager.i.GetActivePlayer().UserId != Settings.LoggedInPlayer.UserId)
         {
-            yield return new WaitForSeconds(.5f);
+            GameManager.i.isMoving = true;
+
+            GameManager.i.AllIngredients.ForEach(x => x.SetSelector(false));
+
+            yield return StartCoroutine(BeforeMoving());
+
+            yield return StartCoroutine(DoMovement());
+
+            yield return StartCoroutine(AfterMovement());
+
+            GameManager.i.isMoving = false;
+
+            yield return StartCoroutine(GameManager.i.DoneMoving());
         }
-
-        GameManager.i.isMoving = true;
-
-        yield return StartCoroutine(BeforeMoving());
-      
-        yield return StartCoroutine(DoMovement()); 
-
-        yield return StartCoroutine(AfterMovement());
-
-        GameManager.i.isMoving = false;
-
-        if (GameManager.i.IsCPUTurn())
-            yield return new WaitForSeconds(.5f);
-
-        yield return StartCoroutine(GameManager.i.DoneMoving());
     }
 
     private IEnumerator BeforeMoving()
     {
+        if (Settings.OnlineGameId != 0 && GameManager.i.GetActivePlayer().UserId == Settings.LoggedInPlayer.UserId)
+            StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateTurn?UserId={Settings.LoggedInPlayer.UserId}&GameId={Settings.OnlineGameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
+
         GameManager.i.firstIngredientMoved = IngredientId;
+
         if (routePosition != 0)
             Route.i.FullRoute[routePosition].ingredients.Pop();
         else
@@ -186,6 +185,8 @@ public class Ingredient : MonoBehaviour
                 isCooked = true;
                 CookedQuad.gameObject.SetActive(true);
                 BackCookedQuad.gameObject.SetActive(false);
+                if(Team == 0)
+                    GameManager.i.XpText.GetComponent<Animation>().Play("CookedXP");
             }
             routePosition = 0;
             yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this));
@@ -228,6 +229,9 @@ public class Ingredient : MonoBehaviour
         { 
             Route.i.FullRoute[routePosition].ingredients.Push(this);
         }
+
+        if (GameManager.i.IsCPUTurn())
+            yield return new WaitForSeconds(.5f);
     }
 
     public IEnumerator MoveToNextTile(Vector3? nextPos = null, bool isforEffect=false, float speed = 35f, bool trash = false)
@@ -305,16 +309,8 @@ public class Ingredient : MonoBehaviour
         //        GameManager.i.undoButton1.gameObject.SetActive(false);
         //        GameManager.i.undoButton2.gameObject.SetActive(false);
         //    }
-            StartCoroutine(MoveSelectedIngredient());
+            StartCoroutine(Move());
         }
-    }
-
-    private IEnumerator MoveSelectedIngredient()
-    {
-        if (Settings.OnlineGameId != 0)
-            yield return StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateTurn?UserId={Settings.LoggedInPlayer.UserId}&GameId={Settings.OnlineGameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
-
-        yield return StartCoroutine(Move());
     }
 }
 public static class MyEnumExtensions

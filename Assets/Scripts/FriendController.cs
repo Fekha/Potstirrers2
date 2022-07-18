@@ -22,7 +22,6 @@ public class FriendController : MonoBehaviour
     [Header("Messages")]
     public GameObject hasMessage;
     public GameObject sendMessagePanel;
-    public GameObject messageChoice;
     public GameObject SubjectInput;
     public GameObject BodyInput;
     public Text ToInput;
@@ -32,6 +31,7 @@ public class FriendController : MonoBehaviour
     public Text FromText;
     public GameObject ViewMessagePanel;
     public GameObject MessageButtonContent;
+    public GameObject RemoveChoice;
     public Button MessagePrefabObj;
     private List<Button> MessageButtonLog = new List<Button>();
 
@@ -41,11 +41,12 @@ public class FriendController : MonoBehaviour
     public GameObject FriendText;
     private List<Button> FriendButtonLog = new List<Button>();
 
+    private int toDeleteId = 0;
+    private string toDeleteName = "";
     private Message CurrentMessage;
-    private bool showFriendList = false;
     public GameObject alert;
     public Text alertText;
-    private Profile YourFriend;
+
 
     void Awake()
     {
@@ -53,6 +54,9 @@ public class FriendController : MonoBehaviour
     }
     private void OnEnable()
     {
+        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Loading";
+        alert.transform.Find("AlertText").GetComponent<Text>().text = "Finding all of your friends...";
+        alert.SetActive(true);
         StartCoroutine(sql.RequestRoutine($"player/GetFriends?userId={Settings.LoggedInPlayer.UserId}", GetFriendCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetMessages?userId={Settings.LoggedInPlayer.UserId}", GetMessageCallback));
     }
@@ -81,25 +85,21 @@ public class FriendController : MonoBehaviour
     }
 
 
-    public void EditFriend(bool add)
+    public void AddFriend()
     {
-        if (add)
-        {
-            StartCoroutine(sql.RequestRoutine("player/GetUserByName?username=" + FriendText.GetComponent<InputField>().text, this.GetFriendByUsernameCallback));
-        }
-        else
-        {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = $"You have removed {YourFriend.Username} as a friend :(";
-            alert.SetActive(true);
-            MainMenuController.i.ShowProfile(false);
-            StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Settings.LoggedInPlayer.UserId}&username={YourFriend.Username}&add={add}", GetFriendCallback));
-        }
+        StartCoroutine(sql.RequestRoutine("player/GetUserByName?username=" + FriendText.GetComponent<InputField>().text, this.GetFriendByUsernameCallback));
+    }  
+    
+    private void RemoveFriend(string FriendName)
+    {
+        toDeleteId = 0;
+        toDeleteName = FriendName;
+        RemoveChoice.transform.Find("Question").GetComponent<Text>().text = "Do you want to remove this friend?";
+        RemoveChoice.SetActive(true);
     }
 
     public void ShowFriendsList(bool open)
     {
-        showFriendList = open;
         MainMenuController.i.profilePanel.SetActive(!open);
         friendslist.SetActive(open);
     }
@@ -111,7 +111,7 @@ public class FriendController : MonoBehaviour
         else
         {
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "You must have friends that are friends with you to be able to send a message! Why did you remove poor feca :(";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "You must have friends that are friends with you to be able to send a message! Why did you remove poor Feca :(";
             alert.SetActive(true);
         }
     }
@@ -132,56 +132,75 @@ public class FriendController : MonoBehaviour
         }
         alert.SetActive(true);
     }
-    private void showMessageChoice(Message message)
+    public void viewMessage(Message message)
     {
         CurrentMessage = message;
-        if (message.IsRead)
-        {
-            messageChoice.SetActive(true);
-        }
-        else
-        {
-            viewMessage();
-        }
-    }
-    public void viewMessage()
-    {
         SubjectText.text = CurrentMessage.Subject;
         BodyText.text = CurrentMessage.Body;
         FromText.text = $"From: " + CurrentMessage.FromName;
-        messageChoice.SetActive(false);
         ViewMessagePanel.SetActive(true);
         StartCoroutine(sql.RequestRoutine($"player/ReadMessage?MessageId={CurrentMessage.MessageId}", GetMessageCallback));
     }
-    public void deleteMessage()
+    public void deleteMessage(int messageId)
     {
-        messageChoice.SetActive(false);
-        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
-        alert.transform.Find("AlertText").GetComponent<Text>().text = "Message Deleted!";
-        alert.SetActive(true);
-        StartCoroutine(sql.RequestRoutine($"player/DeleteMessage?MessageId={CurrentMessage.MessageId}", GetMessageCallback));
+        toDeleteName = "";
+        toDeleteId = messageId;
+        RemoveChoice.transform.Find("Question").GetComponent<Text>().text = "Do you want to delete this message?";
+        RemoveChoice.SetActive(true);
     }
 
+    public void Delete()
+    {
+        RemoveChoice.SetActive(false);
+        if (toDeleteId != 0)
+        {
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = "Message Deleted!";
+            alert.SetActive(true);
+            StartCoroutine(sql.RequestRoutine($"player/DeleteMessage?MessageId={toDeleteId}", GetMessageCallback));
+            toDeleteId = 0;
+        }
+        else if (toDeleteName != "")
+        {
+            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
+            alert.transform.Find("AlertText").GetComponent<Text>().text = $"You have removed {toDeleteName} as a friend :(";
+            alert.SetActive(true);
+            MainMenuController.i.ShowProfile(false);
+            StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Settings.LoggedInPlayer.UserId}&username={toDeleteName}&add={false}", GetFriendCallback));
+            toDeleteName = "";
+        }
+    }
     public void HideMessage()
     {
         ViewMessagePanel.SetActive(false);
     }
 
-    private void CreateFriend(string username, bool realFriend)
+    private void CreateFriend(FriendDTO user, bool realFriend)
     {
         if (realFriend)
         {
             ToDropdown.options.Add(new Dropdown.OptionData()
             {
-                text = username
+                text = user.Username
             });
         }
         MessagePrefabObj.transform.Find("Image").gameObject.SetActive(!realFriend);
-        MessagePrefabObj.GetComponentInChildren<Text>().text = username;
+        MessagePrefabObj.transform.Find("Delete").gameObject.SetActive(realFriend);
+        MessagePrefabObj.GetComponentInChildren<Text>().text = user.Username;
         Button newButton = Instantiate(MessagePrefabObj, FriendButtonContent.transform);
-        newButton.onClick.AddListener(() => StartCoroutine(sql.RequestRoutine($"player/GetProfile?username={username}", MainMenuController.i.GetFriendProfileCallback)));
+        newButton.onClick.AddListener(() => StartCoroutine(sql.RequestRoutine($"player/GetProfile?UserId={user.UserId}", MainMenuController.i.GetFriendProfileCallback)));
+        newButton.transform.Find("Image").GetComponent<Button>().onClick.AddListener(()=> NotRealFriendPopup(user.Username));
+        newButton.transform.Find("Delete").GetComponent<Button>().onClick.AddListener(()=> RemoveFriend(user.Username));
         FriendButtonLog.Add(newButton);
     }
+
+    private void NotRealFriendPopup(string Username)
+    {
+        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Not Your Friend";
+        alert.transform.Find("AlertText").GetComponent<Text>().text = $"{Username} is your friend, but its not mutual. Waiting on them to add you back so you can do cool friend stuff!";
+        alert.SetActive(true);
+    }
+
     private void ClearFriends()
     {
         if (FriendButtonLog.Count() > 0)
@@ -207,9 +226,11 @@ public class FriendController : MonoBehaviour
     private void CreateMessage(Message message)
     {
         MessagePrefabObj.transform.Find("Image").gameObject.SetActive(!message.IsRead);
+        MessagePrefabObj.transform.Find("Delete").gameObject.SetActive(message.IsRead);
         MessagePrefabObj.GetComponentInChildren<Text>().text = message.Subject;
         Button newButton = Instantiate(MessagePrefabObj, MessageButtonContent.transform);
-        newButton.onClick.AddListener(() => showMessageChoice(message));
+        newButton.onClick.AddListener(() => viewMessage(message));
+        newButton.transform.Find("Delete").GetComponent<Button>().onClick.AddListener(() => deleteMessage(message.MessageId));
         MessageButtonLog.Add(newButton);
     }
     private void ClearMessages()
@@ -249,11 +270,13 @@ public class FriendController : MonoBehaviour
         var friends = sql.jsonConvert<List<FriendDTO>>(data);
         foreach (var d in friends.OrderByDescending(x => x.Level))
         {
-            CreateFriend(d.Username, d.RealFriend);
+            CreateFriend(d, d.RealFriend);
         }
+        alert.SetActive(false);
     }
     private class FriendDTO
     {
+        public int UserId { get; set; }
         public string Username { get; set; }
         public bool RealFriend { get; set; }
         public int Level { get; set; }

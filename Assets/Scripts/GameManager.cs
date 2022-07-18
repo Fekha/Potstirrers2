@@ -35,6 +35,7 @@ public class GameManager : MonoBehaviour
     private States State = States.Switching;
     private bool IsPlayer1Player1 = true;
     List<Ingredient> MoveableList = new List<Ingredient>();
+    public GameObject XpText;
     private enum States
     {
         Switching,
@@ -307,14 +308,12 @@ public class GameManager : MonoBehaviour
             yield return StartCoroutine(RollSelected(true, true));
             yield return new WaitForSeconds(0.5f);
             var ing = MoveableList[Random.Range(0, MoveableList.Count())];
-            yield return StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateTurn?UserId={Settings.LoggedInPlayer.UserId}&GameId={Settings.OnlineGameId}&IngId={ing.IngredientId}&Higher={higherMoveSelected}"));
             yield return StartCoroutine(ing.Move());
            
         }
 
         yield return new WaitForSeconds(0.5f);
         var ing2 = MoveableList[Random.Range(0, MoveableList.Count())];
-        yield return StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateTurn?UserId={Settings.LoggedInPlayer.UserId}&GameId={Settings.OnlineGameId}&IngId={ing2.IngredientId}&Higher={higherMoveSelected}"));
         yield return StartCoroutine(ing2.Move());
     }
 
@@ -552,15 +551,17 @@ public class GameManager : MonoBehaviour
 
     internal IEnumerator RollSelected(bool isHigher, bool HUMAN)
     {
-        while (isMoving || (IsCPUTurn() && HUMAN))
+        if (isMoving || (IsCPUTurn() && HUMAN))
         {
             yield return new WaitForSeconds(0.5f);
         }
-
-        higherMoveSelected = isHigher;
-        Steps = higherMoveSelected ? higherMove : lowerMove;
-        SetDice();
-        yield return StartCoroutine(SetSelectableIngredients());
+        else
+        {
+            higherMoveSelected = isHigher;
+            Steps = higherMoveSelected ? higherMove : lowerMove;
+            SetDice();
+            yield return StartCoroutine(SetSelectableIngredients());
+        }     
     }
     private void SetDice()
     {
@@ -666,14 +667,17 @@ public class GameManager : MonoBehaviour
         else
         {
             eventText.text = (player1Count > player2Count ? "You Won!" : "You Lost!");
-            if (Settings.SecondPlayer.IsCPU && !Settings.LoggedInPlayer.IsGuest && player1Count > player2Count) {
-                StartCoroutine(sql.RequestRoutine($"multiplayer/CPUGameWon?UserId={Settings.LoggedInPlayer.UserId}"));
-                eventText.text += $"\n \n Great work, its no easy task beating {Settings.SecondPlayer.Username}! \n \n You earned 50 Calories.";
+            if (Settings.SecondPlayer.IsCPU && !Settings.LoggedInPlayer.IsGuest ) {
+                StartCoroutine(sql.RequestRoutine($"multiplayer/CPUGameFinished?UserId={Settings.LoggedInPlayer.UserId}&Cooked={player1Count}"));
             }
 
             if (player1Count < player2Count)
             {
                 eventText.text += "\n \n Keep practicing, theres more skill to the game than you might think!";
+            }
+            else
+            {
+                eventText.text += $"\n \n Great work, its no easy task beating {Settings.SecondPlayer.Username}! \n \n You earned 50 Calories.";
             }
 
             if (Settings.LoggedInPlayer.IsGuest) {
@@ -1034,16 +1038,19 @@ public class GameManager : MonoBehaviour
             User = GetActivePlayer();
 
         var textToChange = User.UserId == playerList[0].UserId ? TitleText1 : TitleText2;
-        
-        if (User.IsCPU)
+        if (User.UserId == 5)
+        {
+            textToChange.text = "The Dev";
+        }
+        else if (User.IsCPU)
         {
             textToChange.text = "CPU";
         }
         else if (User.IsGuest)
         {
-            textToChange.text = "";
+            textToChange.text = "Account Hater";
         }
-        else if(User.SelectedIngs.Count > 0)
+        else if(User.SelectedTitles.Count > 0)
         {
             var random = new System.Random();
             int index1 = random.Next(User.SelectedTitles.Count);

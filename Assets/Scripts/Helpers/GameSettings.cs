@@ -12,8 +12,11 @@ public static class Settings
     public static bool EnteredGame = false;
     public static bool JustWonOnline = false;
     public static int OnlineGameId = 0;
-    public static double AppVersion = 1.07;
+    public static double AppVersion = 1.11;
     public static bool FakeOnlineGame = false;
+    public static bool hasNewIng = false;
+    public static bool hasNewDie = false;
+    public static bool hasNewTitle = false;
 
     //public static List<Player> CPUPlayers = new List<Player>() { 
     //    new Player() { Username = "Joe", IsCPU = true, UserId = 43 },

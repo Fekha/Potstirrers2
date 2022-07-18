@@ -1,5 +1,6 @@
 using Assets.Models;
 using Assets.Scripts.Models;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,38 +18,73 @@ public class LeaderboardController : MonoBehaviour
     }
     public Text headerText;
     public GameObject eventLogTextContent;
-    public GameObject loading;
+    public GameObject alert;
     public Text eventLogTextObject;
     private List<LeaderboardMessage> eventLogList = new List<LeaderboardMessage>();
     public List<Profile> leaderData;
     private SqlController sql;
-    private int numLeaderboards = 4;
-    private int currentShowing = 0;
+    private int numLeaderboards = 2;
+    private int currentShowing = 1; 
+    private float elapsed;
     private void Start()
     {
-        loading.SetActive(true);
+        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Loading";
+        alert.transform.Find("AlertText").GetComponent<Text>().text = "Getting all the good players...";
+        alert.SetActive(true);
         sql = new SqlController();
         StartCoroutine(sql.RequestRoutine("player/GetLeaderboard", leaderboardCallback, true));
+    }
+    private void Update()
+    {
+        elapsed += Time.deltaTime;
+        if (elapsed >= 5f)
+        {
+            elapsed = elapsed % 5f;
+            try
+            {
+                StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
+            }
+            catch (Exception ex)
+            {
+                alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Network Failure";
+                alert.transform.Find("AlertText").GetComponent<Text>().text = "Can't connect to the server.";
+                alert.SetActive(true);
+            }
+        }
+    }
+
+    private void GetAppVersionCallback(string data)
+    {
+        if (!string.IsNullOrEmpty(data))
+        {
+            var version = sql.jsonConvert<double>(data);
+            if (Settings.AppVersion < version)
+            {
+                alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Version Mismatch";
+                alert.transform.Find("AlertText").GetComponent<Text>().text = "Your version of the game is out of sync, please refresh your browser to get the latest update.";
+                alert.SetActive(true);
+            }
+        }
     }
     private void leaderboardCallback(string jdata)
     {
         leaderData = sql.jsonConvert<List<Profile>>(jdata);
-        currentShowing = 0;// Random.Range(0, numLeaderboards);
+        currentShowing = 1;// Random.Range(0, numLeaderboards);
         ShowLeaderboard();
-        loading.SetActive(false);
+        alert.SetActive(false);
     }
 
     private void ShowLeaderboard()
     {
+        //if (currentShowing == 0)
+        //{
+        //    ShowDailyWins();
+        //}
+        //else if (currentShowing == 1)
+        //{
+        //    ShowWeeklyWins();
+        //} 
         if (currentShowing == 0)
-        {
-            ShowDailyWins();
-        }
-        else if (currentShowing == 1)
-        {
-            ShowWeeklyWins();
-        } 
-        else if (currentShowing == 2)
         {
             ShowWins();
         }

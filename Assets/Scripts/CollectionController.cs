@@ -20,15 +20,12 @@ public class CollectionController : MonoBehaviour
 
     [Header("Ingredients")]
     public GameObject IngButtonContent;
-    public Button IngPrefabObj;
     private List<SkinData> AllIngSkins = new List<SkinData>();
     private List<SkinData> MyIngSkins = new List<SkinData>();
     private List<Button> IngButtonLog = new List<Button>();
 
-
     [Header("Dice")]
     public GameObject DiceButtonContent;
-    public Button DicePrefabObj;
     private List<SkinData> AllDiceSkins = new List<SkinData>();
     private List<SkinData> MyDiceSkins = new List<SkinData>();
     private List<Button> DiceButtonLog = new List<Button>();
@@ -40,12 +37,42 @@ public class CollectionController : MonoBehaviour
     private List<SkinData> MyTitles = new List<SkinData>();
     private List<Button> TitleButtonLog = new List<Button>();
 
+    [Header("Crafting")]
+    public GameObject CraftPanel;
+    private int AmountToDestroy;
+    private int AmountToCraft;
+    private bool isCraftingDie = false;
+    private Skin currentDestroyItem;
+    private Skin currentCraftItem;
+    private int canDestroyIndex = 0;
+    private List<Skin> canCraft = new List<Skin>();
+    private List<Skin> canDestroy = new List<Skin>();
+    public Sprite CommonSprite;
+    public Sprite EpicSprite;
+    public Sprite RareSprite;
+
+    private Image CurrentCraftImage;
+    private Image CurrentDestroyImage;
+    private Image BackgroundCraftImage;
+    private Image BackgroundDestroyImage;
+    private Text AmountToCraftText;
+    private Text AmountToDestroyText;
+    private Text AmountOwnedCraftText;
+    private Text AmountOwnedDestroyText;
+    private Text CostText;
 
     [Header("Global")]
+    public Button ItemPrefabObj;
     public GameObject alert;
-    public Text alertText;
+    public GameObject UnlockPanel;
     private SqlController sql;
+    private Skin DieToPurchase;
+    private Skin IngToPurchase;
     public static CollectionController i;
+    public GameObject hasNewIng;
+    public GameObject hasNewDie;
+    public GameObject hasNewTitle;
+    private int lastSelected = 1;
     private class SkinData : Skin
     {
         public Button SkinButton = null;
@@ -58,40 +85,258 @@ public class CollectionController : MonoBehaviour
 
     private void OnEnable()
     {
+        RefreshSkinsCallback();
+        hasNewIng.SetActive(Settings.hasNewIng);
+        hasNewDie.SetActive(Settings.hasNewDie);
+        hasNewTitle.SetActive(Settings.hasNewTitle);
+        TabClicked(lastSelected);
+    }
+    public void UnlockItem()
+    {
+        UnlockPanel.SetActive(false);
+        if (DieToPurchase != null)
+        {
+            if (DieToPurchase.UnlockedQty > 9)
+            {
+                StartCoroutine(sql.RequestRoutine($"skin/UnlockDiceSkin?UserId={Settings.LoggedInPlayer.UserId}&SkinId={DieToPurchase.SkinId}", RefreshSkinsCallback));
+                DieToPurchase = null;
+            }
+            else
+            {
+                if (MyDiceSkins.Count > 1)
+                {
+                    canDestroy.Clear();
+                    currentCraftItem = DieToPurchase;
+                    isCraftingDie = true;
+                    MyDiceSkins.ForEach(x =>
+                    {
+                        if (x.SkinId != DieToPurchase.SkinId && x.UnlockedQty >= SetCraftCosts(x.Rarity))
+                            canDestroy.Add(x);
+                    });
+                    if (canDestroy.Count != 0)
+                    {
+                        OpenCraftPanel();
+                    }
+                    else
+                    {
+                        DisplayAlert("You need to collect more skins before being able to craft this!", "Unable to craft");
+                    }
+                }
+                else
+                {
+                    DisplayAlert("You need to collect more skins before being able to craft this!", "Unable to craft");
+                }
+            }
+        }
+        else if (IngToPurchase != null)
+        {
+            if (IngToPurchase.UnlockedQty > 3)
+            {
+                StartCoroutine(sql.RequestRoutine($"skin/UnlockIngSkin?UserId={Settings.LoggedInPlayer.UserId}&SkinId={IngToPurchase.SkinId}", RefreshSkinsCallback));
+                IngToPurchase = null;
+            }
+            else
+            {
+                if (MyIngSkins.Count > 1)
+                {
+                    canDestroy.Clear();
+                    currentCraftItem = IngToPurchase;
+                    isCraftingDie = false;
+                    MyIngSkins.ForEach(x => {
+                        if (x.SkinId != IngToPurchase.SkinId && x.UnlockedQty >= SetCraftCosts(x.Rarity))
+                            canDestroy.Add(x);
+                    });
+                    if (canDestroy.Count != 0)
+                    {
+                        OpenCraftPanel();
+                    }
+                    else
+                    {
+                        DisplayAlert("You need to collect more skins before being able to craft this!", "Unable to craft");
+                    }
+                }
+                else
+                {
+                    DisplayAlert("You need to collect more skins before being able to craft this!", "Unable to craft");
+                }
+            }
+        }
+    }
+
+    private void OpenCraftPanel()
+    {
+        canDestroyIndex = 0;
+
+        CraftPanel.SetActive(true);
+
+        var itemToCraftPanel = CraftPanel.transform.Find("ItemToCraft");
+        CurrentCraftImage = itemToCraftPanel.transform.Find("CurrentCraft").GetComponent<Image>();
+        AmountToCraftText = itemToCraftPanel.transform.Find("AmountToCraftText").GetComponent<Text>();
+        BackgroundCraftImage = itemToCraftPanel.transform.Find("BackgroundRarity").GetComponent<Image>();
+        AmountOwnedCraftText = itemToCraftPanel.transform.Find("AmountOwnedText").GetComponent<Text>();
+
+        var itemToDestroyPanel = CraftPanel.transform.Find("ItemToDestroy");
+        CurrentDestroyImage = itemToDestroyPanel.transform.Find("CurrentDestroy").GetComponent<Image>();
+        AmountToDestroyText = itemToDestroyPanel.transform.Find("AmountToDestroyText").GetComponent<Text>();
+        BackgroundDestroyImage = itemToDestroyPanel.transform.Find("BackgroundRarity").GetComponent<Image>();
+        AmountOwnedDestroyText = itemToDestroyPanel.transform.Find("AmountOwnedText").GetComponent<Text>();
+
+        CostText = CraftPanel.transform.Find("CostText").GetComponent<Text>();
+        if (isCraftingDie)
+        {
+            (CurrentCraftImage.transform as RectTransform).sizeDelta = new Vector2(225, 225);
+            (CurrentDestroyImage.transform as RectTransform).sizeDelta = new Vector2(225, 225);
+        }else{
+            (CurrentCraftImage.transform as RectTransform).sizeDelta = new Vector2(250, 250);
+            (CurrentDestroyImage.transform as RectTransform).sizeDelta = new Vector2(250, 250);
+        }
+        
+        SetSkinData();
+    }
+
+    public void NextDestroyOption(bool forward)
+    {
+        if (forward)
+        {
+            if (canDestroyIndex < canDestroy.Count-1)
+                canDestroyIndex++;
+            else
+                canDestroyIndex = 0;
+
+        }
+        else
+        {
+            if (canDestroyIndex > 0)
+                canDestroyIndex--;
+            else
+                canDestroyIndex = canDestroy.Count - 1;
+
+        }
+
+        SetSkinData();
+
+        //if (currentDestroyItem.Rarity == 1)
+        //{
+        //    AmountToCraft = 1;
+        //    if (currentCraftItem.Rarity == 1)
+        //    {
+        //        AmountToDestroy = 1;
+        //    }
+        //    else if (currentCraftItem.Rarity == 2)
+        //    {
+        //        AmountToDestroy = 5;
+        //    }
+        //    else if (currentCraftItem.Rarity == 3)
+        //    {
+        //        AmountToDestroy = 25;
+        //    }
+        //}
+        //else if (currentDestroyItem.Rarity == 2)
+        //{
+        //    if (currentCraftItem.Rarity == 1)
+        //    {
+        //        AmountToCraft = 3;
+        //        AmountToDestroy = 1;
+        //    }
+        //    else if (currentCraftItem.Rarity == 2)
+        //    {
+        //        AmountToCraft = 1;
+        //        AmountToDestroy = 1;
+        //    }
+        //    else if (currentCraftItem.Rarity == 3)
+        //    {
+        //        AmountToCraft = 1;
+        //        AmountToDestroy = 5;
+        //    }
+        //} 
+        //else if (currentDestroyItem.Rarity == 3)
+        //{
+        //    AmountToDestroy = 1;
+        //    if (currentCraftItem.Rarity == 1)
+        //    {
+        //        AmountToCraft = 9;
+        //    }
+        //    else if (currentCraftItem.Rarity == 2)
+        //    {
+        //        AmountToCraft = 3;
+        //    }
+        //    else if (currentCraftItem.Rarity == 3)
+        //    {
+        //        AmountToCraft = 1;
+        //    }
+        //}
+    }
+
+    private void SetSkinData()
+    {
+        currentDestroyItem = canDestroy[canDestroyIndex];
+        BackgroundCraftImage.sprite = currentCraftItem.Rarity == 3 ? EpicSprite : currentCraftItem.Rarity == 2 ? RareSprite : CommonSprite;
+        BackgroundDestroyImage.sprite = currentDestroyItem.Rarity == 3 ? EpicSprite : currentDestroyItem.Rarity == 2 ? RareSprite : CommonSprite;
+        AmountOwnedCraftText.text = currentCraftItem.UnlockedQty.ToString();
+        AmountOwnedDestroyText.text = currentDestroyItem.UnlockedQty.ToString();
+        
+        //diff positive then destroying a better item
+        if (isCraftingDie)
+        {
+            CurrentCraftImage.sprite = MainMenuController.i.DieSprites[currentCraftItem.SkinId - 1];
+            CurrentDestroyImage.sprite = MainMenuController.i.DieSprites[currentDestroyItem.SkinId - 1];
+        }
+        else
+        {
+            CurrentCraftImage.sprite = MainMenuController.i.IngSprites[currentCraftItem.SkinId - 1];
+            CurrentDestroyImage.sprite = MainMenuController.i.IngSprites[currentDestroyItem.SkinId - 1];
+        }
+        SetCraftCosts(currentDestroyItem.Rarity);
+        AmountToCraftText.text = AmountToCraft.ToString();
+        AmountToDestroyText.text = AmountToDestroy.ToString();
+        CostText.text = $"Cost to Craft: " + ((AmountToCraft + AmountToDestroy) * (isCraftingDie ? 50 : 100)).ToString() + " Calories";
+    }
+
+    private int SetCraftCosts(int deleteRarity)
+    {
+        var difference = deleteRarity - currentCraftItem.Rarity;
+        AmountToCraft = (int)(difference > 0 ? Math.Pow(isCraftingDie ? 3: 2, difference) : 1);
+        AmountToDestroy = (int)(difference > 0 ? 1 : Math.Pow(isCraftingDie ? 5 : 3, Math.Abs(difference)));
+        return AmountToDestroy;
+    }
+
+    private void RefreshSkinsCallback(string obj = null)
+    {
         StartCoroutine(sql.RequestRoutine($"skin/GetMyIngredientSkins?UserId={Settings.LoggedInPlayer.UserId}", GetMyIngredientCallback));
         StartCoroutine(sql.RequestRoutine($"skin/GetMyDiceSkins?UserId={Settings.LoggedInPlayer.UserId}", GetMyDiceCallback));
         StartCoroutine(sql.RequestRoutine($"skin/GetMyTitles?UserId={Settings.LoggedInPlayer.UserId}", GetMyTitlesCallback));
     }
-
     #region Ingredients
     private void CreateIng(Sprite item, int skinId)
     {
         bool isSelected = false;
         if (Settings.LoggedInPlayer.SelectedIngs.Contains(skinId))
         {
-            IngPrefabObj.transform.Find("Selected").gameObject.SetActive(true);
+            ItemPrefabObj.transform.Find("Selected").gameObject.SetActive(true);
             isSelected = true;
         }
         else
         {
-            IngPrefabObj.transform.Find("Selected").gameObject.SetActive(false);
+            ItemPrefabObj.transform.Find("Selected").gameObject.SetActive(false);
         }
-        IngPrefabObj.transform.Find("Item").gameObject.GetComponent<Image>().sprite = item;
-     
+        (ItemPrefabObj.transform.Find("Item").transform as RectTransform).sizeDelta = new Vector2(230, 230);
+        ItemPrefabObj.transform.Find("Item").gameObject.GetComponent<Image>().sprite = item;
+        
         SkinData skin = new SkinData();
         if (MyIngSkins.Any(x => x.SkinId == skinId))
         {
             skin = MyIngSkins.FirstOrDefault(x => x.SkinId == skinId);
-            IngPrefabObj.GetComponentInChildren<Text>().text = "0";
+            ItemPrefabObj.GetComponentInChildren<Text>().text = skin.UnlockedQty.ToString();
         }
-        else if (skinId >= 0 && skinId <= 6)
+        else if (skinId >= 0 && skinId <= 3)
         {
             skin = new SkinData()
             {
                 SkinId = skinId,
                 IsUnlocked = true,
+                Rarity = skinId < 13 ? 1 : skinId < 17 ? 2 : 3
             };
-            IngPrefabObj.GetComponentInChildren<Text>().text = "";
+            ItemPrefabObj.GetComponentInChildren<Text>().text = "";
         }
         else
         {
@@ -99,20 +344,21 @@ public class CollectionController : MonoBehaviour
             {
                 SkinId = skinId,
                 IsUnlocked = false,
+                Rarity = skinId < 13 ? 1 : skinId < 19 ? 2 : 3
             };
-            IngPrefabObj.GetComponentInChildren<Text>().text = "0";
+            ItemPrefabObj.GetComponentInChildren<Text>().text = "0";
         }
         if (Settings.IsDebug)
             skin.IsUnlocked = true;
         
-        IngPrefabObj.transform.Find("Lock").gameObject.SetActive(!skin.IsUnlocked);
-        Button newButton = Instantiate(IngPrefabObj, IngButtonContent.transform);
+        ItemPrefabObj.transform.Find("Lock").gameObject.SetActive(!skin.IsUnlocked);
+        ItemPrefabObj.transform.Find("Rarity").gameObject.GetComponent<Image>().sprite = skin.Rarity == 3 ? EpicSprite : skin.Rarity == 2 ? RareSprite : CommonSprite;
+        Button newButton = Instantiate(ItemPrefabObj, IngButtonContent.transform);
         newButton.onClick.AddListener(() => SelectIng(skinId));
         skin.SkinButton = newButton;
         skin.IsSelected = isSelected;
         AllIngSkins.Add(skin);
         IngButtonLog.Add(newButton);
-
     }
     private void SelectIng(int skinId)
     {
@@ -135,9 +381,19 @@ public class CollectionController : MonoBehaviour
             }
             else
             {
-                alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Locked";
-                alert.transform.Find("AlertText").GetComponent<Text>().text = $"You have not unlocked this ingredient yet.";
-                alert.SetActive(true);
+                IngToPurchase = item;
+                DieToPurchase = null;
+                if (item.UnlockedQty > 9)
+                {
+                    UnlockPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unlock Ingredient?";
+                    UnlockPanel.transform.Find("Question").GetComponent<Text>().text = $"Do you want to spend 4 of these Ingredient skins, representing the 4 playing pieces on your team, to unlock this?";
+                }
+                else
+                {
+                    UnlockPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = "Craft Ingredient?";
+                    UnlockPanel.transform.Find("Question").GetComponent<Text>().text = $"You need 4 of these Ingredient skins to unlock this, would you like to try and craft some?";
+                }
+                UnlockPanel.SetActive(true);
             }
         }
 
@@ -162,7 +418,7 @@ public class CollectionController : MonoBehaviour
         MyIngSkins = sql.jsonConvert<List<SkinData>>(data);
         ClearIngs();
         var j = 0;
-        MainMenuController.i.ingSprites.ForEach(x => { j++; CreateIng(x, j); });
+        MainMenuController.i.IngSprites.ForEach(x => { j++; CreateIng(x, j); });
     }
     #endregion
 
@@ -172,14 +428,15 @@ public class CollectionController : MonoBehaviour
         bool isSelected = false;
         if (Settings.LoggedInPlayer.SelectedDice.Contains(skinId))
         {
-            DicePrefabObj.transform.Find("Selected").gameObject.SetActive(true);
+            ItemPrefabObj.transform.Find("Selected").gameObject.SetActive(true);
             isSelected = true;
         }
         else
         {
-            DicePrefabObj.transform.Find("Selected").gameObject.SetActive(false);
+            ItemPrefabObj.transform.Find("Selected").gameObject.SetActive(false);
         }
-        DicePrefabObj.transform.Find("Item").gameObject.GetComponent<Image>().sprite = item;
+        (ItemPrefabObj.transform.Find("Item").transform as RectTransform).sizeDelta = new Vector2(205, 205);
+        ItemPrefabObj.transform.Find("Item").gameObject.GetComponent<Image>().sprite = item;
         SkinData skin = new SkinData();
         if (MyDiceSkins.Any(x => x.SkinId == skinId))
         {
@@ -191,14 +448,17 @@ public class CollectionController : MonoBehaviour
             {
                 SkinId = skinId,
                 IsUnlocked = false,
-                UnlockedQty = 0
+                UnlockedQty = 0,
+                Rarity = skinId < 10 ? 1 : skinId < 16 ? 2 : 3
             };
         }
         if(Settings.IsDebug)
             skin.IsUnlocked = true;
-        DicePrefabObj.GetComponentInChildren<Text>().text = skin.UnlockedQty.ToString();
-        DicePrefabObj.transform.Find("Lock").gameObject.SetActive(!skin.IsUnlocked);
-        Button newButton = Instantiate(DicePrefabObj, DiceButtonContent.transform);
+
+        ItemPrefabObj.transform.Find("Rarity").gameObject.GetComponent<Image>().sprite = skin.Rarity == 3 ? EpicSprite : skin.Rarity == 2 ? RareSprite : CommonSprite;
+        ItemPrefabObj.GetComponentInChildren<Text>().text = skin.UnlockedQty.ToString();
+        ItemPrefabObj.transform.Find("Lock").gameObject.SetActive(!skin.IsUnlocked);
+        Button newButton = Instantiate(ItemPrefabObj, DiceButtonContent.transform);
         newButton.onClick.AddListener(() => SelectDice(skinId));
         skin.SkinButton = newButton;
         skin.IsSelected = isSelected;
@@ -227,9 +487,19 @@ public class CollectionController : MonoBehaviour
             }
             else
             {
-                alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Locked";
-                alert.transform.Find("AlertText").GetComponent<Text>().text = $"You must unlock all sides before selecting this die.";
-                alert.SetActive(true);
+                IngToPurchase = null;
+                DieToPurchase = item;
+                if (item.UnlockedQty > 9)
+                {
+                    UnlockPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unlock Die?";
+                    UnlockPanel.transform.Find("Question").GetComponent<Text>().text = $"Do you want to spend 10 of these Die skins, representing the 10 sides of the die, to unlock this?";
+                }
+                else
+                {
+                    UnlockPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = "Craft Die?";
+                    UnlockPanel.transform.Find("Question").GetComponent<Text>().text = $"You need 10 of these die skins to unlock this, would you like to try and craft some?";
+                }
+                UnlockPanel.SetActive(true);
             }
         }
         
@@ -254,7 +524,7 @@ public class CollectionController : MonoBehaviour
         MyDiceSkins = sql.jsonConvert<List<SkinData>>(data);
         ClearDice();
         var j = 0;
-        MainMenuController.i.diceSprites.ForEach(x => { j++; CreateDice(x, j); });
+        MainMenuController.i.DieSprites.ForEach(x => { j++; CreateDice(x, j); });
     }
     #endregion 
     #region Titles
@@ -292,25 +562,23 @@ public class CollectionController : MonoBehaviour
         TitlePrefabObj.transform.Find("Lock").gameObject.SetActive(!skin.IsUnlocked);
         TitlePrefabObj.transform.Find("Info").gameObject.SetActive(skin.IsUnlocked);
         Button newButton = Instantiate(TitlePrefabObj, TitleButtonContent.transform);
-        newButton.onClick.AddListener(() => SelectTitle(item.SkinId));
-        newButton.transform.Find("Info").gameObject.GetComponent<Button>().onClick.AddListener(() => GetTitleInfo(item.SkinDesc, "Info"));
+        newButton.onClick.AddListener(() => SelectTitle(skin));
+        newButton.transform.Find("Info").gameObject.GetComponent<Button>().onClick.AddListener(() => DisplayAlert(item.SkinDesc, "Info"));
         skin.SkinButton = newButton;
         skin.IsSelected = isSelected;
         AllTitles.Add(skin);
         TitleButtonLog.Add(newButton);
     }
 
-    private void GetTitleInfo(string skinDesc, string bannerText)
+    private void DisplayAlert(string skinDesc, string bannerText)
     {
         alert.transform.Find("Banner").GetComponentInChildren<Text>().text = bannerText;
-        alert.transform.Find("AlertText").GetComponent<Text>().text = skinDesc;
         alert.transform.Find("AlertText").GetComponent<Text>().text = skinDesc;
         alert.SetActive(true);
     }
 
-    private void SelectTitle(int skinId)
+    private void SelectTitle(SkinData item)
     {
-        SkinData item = AllTitles.FirstOrDefault(x=>x.SkinId == skinId);
         if (item.IsSelected)
         {
             item.SkinButton.transform.Find("Selected").gameObject.SetActive(false);
@@ -329,7 +597,7 @@ public class CollectionController : MonoBehaviour
             }
             else
             {
-                GetTitleInfo(item.SkinDesc,"Locked");
+                DisplayAlert(item.SkinDesc,"Locked");
             }
         }
     }
@@ -365,6 +633,19 @@ public class CollectionController : MonoBehaviour
     #region Tabs
     public void TabClicked(int Selected)
     {
+        if (lastSelected == 1)
+        {
+
+        }
+        else if (lastSelected == 2)
+        {
+
+        }
+        else if (lastSelected == 3)
+        {
+
+        }
+        lastSelected = Selected;
         if (Selected != 1)
         {
             IngPanel.SetActive(false);
@@ -372,6 +653,7 @@ public class CollectionController : MonoBehaviour
         }
         else
         {
+            Settings.hasNewIng = false;
             IngPanel.SetActive(true);
             IngButtonImage.sprite = SelectedTabSprite;
         }
@@ -382,6 +664,7 @@ public class CollectionController : MonoBehaviour
         }
         else
         {
+            Settings.hasNewDie = false;
             DicePanel.SetActive(true);
             DiceButtonImage.sprite = SelectedTabSprite;
         } 
@@ -392,9 +675,13 @@ public class CollectionController : MonoBehaviour
         }
         else
         {
+            Settings.hasNewTitle = false;
             TitlePanel.SetActive(true);
             TitleButtonImage.sprite = SelectedTabSprite;
         }
+        hasNewIng.SetActive(Settings.hasNewIng);
+        hasNewDie.SetActive(Settings.hasNewDie);
+        hasNewTitle.SetActive(Settings.hasNewTitle);
     }
 
     #endregion region

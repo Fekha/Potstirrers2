@@ -166,7 +166,7 @@ public class CpuLogic : MonoBehaviour
     }
     internal void ActivateShitTalk()
     {
-        if (Settings.OnlineGameId != 0 || Settings.FakeOnlineGame)
+        if (Settings.OnlineGameId != 0)
             return;
 
         if (!string.IsNullOrEmpty(GameManager.i.talkShitText.text) && !GameManager.i.TalkShitPanel.activeInHierarchy)
@@ -177,7 +177,7 @@ public class CpuLogic : MonoBehaviour
     }
     internal void PrepShitTalk(TalkType talk)
     {
-        if (Settings.OnlineGameId != 0 || Settings.FakeOnlineGame || !string.IsNullOrEmpty(GameManager.i.talkShitText.text) || !GameManager.i.playerList.Any(x => x.IsCPU))
+        if (Settings.OnlineGameId != 0 || !string.IsNullOrEmpty(GameManager.i.talkShitText.text) || !GameManager.i.playerList.Any(x => x.IsCPU))
             return;
 
         var username = GameManager.i.GetActivePlayer().Username;
@@ -186,10 +186,10 @@ public class CpuLogic : MonoBehaviour
             case TalkType.MoveRandomly:
                 switch (username)
                 {
-                    case "Ethan":
+                    case "Zach":
                         GameManager.i.talkShitText.text = "Hmm, you stumped me!";
                         break;
-                    case "Joe":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "It really didn't matter...";
                         break;
                     case "Jenn":
@@ -205,10 +205,10 @@ public class CpuLogic : MonoBehaviour
             case TalkType.Trash:
                 switch (username)
                 {
-                    case "Ethan":
+                    case "Zach":
                         GameManager.i.talkShitText.text = "My pa paw taught me to take out the trash.";
                         break;
-                    case "Joe":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "Go back where you belong!";
                         break;
                     case "Jenn":
@@ -224,10 +224,10 @@ public class CpuLogic : MonoBehaviour
             case TalkType.Stomped:
                 switch (username)
                 {
-                    case "Ethan":
+                    case "Zach":
                         GameManager.i.talkShitText.text = "Stomped!";
                         break;
-                    case "Joe":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "Have fun in Prep...";
                         break;
                     case "Jenn":
@@ -243,11 +243,11 @@ public class CpuLogic : MonoBehaviour
             case TalkType.StompedBySelf:
                 switch (username)
                 {
-                    case "Ethan":
+                    case "Zach":
                         GameManager.i.talkShitText.text = "Self Stomp!";
                         break;
-                    case "Joe":
-                        GameManager.i.talkShitText.text = "Stop hitting yourself.";
+                    case "Ethan":
+                        GameManager.i.talkShitText.text = "Stop hitting yourself!";
                         break;
                     case "Jenn":
                         GameManager.i.talkShitText.text = "#GetRekt";
@@ -262,10 +262,10 @@ public class CpuLogic : MonoBehaviour
             case TalkType.SafeZoned:
                 switch (username)
                 {
-                    case "Ethan":
+                    case "Zach":
                         GameManager.i.talkShitText.text = "Safe for me, not you!";
                         break;
-                    case "Joe":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "You owe me one for moving you...";
                         break;
                     case "Jenn":
@@ -281,10 +281,10 @@ public class CpuLogic : MonoBehaviour
             case TalkType.Cook:
                 switch (username)
                 {
-                    case "Ethan":
+                    case "Zach":
                         GameManager.i.talkShitText.text = "My me maw taught me to cook like this.";
                         break;
-                    case "Joe":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "Watch and learn!";
                         break;
                     case "Jenn":
@@ -300,10 +300,10 @@ public class CpuLogic : MonoBehaviour
             case TalkType.HelpCook:
                 switch (username)
                 {
-                    case "Ethan":
+                    case "Zach":
                         GameManager.i.talkShitText.text = "Alley Oop!";
                         break;
-                    case "Joe":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "This is my final form!";
                         break;
                     case "Jenn":
@@ -319,10 +319,10 @@ public class CpuLogic : MonoBehaviour
             case TalkType.MovePastPrep:
                 switch (username)
                 {
-                    case "Ethan":
+                    case "Zach":
                         GameManager.i.talkShitText.text = "You know what they say...";
                         break;
-                    case "Joe":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = "HAHA you got too close to the end!";
                         break;
                     case "Jenn":
@@ -344,10 +344,10 @@ public class CpuLogic : MonoBehaviour
                 var ChrissyOptions = new List<string>() { "", "Well that wasn't very nice!", "Hey, quit doing that!", "Treat others how you want to be treated..." };
                 switch (username)
                 {
-                    case "Ethan":
+                    case "Zach":
                         GameManager.i.talkShitText.text = EthanOptions[Random.Range(0, EthanOptions.Count())];
                         break;
-                    case "Joe":
+                    case "Ethan":
                         GameManager.i.talkShitText.text = JoeOptions[Random.Range(0, JoeOptions.Count())];
                         break;
                     case "Jenn":

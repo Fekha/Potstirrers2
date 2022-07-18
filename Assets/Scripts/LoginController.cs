@@ -24,6 +24,7 @@ public class LoginController : MonoBehaviour
     private SqlController sql;
     private float elapsed;
     private int tick = 10;
+    private bool isLoading = false;
 
     private void Start()
     {
@@ -32,6 +33,10 @@ public class LoginController : MonoBehaviour
         system = EventSystem.current;
         //alert.transform.Find("AlertText").GetComponent<Text>().text = "Sorry, I messed up.. \n \n Until July 1st only playing as guest will work..";
         //alert.SetActive(true);
+        isLoading = true;
+        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Loading";
+        alert.transform.Find("AlertText").GetComponent<Text>().text = "Any second now...";
+        alert.SetActive(true);
         try {
             FileStream stream = File.Open("idbfs/PotstirrersDevice.json", FileMode.OpenOrCreate, FileAccess.ReadWrite);
             using (StreamReader sr = new StreamReader(stream))
@@ -53,10 +58,13 @@ public class LoginController : MonoBehaviour
         
             StartCoroutine(sql.RequestRoutine($"player/GetDevice?deviceId={deviceId}", GetDeviceCallback, true));
         }
-        catch(Exception ex){}
+        catch(Exception ex){
+            isLoading = false;
+            alert.SetActive(false);
+        }
 
 #if UNITY_EDITOR
-        username.GetComponent<InputField>().text = "Feca";
+        username.GetComponent<InputField>().text = "Feca74";
         password.GetComponent<InputField>().text = "1234";
 #endif
 
@@ -64,7 +72,7 @@ public class LoginController : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Mouse0) && alert.activeInHierarchy)
+        if (Input.GetKeyDown(KeyCode.Mouse0) && alert.activeInHierarchy && !isLoading)
         {
             alert.SetActive(false);
         }
@@ -87,7 +95,7 @@ public class LoginController : MonoBehaviour
         {
             elapsed = elapsed % 1f;
             tick++;
-            if (tick > 10)
+            if (tick > 5)
             {
                 tick = 0;
                 try{
@@ -111,6 +119,8 @@ public class LoginController : MonoBehaviour
     {
         Player = sql.jsonConvert<Player>(data);
         Settings.LoggedInPlayer = Player;
+        isLoading = false;
+        alert.SetActive(false);
         if (Player != null)
         {
             username.GetComponent<InputField>().text = Player.Username;
@@ -135,6 +145,7 @@ public class LoginController : MonoBehaviour
     {
         Player = sql.jsonConvert<Player>(data);
         Settings.LoggedInPlayer = Player;
+        isLoading = false;
         if (Player == null)
         {
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
@@ -152,6 +163,7 @@ public class LoginController : MonoBehaviour
     {
         if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
         {
+            isLoading = true;
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Loading";
             alert.transform.Find("AlertText").GetComponent<Text>().text = "Any second now...";
             alert.SetActive(true);

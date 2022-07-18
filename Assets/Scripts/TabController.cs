@@ -26,7 +26,11 @@ public class TabController : MonoBehaviour
     }
     public void TabClicked(int Selected)
     {
-        if (Settings.LoggedInPlayer.IsGuest)
+        if (Selected == 3)
+        {
+            MainMenuController.i.SetPlayer();
+        }
+        if (Settings.LoggedInPlayer.IsGuest && Selected != 3)
         {
             MainMenuController.i.alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
             MainMenuController.i.alert.transform.Find("AlertText").GetComponent<Text>().text = "Create an account to access the tabs!";
@@ -53,6 +57,7 @@ public class TabController : MonoBehaviour
             }
             else
             {
+                MainMenuController.i.HasMessage.SetActive(false);
                 FriendPanel.SetActive(true);
                 FriendButtonImage.sprite = SelectedTabSprite;
             }
@@ -73,6 +78,7 @@ public class TabController : MonoBehaviour
             }
             else
             {
+                MainMenuController.i.HasChest.SetActive(false);
                 ChestsPanel.SetActive(true);
                 ChestsButtonImage.sprite = SelectedTabSprite;
             }
@@ -83,6 +89,7 @@ public class TabController : MonoBehaviour
             }
             else
             {
+                MainMenuController.i.HasUnlock.SetActive(false);
                 CollectionPanel.SetActive(true);
                 CollectionButtonImage.sprite = SelectedTabSprite;
             }
