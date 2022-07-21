@@ -29,5 +29,7 @@ namespace Assets.Models
         public bool UseD8s = false;
         public bool DisableDoubles = false;
         public bool PlayAsPurple = false;
+        public float MusicVolume = .5f;
+        public float TurnVolume = .5f;
     }
 }

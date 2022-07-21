@@ -28,6 +28,9 @@ public class MainMenuController : MonoBehaviour
     public Toggle doubleToggle;
     public Toggle playAsPurple;
     public GameObject CodeText;
+    public Slider VolumeSlider;
+    public Slider TurnVolumeSlider;
+
     #endregion
 
     [Header("Profile")]
@@ -80,50 +83,58 @@ public class MainMenuController : MonoBehaviour
     public GameObject HasMessage;
     public GameObject HasChest;
     public GameObject HasUnlock;
+    private AudioSource audioSourceGlobal;
+
 
     #endregion
     void Awake()
     {
         i = this;
         sql = new SqlController();
-        Settings.OnlineGameId = 0;
-        Settings.FakeOnlineGame = false;
-        Settings.HardMode = true;
-        Settings.IsDebug = false;
+        Global.OnlineGameId = 0;
+        Global.FakeOnlineGame = false;
+        Global.HardMode = true;
+        Global.IsDebug = false;
+        if (GameObject.FindGameObjectsWithTag("GameMusic").Length > 0)
+        {
+            audioSourceGlobal = GameObject.FindGameObjectWithTag("GameMusic").GetComponent<AudioSource>();
+            audioSourceGlobal.volume = Global.LoggedInPlayer.MusicVolume;
+        }
 #if UNITY_EDITOR
         //Settings.IsDebug = true;
 #endif
-        wineToggle.isOn = Settings.LoggedInPlayer.WineMenu;
-        d8Toggle.isOn = Settings.LoggedInPlayer.UseD8s;
-        doubleToggle.isOn = Settings.LoggedInPlayer.DisableDoubles;
-        playAsPurple.isOn = Settings.LoggedInPlayer.PlayAsPurple;
+        wineToggle.isOn = Global.LoggedInPlayer.WineMenu;
+        d8Toggle.isOn = Global.LoggedInPlayer.UseD8s;
+        doubleToggle.isOn = Global.LoggedInPlayer.DisableDoubles;
+        playAsPurple.isOn = Global.LoggedInPlayer.PlayAsPurple;
+        VolumeSlider.value = Global.LoggedInPlayer.MusicVolume;
+        TurnVolumeSlider.value = Global.LoggedInPlayer.TurnVolume;
     }
     private void Start()
     {
         //loading starts as true but is turned false after elements render and toggles are set correctly
         loadingToggle = false;
         toggleActivated = false;
-        Settings.SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
-        SetPlayer();
-        if (Settings.LoggedInPlayer.IsGuest && Settings.EnteredGame)
+        Global.SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
+        StartCoroutine(SetPlayer());
+        if (Global.LoggedInPlayer.IsGuest && Global.EnteredGame)
         {
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Still a guest?";
             alert.transform.Find("AlertText").GetComponent<Text>().text = $"If you make an account you will get xp, calories, and unlock new rewards!";
             alert.SetActive(true);
-            Settings.EnteredGame = false;
+            Global.EnteredGame = false;
         } 
-        else if (Settings.JustWonOnline) 
+        else if (Global.JustWonOnline) 
         {
-            Settings.JustWonOnline = false;
-            rewardAlert2.transform.Find("RewardText").GetComponent<Text>().text = $"You earned a reward for winning your match. Check the reward tab at the bottom to claim it! \n \n";
+            Global.JustWonOnline = false;
+            rewardAlert2.transform.Find("RewardText").GetComponent<Text>().text = $"You earned a reward for winning your match. Check the reward tab at the bottom to claim it!";
             HasChest.SetActive(true);
             rewardAlert2.SetActive(true);
         }
     }
-  
+    
     private void Update()
     {
-        
         elapsed += Time.deltaTime;
         
         if (LoadingPanel.activeInHierarchy) {
@@ -151,7 +162,7 @@ public class MainMenuController : MonoBehaviour
                 totalElapsed++;
                 TimeSpan time = TimeSpan.FromSeconds(totalElapsed);
                 loadingTimer.text = "Time in queue: " + time.ToString(@"m\:ss");
-                StartCoroutine(sql.RequestRoutine($"multiplayer/LookforGame?UserId={Settings.LoggedInPlayer.UserId}&Wager={wager}", GetGameUpdate));
+                StartCoroutine(sql.RequestRoutine($"multiplayer/LookforGame?UserId={Global.LoggedInPlayer.UserId}&Wager={wager}", GetGameUpdate));
                 if (!keepWaiting && totalElapsed > 30)
                 {
                     NoMatchesFound.SetActive(true);
@@ -168,21 +179,34 @@ public class MainMenuController : MonoBehaviour
                 tick = 0;
                 try
                 {
-                    StartCoroutine(sql.RequestRoutine($"player/GetAppVersion?UserId={Settings.LoggedInPlayer.UserId}", GetAppVersionCallback, true));
+                    StartCoroutine(sql.RequestRoutine($"player/GetAppVersion?UserId={Global.LoggedInPlayer.UserId}", GetAppVersionCallback, true));
                 }
                 catch (Exception ex)
                 {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Network Failure";
+                    alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Network Failure";
                     alert.transform.Find("AlertText").GetComponent<Text>().text = "Can not connect to server.";
                     alert.SetActive(true);
                 }
             }
         }
     }
+    public void OnVolumeChanged(bool turn)
+    {
+        toggleActivated = true;
+        if (turn)
+        {
+            Global.LoggedInPlayer.TurnVolume = TurnVolumeSlider.value;
+        }
+        else
+        {
+            Global.LoggedInPlayer.MusicVolume = VolumeSlider.value;
+            audioSourceGlobal.volume = VolumeSlider.value;
+        }
+    }  
     private void GetGameUpdate(string data)
     {
-        Settings.OnlineGameId = sql.jsonConvert<int>(data);
-        if (Settings.OnlineGameId != 0)
+        Global.OnlineGameId = sql.jsonConvert<int>(data);
+        if (Global.OnlineGameId != 0)
         {
             LookingForGame = false;
             SceneManager.LoadScene("PlayScene");
@@ -192,8 +216,8 @@ public class MainMenuController : MonoBehaviour
     private void StartFakeOnlineGame()
     {
         StopMatchmaking();
-        Settings.SecondPlayer = new Player() { Username = "Ethan", IsCPU = true, UserId = 42 };
-        Settings.FakeOnlineGame = true;
+        Global.SecondPlayer = new Player() { Username = "Ethan", IsCPU = true, UserId = 42 };
+        Global.FakeOnlineGame = true;
         SceneManager.LoadScene("PlayScene");
     }
 
@@ -202,7 +226,7 @@ public class MainMenuController : MonoBehaviour
         if (!string.IsNullOrEmpty(data))
         {
             var version = sql.jsonConvert<double>(data);
-            if (Settings.AppVersion < version)
+            if (Global.AppVersion < version)
             {
                 StopMatchmaking();
                 VersionPanel.SetActive(true);
@@ -211,13 +235,13 @@ public class MainMenuController : MonoBehaviour
     }
     public void Matchmaking(bool start)
     {
-        if (Settings.LoggedInPlayer.IsGuest) 
+        if (Global.LoggedInPlayer.IsGuest) 
         {
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
             alert.transform.Find("AlertText").GetComponent<Text>().text = "Guests can only play vs the computer, try that or create an account!";
             alert.SetActive(true);
         }
-        else if (Settings.LoggedInPlayer.Calories < 150)
+        else if (Global.LoggedInPlayer.Calories < 100)
         {
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Insufficent Funds";
             alert.transform.Find("AlertText").GetComponent<Text>().text = "You need 100 calories to play online!";
@@ -253,37 +277,40 @@ public class MainMenuController : MonoBehaviour
     }
     public void EditWager(bool more)
     {
-        if (more) 
+        if (!LookingForGame)
         {
-            if (Settings.LoggedInPlayer.Calories >= wager + 100)
+            if (more)
             {
-                wager = wager + 100;
+                if (Global.LoggedInPlayer.Calories >= wager + 100)
+                {
+                    wager = wager + 100;
+                }
+                else
+                {
+                    DisplayAlert("You don't have that much money, you addict!", "Insufficent Funds");
+                }
             }
             else
             {
-                DisplayAlert("You don't have that much money, you addict!","Insufficent Funds");
+                if (wager > 100)
+                {
+                    wager -= 100;
+                }
             }
-        } 
-        else 
-        {
-            if (wager > 100)
-            {
-                wager -= 100;
-            }
+            LoadingPanel.transform.Find("WagerText").GetComponent<Text>().text = wager.ToString();
         }
-        LoadingPanel.transform.Find("WagerText").GetComponent<Text>().text = wager.ToString();
     }
     private void StopMatchmaking()
     {
         LookingForGame = false;
         keepWaiting = false;
         LoadingPanel.SetActive(false);
-        StartCoroutine(sql.RequestRoutine($"multiplayer/StopLookingforGame?UserId={Settings.LoggedInPlayer.UserId}"));
+        StartCoroutine(sql.RequestRoutine($"multiplayer/StopLookingforGame?UserId={Global.LoggedInPlayer.UserId}"));
     }
 
     public void showSettings()
     {
-        if (!Settings.IsConnected)
+        if (!Global.IsConnected)
         {
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unable to Connect";
             alert.transform.Find("AlertText").GetComponent<Text>().text = "This feature requires an active connection to the game server.";
@@ -291,19 +318,7 @@ public class MainMenuController : MonoBehaviour
         }
         else
         {
-            if (Settings.LoggedInPlayer.IsGuest)
-            {
-                alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
-                alert.transform.Find("AlertText").GetComponent<Text>().text = "Log in to edit settings!";
-                alert.SetActive(true);
-            }
-            else if (Settings.LoggedInPlayer.Wins == 0)
-            {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Get Gewd";
-                alert.transform.Find("AlertText").GetComponent<Text>().text = "Win a game to access additional settings!";
-                alert.SetActive(true);
-            }
-            else if (!settings.activeInHierarchy)
+            if (!settings.activeInHierarchy)
             {
                 settings.SetActive(true);
             }
@@ -312,7 +327,7 @@ public class MainMenuController : MonoBehaviour
 
     public void ShowProfile(bool open)
     {
-        if (!Settings.IsConnected)
+        if (!Global.IsConnected)
         {
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unable to Connect";
             alert.transform.Find("AlertText").GetComponent<Text>().text = "This feature requires an active connection to the game server.";
@@ -320,7 +335,7 @@ public class MainMenuController : MonoBehaviour
         }
         else
         {
-            if (Settings.LoggedInPlayer.IsGuest)
+            if (Global.LoggedInPlayer.IsGuest)
             {
                 alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
                 alert.transform.Find("AlertText").GetComponent<Text>().text = "Log in to create a profile!";
@@ -342,20 +357,20 @@ public class MainMenuController : MonoBehaviour
     {
         ExitPrompt.SetActive(open);
     } 
-    internal void SetPlayer()
+    internal IEnumerator SetPlayer()
     {
-        StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Settings.LoggedInPlayer.UserId}", GetLevelUpdateCallback));
-        StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Settings.LoggedInPlayer.UserId}", GetRewardCallback));
-        StartCoroutine(sql.RequestRoutine($"skin/CheckForUnlocks?UserId={Settings.LoggedInPlayer.UserId}", GetTitleUnlockCallback));
-        StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Settings.LoggedInPlayer.Username}", GetPlayerCallback));
-        StartCoroutine(sql.RequestRoutine($"player/GetProfile?UserId={Settings.LoggedInPlayer.UserId}", GetProfileCallback));
+        yield return StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Global.LoggedInPlayer.UserId}", GetLevelUpdateCallback));
+        StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Global.LoggedInPlayer.UserId}", GetRewardCallback));
+        StartCoroutine(sql.RequestRoutine($"skin/CheckForUnlocks?UserId={Global.LoggedInPlayer.UserId}", GetTitleUnlockCallback));
+        StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Global.LoggedInPlayer.Username}", GetPlayerCallback));
+        StartCoroutine(sql.RequestRoutine($"player/GetProfile?UserId={Global.LoggedInPlayer.UserId}", GetProfileCallback));
     }
 
     public void UpdateLvlText() {
-        float xpNeeded = (100 + (Settings.LoggedInPlayer.Level * 50));
-        lvlText.text = $"Current Level: {Settings.LoggedInPlayer.Level}";
-        xpText.text = $"XP To Next Level: {Settings.LoggedInPlayer.Xp}/{xpNeeded}";
-        xpSlider.value = ((float)Settings.LoggedInPlayer.Xp / xpNeeded);
+        float xpNeeded = (100 + (Global.LoggedInPlayer.Level * 50));
+        lvlText.text = $"Current Level: {Global.LoggedInPlayer.Level}";
+        xpText.text = $"XP To Next Level: {Global.LoggedInPlayer.Xp}/{xpNeeded}";
+        xpSlider.value = ((float)Global.LoggedInPlayer.Xp / xpNeeded);
     }
     private void GetPlayerCallback(string data)
     {
@@ -367,15 +382,15 @@ public class MainMenuController : MonoBehaviour
         if (player.HasNewChest)
             HasChest.SetActive(true);
 
-        Settings.LoggedInPlayer.Calories = player.Calories;
-        Settings.LoggedInPlayer.Level = player.Level;
-        Settings.LoggedInPlayer.Xp = player.Xp;
+        Global.LoggedInPlayer.Calories = player.Calories;
+        Global.LoggedInPlayer.Level = player.Level;
+        Global.LoggedInPlayer.Xp = player.Xp;
         UpdateLvlText();
     } 
     private void GetProfileCallback(string data)
     {
         CurrentPlayer = sql.jsonConvert<Profile>(data);
-        Settings.LoggedInPlayer.Wins = CurrentPlayer.AllWins ?? 0;
+        Global.LoggedInPlayer.Wins = CurrentPlayer.AllWins ?? 0;
         SetProfileData();
     }
 
@@ -489,7 +504,7 @@ public class MainMenuController : MonoBehaviour
         if (!String.IsNullOrEmpty(rewardText))
         {
             HasUnlock.SetActive(true);
-            Settings.hasNewTitle = true;
+            Global.hasNewTitle = true;
             rewardAlert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Congrats!";
             rewardAlert.transform.Find("RewardText").GetComponent<Text>().text = rewardText;
             rewardAlert.SetActive(true);
@@ -499,16 +514,16 @@ public class MainMenuController : MonoBehaviour
     public void ExitSettings()
     {
         settings.SetActive(false);
-        if (!Settings.LoggedInPlayer.IsGuest && toggleActivated)
+        if (toggleActivated)
         {
-            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(Settings.LoggedInPlayer.UserId)}&WineMenu={(Settings.LoggedInPlayer.WineMenu)}&UseD8s={(Settings.LoggedInPlayer.UseD8s)}&DisableDoubles={(Settings.LoggedInPlayer.DisableDoubles)}&PlayAsPurple={(Settings.LoggedInPlayer.PlayAsPurple)}"));
+            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(Global.LoggedInPlayer.UserId)}&GameVolume={(Global.LoggedInPlayer.MusicVolume)}&TurnVolume={(Global.LoggedInPlayer.TurnVolume)}&WineMenu={(Global.LoggedInPlayer.WineMenu)}&PlayAsPurple={(Global.LoggedInPlayer.PlayAsPurple)}"));
         }
         toggleActivated = false;
     }
 
     public void TryCode()
     {
-       StartCoroutine(sql.RequestRoutine($"skin/UseKey?key={CodeText.GetComponent<InputField>().text}&userId={Settings.LoggedInPlayer.UserId}", this.GetCodeCallback));
+       StartCoroutine(sql.RequestRoutine($"skin/UseKey?key={CodeText.GetComponent<InputField>().text}&userId={Global.LoggedInPlayer.UserId}", this.GetCodeCallback));
     }
 
     private void GetCodeCallback(string data)
@@ -525,7 +540,7 @@ public class MainMenuController : MonoBehaviour
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
             alert.transform.Find("AlertText").GetComponent<Text>().text = $"Your code was valid! \n \n you have recieved {reward} Calories!";
             alert.SetActive(true);
-            StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Settings.LoggedInPlayer.Username}", GetPlayerCallback));
+            StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Global.LoggedInPlayer.Username}", GetPlayerCallback));
         }
     }
    
@@ -536,25 +551,21 @@ public class MainMenuController : MonoBehaviour
             toggleActivated = true;
             if (toggle == "wine")
             {
-                Settings.LoggedInPlayer.WineMenu = !Settings.LoggedInPlayer.WineMenu;
-            }
-            else if (toggle == "d8")
-            {
-                Settings.LoggedInPlayer.UseD8s = !Settings.LoggedInPlayer.UseD8s;
+                Global.LoggedInPlayer.WineMenu = !Global.LoggedInPlayer.WineMenu;
             }
             else if(toggle == "double")
             {
-                Settings.LoggedInPlayer.DisableDoubles = !Settings.LoggedInPlayer.DisableDoubles;
+                Global.LoggedInPlayer.DisableDoubles = !Global.LoggedInPlayer.DisableDoubles;
             }
             else if(toggle == "purple")
             {
-                Settings.LoggedInPlayer.PlayAsPurple = !Settings.LoggedInPlayer.PlayAsPurple;
+                Global.LoggedInPlayer.PlayAsPurple = !Global.LoggedInPlayer.PlayAsPurple;
             } 
         }
     }
     public void SceneChange(string sceneName)
     {
-        if (!Settings.IsConnected && (sceneName == "Skins" || sceneName == "LeaderboardScene"))
+        if (!Global.IsConnected && (sceneName == "Skins" || sceneName == "LeaderboardScene"))
         {
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unable to Connect";
             alert.transform.Find("AlertText").GetComponent<Text>().text = "This feature requires an active connection to the game server.";
@@ -567,7 +578,7 @@ public class MainMenuController : MonoBehaviour
     }
     public void StartCPUGame(bool hardMode)
     {
-        Settings.HardMode = true;
+        Global.HardMode = true;
         SceneManager.LoadScene("PlayScene");
     }
     

@@ -28,9 +28,9 @@ public class TabController : MonoBehaviour
     {
         if (Selected == 3)
         {
-            MainMenuController.i.SetPlayer();
+            StartCoroutine(MainMenuController.i.SetPlayer());
         }
-        if (Settings.LoggedInPlayer.IsGuest && Selected != 3)
+        if (Global.LoggedInPlayer.IsGuest && Selected != 3)
         {
             MainMenuController.i.alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
             MainMenuController.i.alert.transform.Find("AlertText").GetComponent<Text>().text = "Create an account to access the tabs!";

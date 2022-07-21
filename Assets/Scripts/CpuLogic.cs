@@ -47,7 +47,7 @@ public class CpuLogic : MonoBehaviour
 
     private IEnumerator SetCPUVariables()
     {
-        UseableIngredients = GameManager.i.AllIngredients.Where(x => (x.IngredientId != GameManager.i.firstIngredientMoved || GameManager.i.DoublesRolled() )  && (x.routePosition == 0 || Route.i.FullRoute[x.routePosition].ingredients.Peek() == x)).ToList();
+        UseableIngredients = GameManager.i.AllIngredients.Where(x => (x.IngredientId != GameManager.i.lastMovedIngredient || GameManager.i.DoublesRolled() )  && (x.routePosition == 0 || Route.i.FullRoute[x.routePosition].ingredients.Peek() == x)).ToList();
         foreach (var ing in GameManager.i.AllIngredients)
         {
             //find what ingredients actual end will be accounting for cooked ingredients
@@ -166,7 +166,7 @@ public class CpuLogic : MonoBehaviour
     }
     internal void ActivateShitTalk()
     {
-        if (Settings.OnlineGameId != 0)
+        if (Global.OnlineGameId != 0)
             return;
 
         if (!string.IsNullOrEmpty(GameManager.i.talkShitText.text) && !GameManager.i.TalkShitPanel.activeInHierarchy)
@@ -177,7 +177,7 @@ public class CpuLogic : MonoBehaviour
     }
     internal void PrepShitTalk(TalkType talk)
     {
-        if (Settings.OnlineGameId != 0 || !string.IsNullOrEmpty(GameManager.i.talkShitText.text) || !GameManager.i.playerList.Any(x => x.IsCPU))
+        if (Global.OnlineGameId != 0 || !string.IsNullOrEmpty(GameManager.i.talkShitText.text) || !GameManager.i.playerList.Any(x => x.IsCPU))
             return;
 
         var username = GameManager.i.GetActivePlayer().Username;
@@ -400,7 +400,7 @@ public class CpuLogic : MonoBehaviour
             && CanMoveSafely(x.endHigherPosition));
             if (IngredientMovedWithHigher != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Not Past Prep"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Move Not Past Prep"; }
                 return IngredientMovedWithHigher;
             }
         }
@@ -412,7 +412,7 @@ public class CpuLogic : MonoBehaviour
             && CanMoveSafely(x.endLowerPosition));
             if (IngredientMovedWithLower != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Not Past Prep"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Move Not Past Prep"; }
                 return IngredientMovedWithLower;
             }
         }
@@ -423,27 +423,27 @@ public class CpuLogic : MonoBehaviour
     {
         if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 24
+            IngredientMovedWithLower = UseableTeamIngredients.FirstOrDefault(x => x.endLowerPosition < 22
             && x.endLowerPosition > 16
             && !x.isCooked
             && x.distanceFromScore > 9
             && CanMoveSafely(x.endLowerPosition));
             if (IngredientMovedWithLower != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Into Scoring"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Move Into Scoring"; }
                 return IngredientMovedWithLower;
             }
         }
         if (IngredientMovedWithHigher == null)
         {
-            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 24
+            IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => x.endHigherPosition < 22
             && x.endHigherPosition > 16
             && !x.isCooked
             && x.distanceFromScore > 9
             && CanMoveSafely(x.endHigherPosition));
             if (IngredientMovedWithHigher != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Into Scoring"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Move Into Scoring"; }
                 return IngredientMovedWithHigher;
             }
         }
@@ -492,7 +492,7 @@ public class CpuLogic : MonoBehaviour
                 IngredientMovedWithHigher = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x.endHigherPosition));
                 if (IngredientMovedWithHigher != null)
                 {
-                    if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Boosted with Cooked"; }
+                    if (Global.IsDebug) { GameManager.i.talkShitText.text = "Boosted with Cooked"; }
                     return IngredientMovedWithHigher;
                 }
             }
@@ -508,7 +508,7 @@ public class CpuLogic : MonoBehaviour
                 IngredientMovedWithLower = CookedIngredientsThatCanHelp.OrderBy(x => x.distanceFromScore).FirstOrDefault(x => CanMoveSafely(x.endLowerPosition));
                 if (IngredientMovedWithLower != null)
                 {
-                    if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Boosted with Cooked"; }
+                    if (Global.IsDebug) { GameManager.i.talkShitText.text = "Boosted with Cooked"; }
                     return IngredientMovedWithLower;
                 }
             }
@@ -537,7 +537,7 @@ public class CpuLogic : MonoBehaviour
             && CanMoveSafely(x.endHigherPosition));
             if (IngredientMovedWithHigher != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Cooked Past Prep"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Cooked Past Prep"; }
                 return IngredientMovedWithHigher;
             }
         }
@@ -548,7 +548,7 @@ public class CpuLogic : MonoBehaviour
             && CanMoveSafely(x.endLowerPosition));
             if (IngredientMovedWithLower != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Cooked Past Prep"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Cooked Past Prep"; }
                 return IngredientMovedWithLower;
             }
         }
@@ -559,28 +559,28 @@ public class CpuLogic : MonoBehaviour
     {
         if (IngredientMovedWithHigher == null)
         {
-            IngredientMovedWithHigher = UseableTeamIngredients.OrderByDescending(x => x.endHigherPosition).FirstOrDefault(x => x.endHigherPosition < 23 //Dont move past prep
+            IngredientMovedWithHigher = UseableTeamIngredients.OrderByDescending(x => x.endHigherPosition).FirstOrDefault(x => x.endHigherPosition < 22 //Dont move past prep
             && (x.distanceFromScore > 9 || withCooked) //Dont move from scoring position unless cooked
             && x.isCooked == withCooked
             && (moveStacked || x.routePosition == 0 || Route.i.FullRoute[x.routePosition].ingredients.Count == 1)
             && CanMoveSafely(x.endHigherPosition)); //Dont stomp on safe area
             if (IngredientMovedWithHigher != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Front Most " + (withCooked ? "cooked " : "uncooked ") + (moveStacked ? "stacked " : "unstacked ") + "Ingredient"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Front Most " + (withCooked ? "cooked " : "uncooked ") + (moveStacked ? "stacked " : "unstacked ") + "Ingredient"; }
                 return IngredientMovedWithHigher;
             }
         }
 
         if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
         {
-            IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.endLowerPosition).FirstOrDefault(x => x.endLowerPosition < 23 //Dont move past prep
+            IngredientMovedWithLower = UseableTeamIngredients.OrderByDescending(x => x.endLowerPosition).FirstOrDefault(x => x.endLowerPosition < 22 //Dont move past prep
             && (x.distanceFromScore > 9 || withCooked) //Dont move from scoring position unless cooked
             && x.isCooked == withCooked
             && (moveStacked || x.routePosition == 0 || Route.i.FullRoute[x.routePosition].ingredients.Count == 1)
             && CanMoveSafely(x.endLowerPosition)); //Dont stomp on safe area
             if (IngredientMovedWithLower != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Front Most Ingredient"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Front Most Ingredient"; }
                 return IngredientMovedWithLower;
             }
         }
@@ -595,7 +595,7 @@ public class CpuLogic : MonoBehaviour
             !TeamIngredients.Any(y => y.routePosition == x.endLowerPosition % 26 && !Route.i.FullRoute[x.endLowerPosition % 26].isDangerZone));
             if (IngredientMovedWithLower != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Enemy"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Move Enemy"; }
                 return IngredientMovedWithLower;
             }
         }
@@ -610,7 +610,7 @@ public class CpuLogic : MonoBehaviour
             && CanMoveSafely(x.endLowerPosition)); //Dont stomp on safe area
             if (IngredientMovedWithLower != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Off stack" + (notInScoring ? " from non-scoring" : " from scoring"); }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Move Off stack" + (notInScoring ? " from non-scoring" : " from scoring"); }
                 return IngredientMovedWithLower;
             }
         }
@@ -626,7 +626,7 @@ public class CpuLogic : MonoBehaviour
                 IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => x.routePosition == ingredientThatCouldScore.routePosition && Route.i.FullRoute[x.routePosition].ingredients.Peek().IngredientId == x.IngredientId && x.endLowerPosition != x.routePosition);
                 if (IngredientMovedWithLower != null)
                 {
-                    if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move off stack to score"; }
+                    if (Global.IsDebug) { GameManager.i.talkShitText.text = "Move off stack to score"; }
                     return IngredientMovedWithLower;
                 }
             }
@@ -643,7 +643,7 @@ public class CpuLogic : MonoBehaviour
             && !TeamIngredients.Any(y => y.routePosition == x.endLowerPosition % 26)); //Dont stomp yourself
             if (IngredientMovedWithLower != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Move Front Most Enemy"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Move Front Most Enemy"; }
                 return IngredientMovedWithLower;
             }
         }
@@ -662,7 +662,7 @@ public class CpuLogic : MonoBehaviour
             || Route.i.FullRoute[x.endHigherPositionWithoutSlide % 26].hasSpoon));
             if (IngredientMovedWithHigher != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Slide"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Slide"; }
                 return IngredientMovedWithHigher;
             }
         }
@@ -676,7 +676,7 @@ public class CpuLogic : MonoBehaviour
             || Route.i.FullRoute[x.endLowerPositionWithoutSlide % 26].hasSpoon));
             if (IngredientMovedWithLower != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Slide"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Slide"; }
                 return IngredientMovedWithLower;
             }
         }
@@ -747,7 +747,7 @@ public class CpuLogic : MonoBehaviour
                 && !Route.i.FullRoute[x.endLowerPosition % 26].isDangerZone); //stomp safe area if someone is there
             if (IngredientMovedWithLower != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Stack"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Stack"; }
                 return IngredientMovedWithLower;
             }
         }
@@ -763,7 +763,7 @@ public class CpuLogic : MonoBehaviour
             && !Route.i.FullRoute[x.endHigherPosition % 26].isDangerZone); //Dont stomp safe area if someone is there
             if (IngredientMovedWithHigher != null)
             {
-                if (Settings.IsDebug) { GameManager.i.talkShitText.text = "Stack"; }
+                if (Global.IsDebug) { GameManager.i.talkShitText.text = "Stack"; }
                 return IngredientMovedWithHigher;
             }
         }
@@ -912,7 +912,7 @@ public class CpuLogic : MonoBehaviour
     }
     private Ingredient BeDumb()
     {
-        if (!Settings.IsDebug && !Settings.HardMode && (Settings.LoggedInPlayer.Wins == 0 || (!hasBeenDumb && (Random.Range(0, Mathf.Min(Settings.LoggedInPlayer.Wins, 50)) == 0))))
+        if (!Global.IsDebug && !Global.HardMode && (Global.LoggedInPlayer.Wins == 0 || (!hasBeenDumb && (Random.Range(0, Mathf.Min(Global.LoggedInPlayer.Wins, 50)) == 0))))
         {
             if (IngredientMovedWithHigher == null)
             {

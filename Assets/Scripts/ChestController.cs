@@ -66,7 +66,7 @@ public class ChestController : MonoBehaviour
     }
     private void OnEnable()
     {
-        StartCoroutine(sql.RequestRoutine($"skin/GetMyChests?UserId={Settings.LoggedInPlayer.UserId}", GetMyChestsCallback));
+        StartCoroutine(sql.RequestRoutine($"skin/GetMyChests?UserId={Global.LoggedInPlayer.UserId}", GetMyChestsCallback));
     }
     private void GetMyChestsCallback(string data)
     {
@@ -215,16 +215,16 @@ public class ChestController : MonoBehaviour
             }
             else
             {
-                if (Settings.LoggedInPlayer.Calories >= getSpeedUpCost() || Settings.LoggedInPlayer.Level < 5)
+                if (Global.LoggedInPlayer.Calories >= getSpeedUpCost() || Global.LoggedInPlayer.Level < 5)
                 {
                     var message = $"Want to speed up this pack up? \n";
-                    if (Settings.LoggedInPlayer.Level < 5)
+                    if (Global.LoggedInPlayer.Level < 5)
                     {
                         message += $"It's free for players under level 5!";
                     }
                     else
                     {
-                        message += $"It'll cost you {getSpeedUpCost()} of your {Settings.LoggedInPlayer.Calories} Calories.";
+                        message += $"It'll cost you {getSpeedUpCost()} of your {Global.LoggedInPlayer.Calories} Calories.";
                     }
                     PurchaseSpeedPanel.transform.Find("PurchaseCost").GetComponent<Text>().text = message;
                     PurchaseSpeedPanel.SetActive(true);
@@ -233,7 +233,7 @@ public class ChestController : MonoBehaviour
                 else
                 {
                     MainMenuController.i.alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Insufficent Funds";
-                    MainMenuController.i.alert.transform.Find("AlertText").GetComponent<Text>().text = $"It costs {getSpeedUpCost()} Calories to speed up this unlock but you only have {Settings.LoggedInPlayer.Calories} Calories :(";
+                    MainMenuController.i.alert.transform.Find("AlertText").GetComponent<Text>().text = $"It costs {getSpeedUpCost()} Calories to speed up this unlock but you only have {Global.LoggedInPlayer.Calories} Calories :(";
                     MainMenuController.i.alert.SetActive(true);
                 }
             }
@@ -248,7 +248,7 @@ public class ChestController : MonoBehaviour
 
     public void PurchaseTime()
     {
-        if (Settings.LoggedInPlayer.Calories >= getSpeedUpCost() || Settings.LoggedInPlayer.Level < 5)
+        if (Global.LoggedInPlayer.Calories >= getSpeedUpCost() || Global.LoggedInPlayer.Level < 5)
         {
             StartCoroutine(sql.RequestRoutine($"skin/PurchaseChestUnlock?ChestId={SelectedChest.ChestId}", UpdateChestTimerCallback));
             PurchaseSpeedPanel.SetActive(false);
@@ -298,11 +298,11 @@ public class ChestController : MonoBehaviour
             TimerText.text = "";
             if (SelectedChest.ChestTypeId == 1)
             {
-                Settings.hasNewIng = true;
+                Global.hasNewIng = true;
             }
             else if (SelectedChest.ChestTypeId == 2)
             {
-                Settings.hasNewDie = true;
+                Global.hasNewDie = true;
             }
             Slots.ForEach(x =>
             {
@@ -320,7 +320,7 @@ public class ChestController : MonoBehaviour
             }
             HelpText.text = "";
             ChestToOpenSlot.gameObject.GetComponent<Animation>().Play("DiceShaker");
-            yield return StartCoroutine(sql.RequestRoutine($"skin/OpenMyChest?UserId={Settings.LoggedInPlayer.UserId}&ChestId={SelectedChest.ChestId}", OpenChestsCallback));
+            yield return StartCoroutine(sql.RequestRoutine($"skin/OpenMyChest?UserId={Global.LoggedInPlayer.UserId}&ChestId={SelectedChest.ChestId}", OpenChestsCallback));
             yield return new WaitForSeconds(1.25f);
             ChestToOpenSlot.sprite = EmptySlot;
             UnlockPanel.SetActive(true);

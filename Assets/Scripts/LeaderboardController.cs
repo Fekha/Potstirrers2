@@ -58,7 +58,7 @@ public class LeaderboardController : MonoBehaviour
         if (!string.IsNullOrEmpty(data))
         {
             var version = sql.jsonConvert<double>(data);
-            if (Settings.AppVersion < version)
+            if (Global.AppVersion < version)
             {
                 alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Version Mismatch";
                 alert.transform.Find("AlertText").GetComponent<Text>().text = "Your version of the game is out of sync, please refresh your browser to get the latest update.";
@@ -138,7 +138,7 @@ public class LeaderboardController : MonoBehaviour
     
     private void ShowSeasonScore()
     {
-        headerText.text = "Season Score \n (Calories Earned Online)";
+        headerText.text = "Calories Earned Online";
         ClearMessages();
         var i = 0;
         foreach (var d in leaderData.Where(x => x.SeasonScore > 0).OrderByDescending(x => x.SeasonScore))

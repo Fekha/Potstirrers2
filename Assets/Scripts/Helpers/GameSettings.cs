@@ -2,7 +2,7 @@ using Assets.Models;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-public static class Settings
+public static class Global
 {
     public static Player LoggedInPlayer = new Player();
     public static Player SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
@@ -12,7 +12,7 @@ public static class Settings
     public static bool EnteredGame = false;
     public static bool JustWonOnline = false;
     public static int OnlineGameId = 0;
-    public static double AppVersion = 1.12;
+    public static double AppVersion = 1.16;
     public static bool FakeOnlineGame = false;
     public static bool hasNewIng = false;
     public static bool hasNewDie = false;
@@ -27,7 +27,7 @@ public static class Settings
 }
 public static class Library
 {
-    public static List<string> helpTextList = new List<string>() { @"Welcome, " + Settings.LoggedInPlayer.Username.Trim() +"!"+
+    public static List<string> helpTextList = new List<string>() { @"Welcome, " + Global.LoggedInPlayer.Username.Trim() +"!"+
 @"
 
 The following pages will explain the rules of Pot Stirrers.
@@ -93,7 +93,7 @@ Ingredients do not stack on Prep and Prep may never be skipped regadless of the 
 
 @"Conclusion:
 
-" + Settings.LoggedInPlayer.Username + @", thanks for playing and taking the time to learn the rules.
+" + Global.LoggedInPlayer.Username + @", thanks for playing and taking the time to learn the rules.
 
 Playtesting is the core of game design. 
 Without you there is no game, so please let me know about any feedback you have!"

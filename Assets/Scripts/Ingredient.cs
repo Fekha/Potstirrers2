@@ -41,30 +41,34 @@ public class Ingredient : MonoBehaviour
 
     public IEnumerator Move()
     {
-        if (!GameManager.i.isMoving || GameManager.i.GetActivePlayer().UserId != Settings.LoggedInPlayer.UserId)
+        while (GameManager.i.isMoving)
         {
-            GameManager.i.isMoving = true;
-
-            GameManager.i.AllIngredients.ForEach(x => x.SetSelector(false));
-
-            yield return StartCoroutine(BeforeMoving());
-
-            yield return StartCoroutine(DoMovement());
-
-            yield return StartCoroutine(AfterMovement());
-
-            GameManager.i.isMoving = false;
-
-            yield return StartCoroutine(GameManager.i.DoneMoving());
+            yield return new WaitForSeconds(.5f);
         }
+
+        GameManager.i.isMoving = true;
+
+        yield return StartCoroutine(BeforeMoving());
+
+        yield return StartCoroutine(DoMovement());
+
+        yield return StartCoroutine(AfterMovement());
+
+        GameManager.i.isMoving = false;
+
+        yield return StartCoroutine(GameManager.i.DoneMoving());
     }
 
     private IEnumerator BeforeMoving()
     {
-        if (Settings.OnlineGameId != 0 && GameManager.i.GetActivePlayer().UserId == Settings.LoggedInPlayer.UserId)
-            StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateTurn?UserId={Settings.LoggedInPlayer.UserId}&GameId={Settings.OnlineGameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
+        anim.Play("Moving");
 
-        GameManager.i.firstIngredientMoved = IngredientId;
+        GameManager.i.AllIngredients.ForEach(x => x.SetSelector(false));
+
+        if (Global.OnlineGameId != 0 && GameManager.i.GetActivePlayer().UserId == Global.LoggedInPlayer.UserId)
+            StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateTurn?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.OnlineGameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
+
+        GameManager.i.lastMovedIngredient = IngredientId;
 
         if (routePosition != 0)
             Route.i.FullRoute[routePosition].ingredients.Pop();
@@ -88,7 +92,11 @@ public class Ingredient : MonoBehaviour
             if (GameManager.i.Steps == 1 && (routePosition == 9 || routePosition == 17))
             {
                 if (!GameManager.i.IsCPUTurn() && isCooked && !GameManager.i.Automating)
+                {
+                    selector.SetActive(true);
                     yield return StartCoroutine(GameManager.i.AskShouldTrash());
+                    selector.SetActive(false);
+                }
 
                 if (Team != GameManager.i.activePlayer || GameManager.i.ShouldTrash == true) 
                 {
@@ -185,8 +193,10 @@ public class Ingredient : MonoBehaviour
                 isCooked = true;
                 CookedQuad.gameObject.SetActive(true);
                 BackCookedQuad.gameObject.SetActive(false);
-                if(Team == 0)
+                if (Team == 0)
+                {
                     GameManager.i.XpText.GetComponent<Animation>().Play("CookedXP");
+                }
             }
             routePosition = 0;
             yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this));
@@ -256,7 +266,7 @@ public class Ingredient : MonoBehaviour
             yield return null;
         }
 
-        if (routePosition == 0 && Settings.LoggedInPlayer.WineMenu)
+        if (routePosition == 0 && Global.LoggedInPlayer.WineMenu)
         {
             GameManager.i.setWineMenuText((Team == 0 && !isCooked || Team == 1 && isCooked), GameManager.i.prepTiles.Count(x => x.ingredients.Count() > 0));
         }
@@ -269,7 +279,8 @@ public class Ingredient : MonoBehaviour
         if (on)
         {
             IsMovableBy = GameManager.i.GetActivePlayer().UserId;
-            anim.Play("Moving");
+            if(!selector.activeInHierarchy)
+                anim.Play("Moving");
         }
         else
         {
@@ -280,12 +291,12 @@ public class Ingredient : MonoBehaviour
 
     private void OnMouseDown()
     {
-        if (Settings.OnlineGameId != 0 && GameManager.i.GetActivePlayer().UserId != Settings.LoggedInPlayer.UserId)
+        if (Global.OnlineGameId != 0 && GameManager.i.GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
         {
             return;
         }
 
-        if (IsMovableBy == Settings.LoggedInPlayer.UserId && !GameManager.i.isMoving && !GameManager.i.IsCPUTurn() && !GameManager.i.Automating)
+        if (IsMovableBy == Global.LoggedInPlayer.UserId && !GameManager.i.isMoving && !GameManager.i.IsCPUTurn() && !GameManager.i.Automating)
         {
         //    if (GameManager.i.firstIngredientMoved != null)
         //    {

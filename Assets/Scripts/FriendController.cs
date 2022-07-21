@@ -57,8 +57,8 @@ public class FriendController : MonoBehaviour
         alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Loading";
         alert.transform.Find("AlertText").GetComponent<Text>().text = "Finding all of your friends...";
         alert.SetActive(true);
-        StartCoroutine(sql.RequestRoutine($"player/GetFriends?userId={Settings.LoggedInPlayer.UserId}", GetFriendCallback));
-        StartCoroutine(sql.RequestRoutine($"player/GetMessages?userId={Settings.LoggedInPlayer.UserId}", GetMessageCallback));
+        StartCoroutine(sql.RequestRoutine($"player/GetFriends?userId={Global.LoggedInPlayer.UserId}", GetFriendCallback));
+        StartCoroutine(sql.RequestRoutine($"player/GetMessages?userId={Global.LoggedInPlayer.UserId}", GetMessageCallback));
     }
     public void TabClicked(int Selected)
     {
@@ -120,7 +120,7 @@ public class FriendController : MonoBehaviour
     {
         if (!String.IsNullOrEmpty(ToInput.text))
         {
-            StartCoroutine(sql.RequestRoutine($"player/SendMessage?userId={Settings.LoggedInPlayer.UserId}&toName={ToInput.text}&subject={SubjectInput.GetComponent<InputField>().text}&body={BodyInput.GetComponent<InputField>().text}"));
+            StartCoroutine(sql.RequestRoutine($"player/SendMessage?userId={Global.LoggedInPlayer.UserId}&toName={ToInput.text}&subject={SubjectInput.GetComponent<InputField>().text}&body={BodyInput.GetComponent<InputField>().text}"));
             sendMessagePanel.SetActive(false);
             alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
             alert.transform.Find("AlertText").GetComponent<Text>().text = $"Message sent to {ToInput.text}";
@@ -166,7 +166,7 @@ public class FriendController : MonoBehaviour
             alert.transform.Find("AlertText").GetComponent<Text>().text = $"You have removed {toDeleteName} as a friend :(";
             alert.SetActive(true);
             MainMenuController.i.ShowProfile(false);
-            StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Settings.LoggedInPlayer.UserId}&username={toDeleteName}&add={false}", GetFriendCallback));
+            StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Global.LoggedInPlayer.UserId}&username={toDeleteName}&add={false}", GetFriendCallback));
             toDeleteName = "";
         }
     }
@@ -260,7 +260,7 @@ public class FriendController : MonoBehaviour
             alert.transform.Find("AlertText").GetComponent<Text>().text = $"You have added {player.Username} as a friend :)";
             alert.SetActive(true);
             FriendText.GetComponent<InputField>().text = "";
-            StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Settings.LoggedInPlayer.UserId}&username={player.Username}&add={true}", GetFriendCallback));
+            StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Global.LoggedInPlayer.UserId}&username={player.Username}&add={true}", GetFriendCallback));
         }
     }
 

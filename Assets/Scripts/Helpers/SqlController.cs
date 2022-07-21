@@ -16,7 +16,7 @@ public class SqlController
     }
     public IEnumerator RequestRoutine(string url, Action<string> callback = null, bool allowGuest = false)
     {
-        if (allowGuest || !Settings.LoggedInPlayer.IsGuest)
+        if (allowGuest || !Global.LoggedInPlayer.IsGuest)
         {
             using (UnityWebRequest request = UnityWebRequest.Get(apiUrl + url))
             {

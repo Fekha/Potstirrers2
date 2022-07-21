@@ -28,7 +28,7 @@ public class LoginController : MonoBehaviour
 
     private void Start()
     {
-        AppVersion.text = "Ver. " + Settings.AppVersion.ToString();
+        AppVersion.text = "Ver. " + Global.AppVersion.ToString();
         sql = new SqlController();
         system = EventSystem.current;
         //alert.transform.Find("AlertText").GetComponent<Text>().text = "Sorry, I messed up.. \n \n Until July 1st only playing as guest will work..";
@@ -118,7 +118,7 @@ public class LoginController : MonoBehaviour
     private void GetDeviceCallback(string data)
     {
         Player = sql.jsonConvert<Player>(data);
-        Settings.LoggedInPlayer = Player;
+        Global.LoggedInPlayer = Player;
         isLoading = false;
         alert.SetActive(false);
         if (Player != null)
@@ -134,7 +134,7 @@ public class LoginController : MonoBehaviour
         if (!string.IsNullOrEmpty(data))
         {
             var version = sql.jsonConvert<double>(data);
-            if (Settings.AppVersion < version)
+            if (Global.AppVersion < version)
             {
                 VersionPanel.SetActive(true);
             }
@@ -144,7 +144,7 @@ public class LoginController : MonoBehaviour
     private void GetPlayerCallback(string data)
     {
         Player = sql.jsonConvert<Player>(data);
-        Settings.LoggedInPlayer = Player;
+        Global.LoggedInPlayer = Player;
         isLoading = false;
         if (Player == null)
         {
@@ -155,7 +155,7 @@ public class LoginController : MonoBehaviour
         else
         {
             alert.SetActive(false);
-            Settings.LoggedInPlayer.IsGuest = false;
+            Global.LoggedInPlayer.IsGuest = false;
             SceneManager.LoadScene("MainMenu");
         }
     }
@@ -186,8 +186,8 @@ public class LoginController : MonoBehaviour
     }
     public void GuestButton()
     {
-        Settings.LoggedInPlayer = new Player() { Username = "Guest" + UnityEngine.Random.Range(1000, 10000) };
-        Settings.LoggedInPlayer.IsGuest = true;
+        Global.LoggedInPlayer = new Player() { Username = "Guest" + UnityEngine.Random.Range(1000, 10000) };
+        Global.LoggedInPlayer.IsGuest = true;
         SceneManager.LoadScene("MainMenu");
     }
 
@@ -224,8 +224,8 @@ public class LoginController : MonoBehaviour
         Player = sql.jsonConvert<Player>(data);
         if (Player != null)
         {
-            Settings.LoggedInPlayer = Player;
-            Settings.LoggedInPlayer.IsGuest = false;
+            Global.LoggedInPlayer = Player;
+            Global.LoggedInPlayer.IsGuest = false;
             SceneManager.LoadScene("MainMenu");
         }
         else
