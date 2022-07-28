@@ -141,8 +141,8 @@ public class GameManager : MonoBehaviour
 #if UNITY_EDITOR
         //Global.IsDebug = true;
         //Settings.LoggedInPlayer.Experimental = true;
-        //rollDuration = 2;
-        //turnDuration = 2;
+        rollDuration = 2;
+        turnDuration = 2;
 #endif
         if (Global.CPUGame)
         {
@@ -176,7 +176,7 @@ public class GameManager : MonoBehaviour
 
             if (!Global.LoggedInPlayer.IsGuest)
             {
-                StartCoroutine(sql.RequestRoutine($"multiplayer/CPUGameStart?Player1={playerList[0].UserId}&Player2={playerList[1].UserId}&FakeOnlineGame={Global.FakeOnlineGame}", GetNewGameCallback));
+                StartCoroutine(sql.RequestRoutine($"multiplayer/CPUGameStart?Player1={playerList[0].UserId}&Player2={playerList[1].UserId}", GetNewGameCallback));
             }
             else
             {
@@ -210,6 +210,7 @@ public class GameManager : MonoBehaviour
                     }
                 }
             }
+            //Global.GameId != 0 ensures we wait till the game id has actually been gotten
             if (!GameOver && Global.GameId != 0)
             {
                 StartCoroutine(sql.RequestRoutine($"multiplayer/CheckGameAlive?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.GameId}&OtherUserId={Global.SecondPlayer.UserId}", GameIsAliveCallback));
@@ -275,7 +276,14 @@ public class GameManager : MonoBehaviour
                         if (checkingForTrash)
                         {
                             ShouldTrash = true;
-                            StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateShouldTrash?GameId={Global.GameId}&trash={ShouldTrash}", AfterTrashingCallback));
+                            if (!Global.CPUGame)
+                            {
+                                StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateShouldTrash?GameId={Global.GameId}&trash={ShouldTrash}", AfterTrashingCallback));
+                            }
+                            else
+                            {
+                                AfterTrashingCallback("");
+                            }
                         }
                         else
                         {

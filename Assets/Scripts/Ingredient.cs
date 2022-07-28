@@ -12,6 +12,7 @@ public class Ingredient : MonoBehaviour
     public TrailRenderer trail;
     public ParticleSystem fire;
     public ParticleSystem stomp;
+    public ParticleSystem landOn;
 
     internal int routePosition = 0;
     internal int endLowerPosition = 0;
@@ -186,7 +187,19 @@ public class Ingredient : MonoBehaviour
         }
         if (routePosition != 0 && Route.i.FullRoute[routePosition].ingredients.Count() > 0)
         {
-            stomp.Play();
+            if (Route.i.FullRoute[routePosition].isDangerZone)
+            {
+                var rot = new Vector3(0, 0, 0);
+                stomp.transform.rotation = Quaternion.Euler(rot);
+                stomp.Play();
+            }
+            else
+            {
+                var ingStomp = Route.i.FullRoute[routePosition].ingredients.Peek().stomp;
+                var rot = new Vector3(180, 0, 0);
+                ingStomp.transform.rotation = Quaternion.Euler(rot);
+                ingStomp.Play();
+            }
         }
         GameManager.i.UpdateMoveText();
     }
@@ -195,6 +208,13 @@ public class Ingredient : MonoBehaviour
         {
             routePosition = routePosition + (Route.i.FullRoute[routePosition].hasSpoon ? 6 : -6 );
             yield return StartCoroutine(MoveToNextTile(null, true, 20f));
+            if (Route.i.FullRoute[routePosition].ingredients.Count() > 0)
+            {
+                var ingStomp = Route.i.FullRoute[routePosition].ingredients.Peek().stomp;
+                var rot = new Vector3(180, 0, 0);
+                ingStomp.transform.rotation = Quaternion.Euler(rot);
+                ingStomp.Play();
+            }
         }
     }
     private IEnumerator AfterMovement()
@@ -227,14 +247,23 @@ public class Ingredient : MonoBehaviour
                 if (Route.i.FullRoute[routePosition].ingredients.Count() > 0 && Route.i.FullRoute[routePosition].ingredients.Peek().isCooked)
                 {
                     var checkForInfinite = 0;
+                    var skipping = false;
                     while (Route.i.FullRoute[routePosition].ingredients.Count() > 0 && Route.i.FullRoute[routePosition].ingredients.Peek().isCooked && checkForInfinite < 12)
                     {
                         checkForInfinite++;
                         routePosition++;
-                        yield return StartCoroutine(MoveToNextTile());
-                        yield return StartCoroutine(Slide());
+                        if (!Route.i.FullRoute[routePosition].ingredients.Peek().isCooked)
+                        {
+                            yield return StartCoroutine(MoveToNextTile(null, false, 35, false, skipping));
+                            skipping = false;
+                            yield return StartCoroutine(Slide());
+                        }
+                        else
+                        {
+                            skipping = true;
+                        }
                     }
-                    if (checkForInfinite == 12)
+                    if (checkForInfinite >= 12)
                     {
                         routePosition = 24;
                         yield return StartCoroutine(MoveToNextTile());
@@ -274,17 +303,14 @@ public class Ingredient : MonoBehaviour
         var yValue = .25f;
 
         if (isforEffect)
-            anim.Play("flip");
+            anim.Play("Flip");
+        else if (skipping)
+            anim.Play("Jumping");
         else if(routePosition != 0)
             anim.Play("Moving");
 
         if(nextPos == null)
             nextPos = Route.i.FullRoute[routePosition].gameObject.transform.position;
-
-        if (skipping)
-        {
-            yValue = 1.25f;
-        }
         
         if (!trash && (!Route.i.FullRoute[routePosition].isDangerZone || (Route.i.FullRoute[routePosition].isDangerZone && GameManager.i.Steps != 1)))
         {
