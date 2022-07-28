@@ -34,7 +34,6 @@ public class Ingredient : MonoBehaviour
     public GameObject BackCookedQuad;
     private void Start()
     {
-        //plane = new Plane(this.transform.up, Vector3.zero);
         sql = new SqlController();
     }
    
@@ -61,12 +60,18 @@ public class Ingredient : MonoBehaviour
 
     private IEnumerator BeforeMoving()
     {
+        if (GameManager.i.lastMovedIngredient != null)
+        {
+            GameManager.i.undoButton1.gameObject.SetActive(false);
+            GameManager.i.undoButton2.gameObject.SetActive(false);
+        }
+
         anim.Play("Moving");
 
         GameManager.i.AllIngredients.ForEach(x => x.SetSelector(false));
 
-        if (Global.OnlineGameId != 0 && GameManager.i.GetActivePlayer().UserId == Global.LoggedInPlayer.UserId)
-            StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateTurn?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.OnlineGameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
+        if (!Global.CPUGame && GameManager.i.GetActivePlayer().UserId == Global.LoggedInPlayer.UserId)
+            StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateTurn?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.GameId}&IngId={IngredientId}&Higher={GameManager.i.higherMoveSelected}"));
 
         GameManager.i.lastMovedIngredient = IngredientId;
 
@@ -79,6 +84,7 @@ public class Ingredient : MonoBehaviour
 
     private IEnumerator DoMovement()
     {
+        bool skipped = false;
         while (GameManager.i.Steps > 0)
         {
             while (GameManager.i.IsReading)
@@ -160,17 +166,27 @@ public class Ingredient : MonoBehaviour
 
             if (routePosition == 0)
             {
-                yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this, GameManager.i.Steps == 1));
+                yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this, GameManager.i.Steps == 1 || didMove));
                 GameManager.i.Steps--;
+                skipped = false;
             }
             else if (Route.i.FullRoute[routePosition].ingredients.Count() == 0 || !Route.i.FullRoute[routePosition].ingredients.Peek().isCooked)
             {
-                yield return StartCoroutine(MoveToNextTile());
+                yield return StartCoroutine(MoveToNextTile(null,false,35,false,skipped));
                 GameManager.i.Steps--;
+                skipped = false;
+            }
+            else
+            {
+                skipped = true;
             }
 
             GameManager.i.ShouldTrash = null;
             didMove = false;
+        }
+        if (routePosition != 0 && Route.i.FullRoute[routePosition].ingredients.Count() > 0)
+        {
+            stomp.Play();
         }
         GameManager.i.UpdateMoveText();
     }
@@ -210,11 +226,18 @@ public class Ingredient : MonoBehaviour
                 //skip the spot if cooked
                 if (Route.i.FullRoute[routePosition].ingredients.Count() > 0 && Route.i.FullRoute[routePosition].ingredients.Peek().isCooked)
                 {
-                    while (Route.i.FullRoute[routePosition].ingredients.Count() > 0 && Route.i.FullRoute[routePosition].ingredients.Peek().isCooked)
+                    var checkForInfinite = 0;
+                    while (Route.i.FullRoute[routePosition].ingredients.Count() > 0 && Route.i.FullRoute[routePosition].ingredients.Peek().isCooked && checkForInfinite < 12)
                     {
+                        checkForInfinite++;
                         routePosition++;
                         yield return StartCoroutine(MoveToNextTile());
                         yield return StartCoroutine(Slide());
+                    }
+                    if (checkForInfinite == 12)
+                    {
+                        routePosition = 24;
+                        yield return StartCoroutine(MoveToNextTile());
                     }
                 }
 
@@ -222,13 +245,13 @@ public class Ingredient : MonoBehaviour
                 {
                     if (Route.i.FullRoute[routePosition].isDangerZone)
                     {
-                        stomp.Play();
                         if (!GameManager.i.IsCPUTurn() && Route.i.FullRoute[routePosition].ingredients.Peek().Team != GameManager.i.activePlayer && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                         {
                             CpuLogic.i.PrepShitTalk(TalkType.SentBack);
                             CpuLogic.i.ActivateShitTalk();
                         }
                         var ingToMove = Route.i.FullRoute[routePosition].ingredients.Peek();
+                        ingToMove.trail.enabled = true;
                         Route.i.FullRoute[routePosition].ingredients.Pop();
                         yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(ingToMove));
                     }
@@ -240,11 +263,13 @@ public class Ingredient : MonoBehaviour
             Route.i.FullRoute[routePosition].ingredients.Push(this);
         }
 
+        GameManager.i.ClearSelectedDie();
+
         if (GameManager.i.IsCPUTurn())
             yield return new WaitForSeconds(.5f);
     }
 
-    public IEnumerator MoveToNextTile(Vector3? nextPos = null, bool isforEffect=false, float speed = 35f, bool trash = false)
+    public IEnumerator MoveToNextTile(Vector3? nextPos = null, bool isforEffect=false, float speed = 35f, bool trash = false, bool skipping = false)
     {
         var yValue = .25f;
 
@@ -256,8 +281,15 @@ public class Ingredient : MonoBehaviour
         if(nextPos == null)
             nextPos = Route.i.FullRoute[routePosition].gameObject.transform.position;
 
-        if(!trash && (!Route.i.FullRoute[routePosition].isDangerZone || (Route.i.FullRoute[routePosition].isDangerZone && GameManager.i.Steps != 1)))
+        if (skipping)
+        {
+            yValue = 1.25f;
+        }
+        
+        if (!trash && (!Route.i.FullRoute[routePosition].isDangerZone || (Route.i.FullRoute[routePosition].isDangerZone && GameManager.i.Steps != 1)))
+        {
             yValue += (.4f * Route.i.FullRoute[routePosition].ingredients.Count());
+        }
 
         var goalPos = new Vector3(nextPos.Value.x, yValue, nextPos.Value.z);
 
@@ -291,47 +323,13 @@ public class Ingredient : MonoBehaviour
 
     private void OnMouseDown()
     {
-        if (Global.OnlineGameId != 0 && GameManager.i.GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
+        if (GameManager.i.GetActivePlayer().UserId == Global.LoggedInPlayer.UserId 
+            && IsMovableBy == Global.LoggedInPlayer.UserId 
+            && !GameManager.i.isMoving 
+            && !GameManager.i.IsCPUTurn() 
+            && !GameManager.i.Automating)
         {
-            return;
-        }
-
-        if (IsMovableBy == Global.LoggedInPlayer.UserId && !GameManager.i.isMoving && !GameManager.i.IsCPUTurn() && !GameManager.i.Automating)
-        {
-        //    if (GameManager.i.firstIngredientMoved != null)
-        //    {
-        //        GameManager.i.undoButton1.gameObject.SetActive(false);
-        //        GameManager.i.undoButton2.gameObject.SetActive(false);
-        //    }
-        //    else if (GameManager.i.firstMoveTaken)
-        //    {
-        //        if (GameManager.i.activePlayer == 0)
-        //        {
-        //            GameManager.i.undoButton1.gameObject.SetActive(true);
-        //        }
-        //        else
-        //        {
-        //            GameManager.i.undoButton2.gameObject.SetActive(true);
-        //        }
-                
-        //    }
-        //    else
-        //    {
-        //        GameManager.i.undoButton1.gameObject.SetActive(false);
-        //        GameManager.i.undoButton2.gameObject.SetActive(false);
-        //    }
             StartCoroutine(Move());
         }
-    }
-}
-public static class MyEnumExtensions
-{
-    public static string ToDescriptionString(int val)
-    {
-        DescriptionAttribute[] attributes = (DescriptionAttribute[])val
-           .GetType()
-           .GetField(val.ToString())
-           .GetCustomAttributes(typeof(DescriptionAttribute), false);
-        return attributes.Length > 0 ? attributes[0].Description : string.Empty;
     }
 }

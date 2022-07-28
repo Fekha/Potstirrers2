@@ -64,7 +64,7 @@ public class LoginController : MonoBehaviour
         }
 
 #if UNITY_EDITOR
-        username.GetComponent<InputField>().text = "Feca74";
+        username.GetComponent<InputField>().text = "Ecaflip";
         password.GetComponent<InputField>().text = "1234";
 #endif
 

@@ -14,6 +14,7 @@ public class CpuLogic : MonoBehaviour
     internal Ingredient IngredientMovedWithLower;
     internal Ingredient IngredientMovedWithHigher;
     private bool hasBeenDumb = false;
+    private bool SecondMoveDouble = false;
     internal static CpuLogic i;
     private void Awake()
     {
@@ -30,6 +31,8 @@ public class CpuLogic : MonoBehaviour
 
         if (GameManager.i.DoublesRolled())
         {
+            SecondMoveDouble = true;
+            GameManager.i.higherMoveSelected = null;
             IngredientMovedWithHigher = null;
             IngredientMovedWithLower = null;
         }
@@ -43,11 +46,12 @@ public class CpuLogic : MonoBehaviour
         IngredientMovedWithLower = null;
         IngredientMovedWithHigher = null;
         hasBeenDumb = false;
+        SecondMoveDouble = false;
     }
 
     private IEnumerator SetCPUVariables()
     {
-        UseableIngredients = GameManager.i.AllIngredients.Where(x => (x.IngredientId != GameManager.i.lastMovedIngredient || GameManager.i.DoublesRolled() )  && (x.routePosition == 0 || Route.i.FullRoute[x.routePosition].ingredients.Peek() == x)).ToList();
+        UseableIngredients = GameManager.i.AllIngredients.Where(x => (x.IngredientId != GameManager.i.lastMovedIngredient || GameManager.i.DoublesRolled())  && (x.routePosition == 0 || Route.i.FullRoute[x.routePosition].ingredients.Peek() == x)).ToList();
         foreach (var ing in GameManager.i.AllIngredients)
         {
             //find what ingredients actual end will be accounting for cooked ingredients
@@ -127,18 +131,19 @@ public class CpuLogic : MonoBehaviour
             ?? CookIngredientWithDoubleMove()
             ?? HelpScore()
             ?? MoveOffStackToScore()
-            //?? BeDumb()
+            ?? BeDumb()
             ?? MovePastPrep()
+            ?? MoveOffLastPiece()
             ?? StompEnemy(true)
             ?? GoToTrash()
             ?? StompEnemy(false)
             ?? MoveIntoScoring()
             ?? Slide(false)
             ?? MoveFrontMostEnemy()
-            ?? Slide(true)
             ?? StackEnemy(true)
             ?? MoveOffStack(false)
             ?? MoveFrontMostIngredient(false, false)
+            ?? Slide(true)
             ?? MoveOffStack(true)
             ?? BoostWithCookedIngredient()
             ?? MoveFrontMostIngredient(true, false)
@@ -159,14 +164,15 @@ public class CpuLogic : MonoBehaviour
         }
         else
         {
-            yield return StartCoroutine(GameManager.i.RollSelected(ingredientToMove == IngredientMovedWithHigher, false));
+            var selected = GameManager.i.DoublesRolled() ? SecondMoveDouble : ingredientToMove == IngredientMovedWithHigher;
+            yield return StartCoroutine(GameManager.i.RollSelected(selected, false));
             yield return new WaitForSeconds(.5f);
             yield return StartCoroutine(ingredientToMove.Move());
         }
     }
     internal void ActivateShitTalk()
     {
-        if (Global.OnlineGameId != 0)
+        if (!Global.CPUGame)
             return;
 
         if (!string.IsNullOrEmpty(GameManager.i.talkShitText.text) && !GameManager.i.TalkShitPanel.activeInHierarchy)
@@ -177,7 +183,7 @@ public class CpuLogic : MonoBehaviour
     }
     internal void PrepShitTalk(TalkType talk)
     {
-        if (Global.OnlineGameId != 0 || !string.IsNullOrEmpty(GameManager.i.talkShitText.text) || !GameManager.i.playerList.Any(x => x.IsCPU))
+        if (!Global.CPUGame || !string.IsNullOrEmpty(GameManager.i.talkShitText.text) || !GameManager.i.playerList.Any(x => x.IsCPU))
             return;
 
         var username = GameManager.i.GetActivePlayer().Username;
@@ -648,6 +654,42 @@ public class CpuLogic : MonoBehaviour
             }
         }
         return null;
+    } 
+    
+    private Ingredient MoveOffLastPiece()
+    {
+        if (TeamIngredients.Count(x => !x.isCooked) == 1) {
+
+            var lastIng = TeamIngredients.FirstOrDefault(x => !x.isCooked);
+            if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
+            {
+                IngredientMovedWithLower = UseableIngredients.FirstOrDefault(x => !Route.i.FullRoute[x.endLowerPositionWithoutSlide % 26].hasSpatula
+                && (x.routePosition != 0
+                    && Route.i.FullRoute[x.routePosition].ingredients.Count > 1
+                    && Route.i.FullRoute[x.routePosition].ingredients.Any(x => x.IngredientId == lastIng.IngredientId)
+                    && Route.i.FullRoute[x.routePosition].ingredients.Peek().IngredientId != lastIng.IngredientId)); //Dont stomp yourself
+                if (IngredientMovedWithLower != null)
+                {
+                    if (Global.IsDebug) { GameManager.i.talkShitText.text = "Move Off Last Piece"; }
+                    return IngredientMovedWithLower;
+                }
+            }
+
+            if (IngredientMovedWithHigher == null)
+            {
+                IngredientMovedWithHigher = UseableTeamIngredients.FirstOrDefault(x => !Route.i.FullRoute[x.endLowerPositionWithoutSlide % 26].hasSpatula
+                && (x.routePosition != 0
+                    && Route.i.FullRoute[x.routePosition].ingredients.Count > 1
+                    && Route.i.FullRoute[x.routePosition].ingredients.Any(x => x.IngredientId == lastIng.IngredientId)
+                    && Route.i.FullRoute[x.routePosition].ingredients.Peek().IngredientId != lastIng.IngredientId)); //Dont stomp yourself
+                if (IngredientMovedWithHigher != null)
+                {
+                    if (Global.IsDebug) { GameManager.i.talkShitText.text = "Move Off Last Piece"; }
+                    return IngredientMovedWithHigher;
+                }
+            }
+        }
+        return null;
     }
 
     private Ingredient Slide(bool WithCooked)
@@ -912,7 +954,7 @@ public class CpuLogic : MonoBehaviour
     }
     private Ingredient BeDumb()
     {
-        if (!Global.IsDebug && !Global.HardMode && (Global.LoggedInPlayer.Wins == 0 || (!hasBeenDumb && (Random.Range(0, Mathf.Min(Global.LoggedInPlayer.Wins, 50)) == 0))))
+        if (!Global.IsDebug && !Global.FakeOnlineGame && (!hasBeenDumb && (Random.Range(0, Mathf.Min((Global.LoggedInPlayer.Wins == 0 ? 2 : Global.LoggedInPlayer.Wins*2), 50)) == 0)))
         {
             if (IngredientMovedWithHigher == null)
             {

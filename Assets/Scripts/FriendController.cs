@@ -10,7 +10,7 @@ using UnityEngine.UI;
 public class FriendController : MonoBehaviour
 {
     private SqlController sql;
-
+    internal static FriendController i;
     [Header("Tabs")]
     public GameObject ListPanel;
     public Image ListButtonImage;
@@ -44,20 +44,17 @@ public class FriendController : MonoBehaviour
     private int toDeleteId = 0;
     private string toDeleteName = "";
     private Message CurrentMessage;
-    public GameObject alert;
-    public Text alertText;
 
 
     void Awake()
     {
+        i = this;
         sql = new SqlController();
     }
     private void OnEnable()
     {
-        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Loading";
-        alert.transform.Find("AlertText").GetComponent<Text>().text = "Finding all of your friends...";
-        alert.SetActive(true);
-        StartCoroutine(sql.RequestRoutine($"player/GetFriends?userId={Global.LoggedInPlayer.UserId}", GetFriendCallback));
+        MainMenuController.i.DisplayLoading("Loading", "Finding all of your friends...");
+        StartCoroutine(sql.RequestRoutine($"player/GetFriends?userId={Global.LoggedInPlayer.UserId}&onlyOnline={Global.OnlyGetOnlineFriends}", GetFriendCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetMessages?userId={Global.LoggedInPlayer.UserId}", GetMessageCallback));
     }
     public void TabClicked(int Selected)
@@ -110,9 +107,7 @@ public class FriendController : MonoBehaviour
             sendMessagePanel.SetActive(open);
         else
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "You must have friends that are friends with you to be able to send a message! Why did you remove poor Feca :(";
-            alert.SetActive(true);
+            MainMenuController.i.DisplayAlert("Failure", "You must have friends that are friends with you to be able to send a message! Why did you remove poor Feca :(");
         }
     }
 
@@ -122,15 +117,12 @@ public class FriendController : MonoBehaviour
         {
             StartCoroutine(sql.RequestRoutine($"player/SendMessage?userId={Global.LoggedInPlayer.UserId}&toName={ToInput.text}&subject={SubjectInput.GetComponent<InputField>().text}&body={BodyInput.GetComponent<InputField>().text}"));
             sendMessagePanel.SetActive(false);
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = $"Message sent to {ToInput.text}";
+            MainMenuController.i.DisplayAlert("Success", $"Message sent to {ToInput.text}");
         }
         else
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "Can not send a message without a friend selected!";
+            MainMenuController.i.DisplayAlert("Failure", "Can not send a message without a friend selected!");
         }
-        alert.SetActive(true);
     }
     public void viewMessage(Message message)
     {
@@ -154,17 +146,13 @@ public class FriendController : MonoBehaviour
         RemoveChoice.SetActive(false);
         if (toDeleteId != 0)
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "Message Deleted!";
-            alert.SetActive(true);
+            MainMenuController.i.DisplayAlert("Success", "Message Deleted!");
             StartCoroutine(sql.RequestRoutine($"player/DeleteMessage?MessageId={toDeleteId}", GetMessageCallback));
             toDeleteId = 0;
         }
         else if (toDeleteName != "")
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = $"You have removed {toDeleteName} as a friend :(";
-            alert.SetActive(true);
+            MainMenuController.i.DisplayAlert("Success", $"You have removed {toDeleteName} as a friend :(");
             MainMenuController.i.ShowProfile(false);
             StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Global.LoggedInPlayer.UserId}&username={toDeleteName}&add={false}", GetFriendCallback));
             toDeleteName = "";
@@ -196,9 +184,7 @@ public class FriendController : MonoBehaviour
 
     private void NotRealFriendPopup(string Username)
     {
-        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Not Your Friend";
-        alert.transform.Find("AlertText").GetComponent<Text>().text = $"{Username} is your friend, but its not mutual. Waiting on them to add you back so you can do cool friend stuff!";
-        alert.SetActive(true);
+        MainMenuController.i.DisplayAlert("Not Your Friend", $"{Username} is your friend, but its not mutual. Waiting on them to add you back so you can do cool friend stuff!");
     }
 
     private void ClearFriends()
@@ -250,15 +236,11 @@ public class FriendController : MonoBehaviour
         var player = sql.jsonConvert<Player>(data);
         if (player == null)
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "Player not found.";
-            alert.SetActive(true);
+            MainMenuController.i.DisplayAlert("Failure", "Player not found.");
         }
         else
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = $"You have added {player.Username} as a friend :)";
-            alert.SetActive(true);
+            MainMenuController.i.DisplayAlert("Success", $"You have added {player.Username} as a friend :)");
             FriendText.GetComponent<InputField>().text = "";
             StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Global.LoggedInPlayer.UserId}&username={player.Username}&add={true}", GetFriendCallback));
         }
@@ -266,13 +248,20 @@ public class FriendController : MonoBehaviour
 
     private void GetFriendCallback(string data)
     {
-        ClearFriends();
         var friends = sql.jsonConvert<List<FriendDTO>>(data);
-        foreach (var d in friends.OrderByDescending(x => x.Level))
+        ClearFriends();
+        if (friends.Count == 0)
         {
-            CreateFriend(d, d.RealFriend);
+            MainMenuController.i.DisplayAlert("No Friends!", (Global.OnlyGetOnlineFriends ? "No one on your friends list is online right now to play against!" : "Why did Feca do to you that you removed him!?"));
         }
-        alert.SetActive(false);
+        else
+        {
+            foreach (var d in friends.OrderByDescending(x => x.Level))
+            {
+                CreateFriend(d, d.RealFriend);
+            }
+        }
+        MainMenuController.i.HideLoading();
     }
     private class FriendDTO
     {

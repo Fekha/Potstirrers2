@@ -6,6 +6,7 @@ using UnityEngine.UI;
 
 public class TabController : MonoBehaviour
 {
+    public static TabController i;
     public GameObject StorePanel;
     public Image StoreButtonImage;
     public GameObject FriendPanel;
@@ -16,26 +17,19 @@ public class TabController : MonoBehaviour
     public Image ChestsButtonImage;
     public GameObject CollectionPanel;
     public Image CollectionButtonImage;
+    public GameObject LeaderboardPanel;
     public Sprite SelectedTabSprite;
     public Sprite UnselectedTabSprite; 
-    private SqlController sql;
-    private int lastSelected = 0;
-    private void Start()
+    private static int lastSelected = 0;
+    private void Awake()
     {
-        sql = new SqlController();
+        i = this;
     }
     public void TabClicked(int Selected)
     {
-        if (Selected == 3)
+        if (Global.LoggedInPlayer.IsGuest && Selected != 3 && Selected != 6)
         {
-            StartCoroutine(MainMenuController.i.SetPlayer());
-        }
-        if (Global.LoggedInPlayer.IsGuest && Selected != 3)
-        {
-            MainMenuController.i.alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
-            MainMenuController.i.alert.transform.Find("AlertText").GetComponent<Text>().text = "Create an account to access the tabs!";
-            MainMenuController.i.alert.SetActive(true);
-            return;
+            MainMenuController.i.DisplayAlert("Restricted", "Create an account to access the tabs!");
         }
         else
         {
@@ -50,8 +44,10 @@ public class TabController : MonoBehaviour
                 StorePanel.SetActive(true);
                 StoreButtonImage.sprite = SelectedTabSprite;
             }
+
             if (Selected != 2)
             {
+                Global.OnlyGetOnlineFriends = false;
                 FriendPanel.SetActive(false);
                 FriendButtonImage.sprite = UnselectedTabSprite;
             }
@@ -61,6 +57,7 @@ public class TabController : MonoBehaviour
                 FriendPanel.SetActive(true);
                 FriendButtonImage.sprite = SelectedTabSprite;
             }
+
             if (Selected != 3)
             {
                 HomePanel.SetActive(false);
@@ -68,9 +65,11 @@ public class TabController : MonoBehaviour
             }
             else
             {
+                StartCoroutine(MainMenuController.i.SetPlayer());
                 HomePanel.SetActive(true);
                 HomeButtonImage.sprite = SelectedTabSprite;
             }
+
             if (Selected != 4)
             {
                 ChestsPanel.SetActive(false);
@@ -82,6 +81,7 @@ public class TabController : MonoBehaviour
                 ChestsPanel.SetActive(true);
                 ChestsButtonImage.sprite = SelectedTabSprite;
             }
+
             if (Selected != 5)
             {
                 CollectionPanel.SetActive(false);
@@ -92,6 +92,15 @@ public class TabController : MonoBehaviour
                 MainMenuController.i.HasUnlock.SetActive(false);
                 CollectionPanel.SetActive(true);
                 CollectionButtonImage.sprite = SelectedTabSprite;
+            }
+
+            if (Selected != 6)
+            {
+                LeaderboardPanel.SetActive(false);
+            }
+            else
+            {
+                LeaderboardPanel.SetActive(true);
             }
         }
     }

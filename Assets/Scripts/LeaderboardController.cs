@@ -18,20 +18,17 @@ public class LeaderboardController : MonoBehaviour
     }
     public Text headerText;
     public GameObject eventLogTextContent;
-    public GameObject alert;
-    public Text eventLogTextObject;
-    private List<LeaderboardMessage> eventLogList = new List<LeaderboardMessage>();
+    public GameObject eventLogTextObject;
+    private List<GameObject> eventLogList = new List<GameObject>();
     public List<Profile> leaderData;
     private SqlController sql;
     private int numLeaderboards = 3;
     private int currentShowing = 0; 
     private float elapsed;
-    private void Start()
+    private void Awake()
     {
-        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Loading";
-        alert.transform.Find("AlertText").GetComponent<Text>().text = "Getting all the good players...";
-        alert.SetActive(true);
         sql = new SqlController();
+        MainMenuController.i.DisplayLoading("Loading", "Getting all the good players...");
         StartCoroutine(sql.RequestRoutine("player/GetLeaderboard", leaderboardCallback, true));
     }
     private void Update()
@@ -46,9 +43,7 @@ public class LeaderboardController : MonoBehaviour
             }
             catch (Exception ex)
             {
-                alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Network Failure";
-                alert.transform.Find("AlertText").GetComponent<Text>().text = "Can't connect to the server.";
-                alert.SetActive(true);
+                MainMenuController.i.DisplayAlert("Network Failure", "Can't connect to the server.");
             }
         }
     }
@@ -60,9 +55,7 @@ public class LeaderboardController : MonoBehaviour
             var version = sql.jsonConvert<double>(data);
             if (Global.AppVersion < version)
             {
-                alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Version Mismatch";
-                alert.transform.Find("AlertText").GetComponent<Text>().text = "Your version of the game is out of sync, please refresh your browser to get the latest update.";
-                alert.SetActive(true);
+                MainMenuController.i.DisplayAlert("Version Mismatch", "Your version of the game is out of sync, please refresh your browser to get the latest update.");
             }
         }
     }
@@ -71,7 +64,7 @@ public class LeaderboardController : MonoBehaviour
         leaderData = sql.jsonConvert<List<Profile>>(jdata);
         currentShowing = 0;// Random.Range(0, numLeaderboards);
         ShowLeaderboard();
-        alert.SetActive(false);
+        MainMenuController.i.HideLoading();
     }
 
     private void ShowLeaderboard()
@@ -105,8 +98,7 @@ public class LeaderboardController : MonoBehaviour
         var i = 0;
         foreach (var d in leaderData.Where(x => x.AllWins > 0).OrderByDescending(x => x.AllWins))
         {
-            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.AllWins;
-            SendEventToLog(evenetDesc);
+            SendEventToLog((i + 1) + ") ", d.Username + " - " + d.AllWins);
             i++;
         }
     }  
@@ -117,8 +109,7 @@ public class LeaderboardController : MonoBehaviour
         var i = 0;
         foreach (var d in leaderData.Where(x => x.AllPVPWins > 0).OrderByDescending(x => x.AllPVPWins))
         {
-            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.AllPVPWins;
-            SendEventToLog(evenetDesc);
+            SendEventToLog((i + 1) + ") ", d.Username + " - " + d.AllPVPWins);
             i++;
         }
     }
@@ -130,8 +121,7 @@ public class LeaderboardController : MonoBehaviour
         var i = 0;
         foreach (var d in leaderData.Where(x => x.DailyWins > 0).OrderByDescending(x => x.DailyWins))
         {
-            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.DailyWins;
-            SendEventToLog(evenetDesc);
+            SendEventToLog((i + 1) + ") ", d.Username + " - " + d.DailyWins);
             i++;
         }
     }
@@ -143,8 +133,7 @@ public class LeaderboardController : MonoBehaviour
         var i = 0;
         foreach (var d in leaderData.Where(x => x.SeasonScore > 0).OrderByDescending(x => x.SeasonScore))
         {
-            var evenetDesc = (i + 1) + ") " + d.Username + " - " + d.SeasonScore;
-            SendEventToLog(evenetDesc);
+            SendEventToLog((i + 1) + ") ", d.Username + " - " + d.SeasonScore);
             i++;
         }
     }
@@ -170,18 +159,16 @@ public class LeaderboardController : MonoBehaviour
         {
             for (int i = eventLogList.Count() - 1; i >= 0; i--)
             {
-                Destroy(eventLogList[i].textObject.gameObject);
+                Destroy(eventLogList[i]);
                 eventLogList.Remove(eventLogList[i]);
             }
         }
     }
-    private void SendEventToLog(string text)
+    private void SendEventToLog(string rank, string player)
     {
-        LeaderboardMessage newMessage = new LeaderboardMessage();
-        newMessage.text = text;
-        Text newText = Instantiate(eventLogTextObject, eventLogTextContent.transform);
-        newMessage.textObject = newText.GetComponent<Text>();
-        newMessage.textObject.text = newMessage.text;
+        GameObject newMessage = Instantiate(eventLogTextObject, eventLogTextContent.transform);
+        newMessage.transform.Find("RankText").gameObject.GetComponent<Text>().text = rank;
+        newMessage.transform.Find("PlayerText").gameObject.GetComponent<Text>().text = player;
         eventLogList.Add(newMessage);
     }
 }

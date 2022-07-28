@@ -120,12 +120,12 @@ public class CollectionController : MonoBehaviour
                     }
                     else
                     {
-                        DisplayAlert("You need to collect more skins before being able to craft this!", "Unable to craft");
+                        MainMenuController.i.DisplayAlert("Unable to craft", "You need to collect more skins before being able to craft this!");
                     }
                 }
                 else
                 {
-                    DisplayAlert("You need to collect more skins before being able to craft this!", "Unable to craft");
+                    MainMenuController.i.DisplayAlert("Unable to craft", "You need to collect more skins before being able to craft this!");
                 }
             }
         }
@@ -151,12 +151,12 @@ public class CollectionController : MonoBehaviour
                     }
                     else
                     {
-                        DisplayAlert("You need to collect more skins before being able to craft this!", "Unable to craft");
+                        MainMenuController.i.DisplayAlert("Unable to craft", "You need to collect more skins before being able to craft this!");
                     }
                 }
                 else
                 {
-                    DisplayAlert("You need to collect more skins before being able to craft this!", "Unable to craft");
+                    MainMenuController.i.DisplayAlert("Unable to craft", "You need to collect more skins before being able to craft this!");
                 }
             }
         }
@@ -191,14 +191,14 @@ public class CollectionController : MonoBehaviour
         AmountOwnedDestroyText = itemToDestroyPanel.transform.Find("AmountOwnedText").GetComponent<Text>();
 
         CostText = CraftPanel.transform.Find("CostText").GetComponent<Text>();
-        if (isCraftingDie)
-        {
-            (CurrentCraftImage.transform as RectTransform).sizeDelta = new Vector2(225, 225);
-            (CurrentDestroyImage.transform as RectTransform).sizeDelta = new Vector2(225, 225);
-        }else{
-            (CurrentCraftImage.transform as RectTransform).sizeDelta = new Vector2(250, 250);
-            (CurrentDestroyImage.transform as RectTransform).sizeDelta = new Vector2(250, 250);
-        }
+        //if (isCraftingDie)
+        //{
+        //    (CurrentCraftImage.transform as RectTransform).sizeDelta = new Vector2(225, 225);
+        //    (CurrentDestroyImage.transform as RectTransform).sizeDelta = new Vector2(225, 225);
+        //}else{
+        //    (CurrentCraftImage.transform as RectTransform).sizeDelta = new Vector2(250, 250);
+        //    (CurrentDestroyImage.transform as RectTransform).sizeDelta = new Vector2(250, 250);
+        //}
         
         SetSkinData();
     }
@@ -219,9 +219,7 @@ public class CollectionController : MonoBehaviour
                 canDestroyIndex--;
             else
                 canDestroyIndex = canDestroy.Count - 1;
-
         }
-
         SetSkinData();
     }
 
@@ -248,7 +246,7 @@ public class CollectionController : MonoBehaviour
         SetCraftCosts(currentDestroyItem.Rarity);
         AmountToCraftText.text = AmountToCraft.ToString();
         AmountToDestroyText.text = AmountToDestroy.ToString();
-        craftCost = (AmountToCraft + AmountToDestroy) * (isCraftingDie ? 50 : 100);
+        craftCost = (currentCraftItem.Rarity == 3 ? 450 : currentCraftItem.Rarity == 2 ? 150 : 50) * (isCraftingDie ? 1 : 2);
         CostText.text = $"Cost to Craft: " + craftCost.ToString() + " Calories";
     }
 
@@ -261,17 +259,16 @@ public class CollectionController : MonoBehaviour
         }
         else
         {
-            DisplayAlert($"To craft this it costs {craftCost} Calories, but you only have {Global.LoggedInPlayer.Calories} :(", "Insufficent Funds");
+            MainMenuController.i.DisplayAlert("Insufficent Funds", $"To craft this it costs {craftCost} Calories, but you only have {Global.LoggedInPlayer.Calories} :(");
         }
-
     }
 
     public void CraftDie()
     {
+        MainMenuController.i.DisplayLoading("Loading","Crafting your item...");
         AreYouSurePanel.SetActive(false);
         Global.LoggedInPlayer.Calories -= craftCost;
         StartCoroutine(sql.RequestRoutine($"skin/CraftSkins?UserId={Global.LoggedInPlayer.UserId}&ToDeleteSkinId={currentDestroyItem.SkinId}&ToCraftSkinId={currentCraftItem.SkinId}&isDie={isCraftingDie}", RefreshCraftedSkinsCallback));
-       
     }
 
     private int SetCraftCosts(int deleteRarity)
@@ -314,6 +311,7 @@ public class CollectionController : MonoBehaviour
             }
             SetSkinData();
         }
+        MainMenuController.i.HideLoading();
     }
     #region Ingredients
     private void CreateIng(Sprite item, int skinId)
@@ -328,7 +326,7 @@ public class CollectionController : MonoBehaviour
         {
             ItemPrefabObj.transform.Find("Selected").gameObject.SetActive(false);
         }
-        (ItemPrefabObj.transform.Find("Item").transform as RectTransform).sizeDelta = new Vector2(230, 230);
+        //(ItemPrefabObj.transform.Find("Item").transform as RectTransform).sizeDelta = new Vector2(230, 230);
         ItemPrefabObj.transform.Find("Item").gameObject.GetComponent<Image>().sprite = item;
         
         SkinData skin = new SkinData();
@@ -337,13 +335,13 @@ public class CollectionController : MonoBehaviour
             skin = MyIngSkins.FirstOrDefault(x => x.SkinId == skinId);
             ItemPrefabObj.GetComponentInChildren<Text>().text = (skin.IsUnlocked ? "" : skin.UnlockedQty.ToString() + "/4");
         }
-        else if (skinId >= 0 && skinId <= 3)
+        else if (skinId >= 0 && skinId <= 4)
         {
             skin = new SkinData()
             {
                 SkinId = skinId,
                 IsUnlocked = true,
-                Rarity = skinId < 13 ? 1 : skinId < 17 ? 2 : 3
+                Rarity = skinId < 15 ? 1 : skinId < 22 ? 2 : 3
             };
             ItemPrefabObj.GetComponentInChildren<Text>().text = "";
         }
@@ -353,7 +351,7 @@ public class CollectionController : MonoBehaviour
             {
                 SkinId = skinId,
                 IsUnlocked = false,
-                Rarity = skinId < 13 ? 1 : skinId < 19 ? 2 : 3
+                Rarity = skinId < 15 ? 1 : skinId < 22 ? 2 : 3
             };
             ItemPrefabObj.GetComponentInChildren<Text>().text = "0/4";
         }
@@ -397,13 +395,11 @@ public class CollectionController : MonoBehaviour
                 {
                     if (Global.LoggedInPlayer.Calories >= rarityCost)
                     {
-                        UnlockPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unlock Ingredient?";
-                        UnlockPanel.transform.Find("Question").GetComponent<Text>().text = $"Do you want to spend 4 of these skins and {rarityCost} calories to unlock this?";
-                        UnlockPanel.SetActive(true);
+                        DisplayUnlock("Unlock Ingredient?", $"Do you want to spend 4 of these skins and {rarityCost} of your {Global.LoggedInPlayer.Calories} Calories to unlock this?");
                     }
                     else
                     {
-                        DisplayAlert($"You need {rarityCost} calories to unlock this, but you only have {Global.LoggedInPlayer.Calories}", "Insufficent Funds");
+                        MainMenuController.i.DisplayAlert("Insufficent Funds", $"You need {rarityCost} calories to unlock this, but you only have {Global.LoggedInPlayer.Calories}");
                     }
                 }
                 else
@@ -416,12 +412,19 @@ public class CollectionController : MonoBehaviour
                     }
                     else
                     {
-                        DisplayAlert("Open more packs to unlock this skin in game!", "Locked");
+                        MainMenuController.i.DisplayAlert("Locked", "Open more packs to unlock this skin in game!");
                     }
                 }
             }
         }
 
+    }
+
+    private void DisplayUnlock(string title, string body)
+    {
+        UnlockPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = title;
+        UnlockPanel.transform.Find("Question").GetComponent<Text>().text = body;
+        UnlockPanel.SetActive(true);
     }
 
     private void ClearIngs()
@@ -460,7 +463,7 @@ public class CollectionController : MonoBehaviour
         {
             ItemPrefabObj.transform.Find("Selected").gameObject.SetActive(false);
         }
-        (ItemPrefabObj.transform.Find("Item").transform as RectTransform).sizeDelta = new Vector2(205, 205);
+        //(ItemPrefabObj.transform.Find("Item").transform as RectTransform).sizeDelta = new Vector2(205, 205);
         ItemPrefabObj.transform.Find("Item").gameObject.GetComponent<Image>().sprite = item;
         SkinData skin = new SkinData();
         if (MyDiceSkins.Any(x => x.SkinId == skinId))
@@ -519,26 +522,22 @@ public class CollectionController : MonoBehaviour
                 {
                     if (Global.LoggedInPlayer.Calories >= rarityCost)
                     {
-                        UnlockPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unlock Die?";
-                        UnlockPanel.transform.Find("Question").GetComponent<Text>().text = $"Do you want to spend 10 of these skins and {rarityCost} calories to unlock this?";
-                        UnlockPanel.SetActive(true);
+                        DisplayUnlock("Unlock Die?", $"Do you want to spend 10 of these skins and {rarityCost} of your {Global.LoggedInPlayer.Calories} Calories to unlock this?");
                     }
                     else
                     {
-                        DisplayAlert($"You need {rarityCost} calories to unlock this, but you only have {Global.LoggedInPlayer.Calories}", "Insufficent Funds");
+                        MainMenuController.i.DisplayAlert("Insufficent Funds", $"You need {rarityCost} calories to unlock this, but you only have {Global.LoggedInPlayer.Calories}");
                     }
                 }
                 else
                 {
                     if (item.UnlockedQty > 1)
                     {
-                        UnlockPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = "Craft Die?";
-                        UnlockPanel.transform.Find("Question").GetComponent<Text>().text = $"You need 10 of these die skins to unlock this skin in game, would you like to try and craft some?";
-                        UnlockPanel.SetActive(true);
+                        DisplayUnlock("Craft Die?", $"You need 10 of these die skins to unlock this skin in game, would you like to try and craft some?");
                     }
                     else
                     {
-                        DisplayAlert("Open more packs to unlock this skin in game!", "Locked");
+                        MainMenuController.i.DisplayAlert("Locked", "Open more packs to unlock this skin in game!");
                     }
                 }
             }
@@ -604,18 +603,11 @@ public class CollectionController : MonoBehaviour
         TitlePrefabObj.transform.Find("Info").gameObject.SetActive(skin.IsUnlocked);
         Button newButton = Instantiate(TitlePrefabObj, TitleButtonContent.transform);
         newButton.onClick.AddListener(() => SelectTitle(skin));
-        newButton.transform.Find("Info").gameObject.GetComponent<Button>().onClick.AddListener(() => DisplayAlert(item.SkinDesc, "Info"));
+        newButton.transform.Find("Info").gameObject.GetComponent<Button>().onClick.AddListener(() => MainMenuController.i.DisplayAlert("Info",item.SkinDesc));
         skin.SkinButton = newButton;
         skin.IsSelected = isSelected;
         AllTitles.Add(skin);
         TitleButtonLog.Add(newButton);
-    }
-
-    private void DisplayAlert(string skinDesc, string bannerText)
-    {
-        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = bannerText;
-        alert.transform.Find("AlertText").GetComponent<Text>().text = skinDesc;
-        alert.SetActive(true);
     }
 
     private void SelectTitle(SkinData item)
@@ -638,7 +630,7 @@ public class CollectionController : MonoBehaviour
             }
             else
             {
-                DisplayAlert(item.SkinDesc,"Locked");
+                MainMenuController.i.DisplayAlert("Locked", item.SkinDesc);
             }
         }
     }

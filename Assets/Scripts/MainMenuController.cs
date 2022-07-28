@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -36,8 +37,7 @@ public class MainMenuController : MonoBehaviour
     [Header("Profile")]
     #region Profile
     public GameObject profilePanel;
-    public GameObject viewFriends;
-    public GameObject removeFriend;
+    public GameObject challengeFriendButton;
     public Text ProfileText;
     public Text MainProfileText;
     public Text CurrentLevelText;
@@ -52,12 +52,14 @@ public class MainMenuController : MonoBehaviour
 
     [Header("ConfirmationPopups")]
     #region ConfirmationPopups
-    public GameObject alert;
+    private GameObject alertPanel;
+    private GameObject loadingPanel;
+    public GameObject FriendChallengePanel;
     public GameObject rewardAlert;
     public GameObject rewardAlert2;
     public GameObject rewardAlert3;
     public GameObject rewardAlert4;
-    public GameObject LoadingPanel;
+    public GameObject MatchmakingPanel;
     public Text loadingTimer;
     public GameObject ExitPrompt;
     public GameObject NoMatchesFound;
@@ -76,6 +78,7 @@ public class MainMenuController : MonoBehaviour
     private float elapsed = 0f;
     private float elapsed2 = 0f;
     private bool LookingForGame = false;
+    private bool LookingForFriendGame = false;
     public List<Sprite> DieSprites;
     public List<Sprite> IngSprites;
     private int tick = 10;
@@ -84,17 +87,22 @@ public class MainMenuController : MonoBehaviour
     public GameObject HasChest;
     public GameObject HasUnlock;
     private AudioSource audioSourceGlobal;
-
-
+    private List<GameObject> objectsInScene;
     #endregion
     void Awake()
     {
         i = this;
         sql = new SqlController();
-        Global.OnlineGameId = 0;
+        GetAllObjectsOnlyInScene();
+        alertPanel = GetObject("AlertPanel");
+        loadingPanel = GetObject("LoadingPanel");
+        Global.GameId = 0;
         Global.FakeOnlineGame = false;
         Global.HardMode = true;
         Global.IsDebug = false;
+        Global.FriendlyGame = false;
+        Global.CPUGame = false;
+
         if (GameObject.FindGameObjectsWithTag("GameMusic").Length > 0)
         {
             audioSourceGlobal = GameObject.FindGameObjectWithTag("GameMusic").GetComponent<AudioSource>();
@@ -109,7 +117,10 @@ public class MainMenuController : MonoBehaviour
         playAsPurple.isOn = Global.LoggedInPlayer.PlayAsPurple;
         VolumeSlider.value = Global.LoggedInPlayer.MusicVolume;
         TurnVolumeSlider.value = Global.LoggedInPlayer.TurnVolume;
+        if(!Global.LoggedInPlayer.IsGuest)
+            DisplayLoading("Loading Profile", "Putting everything back where it was...");
     }
+
     private void Start()
     {
         //loading starts as true but is turned false after elements render and toggles are set correctly
@@ -119,9 +130,7 @@ public class MainMenuController : MonoBehaviour
         StartCoroutine(SetPlayer());
         if (Global.LoggedInPlayer.IsGuest && Global.EnteredGame)
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Still a guest?";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = $"If you make an account you will get xp, calories, and unlock new rewards!";
-            alert.SetActive(true);
+            DisplayAlert("Still a guest?", $"If you make an account you will get xp, calories, and unlock new rewards!");
             Global.EnteredGame = false;
         } 
         else if (Global.JustWonOnline) 
@@ -131,13 +140,14 @@ public class MainMenuController : MonoBehaviour
             HasChest.SetActive(true);
             rewardAlert2.SetActive(true);
         }
+
     }
-    
+
     private void Update()
     {
         elapsed += Time.deltaTime;
         
-        if (LoadingPanel.activeInHierarchy) {
+        if (MatchmakingPanel.activeInHierarchy) {
             elapsed2 += Time.deltaTime;
             if (elapsed2 >= .5f)
             {
@@ -153,12 +163,14 @@ public class MainMenuController : MonoBehaviour
             }
         }
         if (elapsed >= 1f)
-        {
-            
+        {  
             elapsed = elapsed % 1f;
             tick++;
             if (LookingForGame)
             {
+#if UNITY_EDITOR
+                totalElapsed = 30f;
+#endif
                 totalElapsed++;
                 TimeSpan time = TimeSpan.FromSeconds(totalElapsed);
                 loadingTimer.text = "Time in queue: " + time.ToString(@"m\:ss");
@@ -168,28 +180,47 @@ public class MainMenuController : MonoBehaviour
                     NoMatchesFound.SetActive(true);
                 }
             }
+            else if (LookingForFriendGame)
+            {
+                StartCoroutine(sql.RequestRoutine($"multiplayer/FriendGameStarted?UserId={Global.LoggedInPlayer.UserId}", GetFriendGameUpdate));
+            }
             else
             {
+                
                 totalElapsed = 0;
                 loadingTimer.text = "Time in queue: 0:00";
             }
 
-            if (tick > 5)
+            try
             {
-                tick = 0;
-                try
-                {
-                    StartCoroutine(sql.RequestRoutine($"player/GetAppVersion?UserId={Global.LoggedInPlayer.UserId}", GetAppVersionCallback, true));
-                }
-                catch (Exception ex)
-                {
-                    alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Network Failure";
-                    alert.transform.Find("AlertText").GetComponent<Text>().text = "Can not connect to server.";
-                    alert.SetActive(true);
-                }
+                StartCoroutine(sql.RequestRoutine($"player/GetAppVersion?UserId={Global.LoggedInPlayer.UserId}", GetAppVersionCallback, true));
+            }
+            catch (Exception ex)
+            {
+                DisplayAlert("Network Failure", "Can not connect to server.");
+            }
+
+            if (!LookingForFriendGame && !FriendChallengePanel.activeInHierarchy)
+            {
+                StartCoroutine(sql.RequestRoutine($"multiplayer/CheckForFriendGameInvite?UserId={Global.LoggedInPlayer.UserId}", GetInviteUpdate));
             }
         }
     }
+    private GameObject GetObject(string v)
+    {
+        return objectsInScene.FirstOrDefault(x => x.name == v);
+    }
+    private void GetAllObjectsOnlyInScene()
+    {
+        objectsInScene = new List<GameObject>();
+
+        foreach (GameObject go in Resources.FindObjectsOfTypeAll(typeof(GameObject)) as GameObject[])
+        {
+            if (!(go.hideFlags == HideFlags.NotEditable || go.hideFlags == HideFlags.HideAndDontSave))
+                objectsInScene.Add(go);
+        }
+    }
+
     public void OnVolumeChanged(bool turn)
     {
         toggleActivated = true;
@@ -200,25 +231,114 @@ public class MainMenuController : MonoBehaviour
         else
         {
             Global.LoggedInPlayer.MusicVolume = VolumeSlider.value;
-            audioSourceGlobal.volume = VolumeSlider.value;
+            if(audioSourceGlobal != null)
+                audioSourceGlobal.volume = VolumeSlider.value;
         }
     }  
     private void GetGameUpdate(string data)
     {
-        Global.OnlineGameId = sql.jsonConvert<int>(data);
-        if (Global.OnlineGameId != 0)
+        var gameId = sql.jsonConvert<int>(data);
+        if (gameId != 0)
         {
+            Global.GameId = gameId;
             LookingForGame = false;
+            LookingForFriendGame = false;
             SceneManager.LoadScene("PlayScene");
         }
+    }  
+    
+    private void GetFriendGameUpdate(string data)
+    {
+        var friendGame = sql.jsonConvert<int?>(data);
+        if (friendGame != null)
+        {
+            if ((int)friendGame != 0)
+            {
+                Global.GameId = (int)friendGame;
+                Global.FriendlyGame = true;
+                LookingForGame = false;
+                LookingForFriendGame = false;
+                SceneManager.LoadScene("PlayScene");
+            }
+        }
+        else
+        {
+            LookingForGame = false;
+            LookingForFriendGame = false;
+            HideLoading();
+            DisplayAlert("Declined", "Your invite to play was declined.");
+        }
     }
+    private void GetInviteUpdate(string data)
+    {
+        var gameId = sql.jsonConvert<int>(data);
+        if (gameId != 0)
+        {
+            Global.GameId = gameId;
+            FriendChallengePanel.transform.Find("Body").GetComponent<Text>().text = $"You have been invited to play a friendly game, would you like to play vs them?";
+            FriendChallengePanel.SetActive(true);
+        }
+    }
+    public void StartFriendGame()
+    {
+        LookingForFriendGame = false;
+        FriendChallengePanel.SetActive(false);
+        StartCoroutine(sql.RequestRoutine($"multiplayer/StartFriendGame?UserId={Global.LoggedInPlayer.UserId}"));
+        Global.FriendlyGame = true;
+        SceneManager.LoadScene("PlayScene");
 
+    } 
+    public void EndFriendGame()
+    {
+        Global.FriendlyGame = false;
+        LookingForFriendGame = false;
+        FriendChallengePanel.SetActive(false);
+        StartCoroutine(sql.RequestRoutine($"multiplayer/DeclineFriendGame?GameId={Global.GameId}"));
+        Global.GameId = 0;
+    }
     private void StartFakeOnlineGame()
     {
         StopMatchmaking();
         Global.SecondPlayer = new Player() { Username = "Ethan", IsCPU = true, UserId = 42 };
         Global.FakeOnlineGame = true;
+        Global.CPUGame = true;
         SceneManager.LoadScene("PlayScene");
+    }
+
+    public void FindOnlineFriends()
+    {
+        if (Global.LoggedInPlayer.IsGuest)
+        {
+            DisplayAlert("No Friends","Guests can't make friends to play against, go make an account!");
+        }
+        else
+        {
+            Global.OnlyGetOnlineFriends = true;
+            TabController.i.TabClicked(2);
+            FriendController.i.TabClicked(1);
+        }
+    } 
+    
+    public void ChallengeFriend()
+    {
+        profilePanel.SetActive(false);
+        DisplayLoading("Asking Friend", "Waiting for a game response from the other player");
+        StartCoroutine(sql.RequestRoutine($"multiplayer/FriendGameInvite?UserId={Global.LoggedInPlayer.UserId}&OtherUserId={YourFriend.UserId}", SentChallengeCallback));
+    }
+
+    private void SentChallengeCallback(string data)
+    {
+        Global.GameId = sql.jsonConvert<int>(data);
+        if (Global.GameId != 0)
+        {
+            LookingForFriendGame = true;
+        }
+        else
+        {
+            DisplayAlert("Unavailable", "Your friend is likely already in a game, send them a message!");
+            LookingForFriendGame = false;
+            HideLoading();
+        }
     }
 
     private void GetAppVersionCallback(string data)
@@ -237,24 +357,20 @@ public class MainMenuController : MonoBehaviour
     {
         if (Global.LoggedInPlayer.IsGuest) 
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "Guests can only play vs the computer, try that or create an account!";
-            alert.SetActive(true);
+            DisplayAlert("Restricted", "Guests can only play vs the computer, try that or create an account!");
         }
         else if (Global.LoggedInPlayer.Calories < 100)
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Insufficent Funds";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "You need 100 calories to play online!";
-            alert.SetActive(true);
+            DisplayAlert("Insufficent Funds", $"You need 100 calories to play online but you only have {Global.LoggedInPlayer.Calories}!");
         }
         else
         {
             if (start)
             {
-                LoadingPanel.SetActive(start);
+                MatchmakingPanel.SetActive(start);
                 Seachingtext.gameObject.SetActive(false);
                 LookingForGame = false;
-                LoadingPanel.transform.Find("StartSearching").gameObject.SetActive(true);
+                MatchmakingPanel.transform.Find("StartSearching").gameObject.SetActive(true);
             }
             else
             {
@@ -265,15 +381,26 @@ public class MainMenuController : MonoBehaviour
 
     public void LookForGame()
     {
-        LoadingPanel.transform.Find("StartSearching").gameObject.SetActive(false);
+        MatchmakingPanel.transform.Find("StartSearching").gameObject.SetActive(false);
         Seachingtext.gameObject.SetActive(true);
         LookingForGame = true;
     }
-    private void DisplayAlert(string skinDesc, string bannerText)
+    public void DisplayAlert(string title, string body)
     {
-        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = bannerText;
-        alert.transform.Find("AlertText").GetComponent<Text>().text = skinDesc;
-        alert.SetActive(true);
+        alertPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = title;
+        alertPanel.transform.Find("AlertText").GetComponent<Text>().text = body;
+        alertPanel.SetActive(true);
+    } 
+    public void DisplayLoading(string title, string body)
+    {
+        loadingPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = title;
+        loadingPanel.transform.Find("LoadingText").GetComponent<Text>().text = body;
+        loadingPanel.SetActive(true);
+    }
+
+    public void HideLoading()
+    {
+        loadingPanel.SetActive(false);
     }
     public void EditWager(bool more)
     {
@@ -287,7 +414,7 @@ public class MainMenuController : MonoBehaviour
                 }
                 else
                 {
-                    DisplayAlert("You don't have that much money, you addict!", "Insufficent Funds");
+                    DisplayAlert("Insufficent Funds", "You don't have that much money, you addict!");
                 }
             }
             else
@@ -297,14 +424,14 @@ public class MainMenuController : MonoBehaviour
                     wager -= 100;
                 }
             }
-            LoadingPanel.transform.Find("WagerText").GetComponent<Text>().text = wager.ToString();
+            MatchmakingPanel.transform.Find("WagerText").GetComponent<Text>().text = wager.ToString();
         }
     }
     private void StopMatchmaking()
     {
         LookingForGame = false;
         keepWaiting = false;
-        LoadingPanel.SetActive(false);
+        MatchmakingPanel.SetActive(false);
         StartCoroutine(sql.RequestRoutine($"multiplayer/StopLookingforGame?UserId={Global.LoggedInPlayer.UserId}"));
     }
 
@@ -312,9 +439,7 @@ public class MainMenuController : MonoBehaviour
     {
         if (!Global.IsConnected)
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unable to Connect";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "This feature requires an active connection to the game server.";
-            alert.SetActive(true);
+            DisplayAlert("Unable to Connect", "This feature requires an active connection to the game server.");
         }
         else
         {
@@ -329,17 +454,13 @@ public class MainMenuController : MonoBehaviour
     {
         if (!Global.IsConnected)
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unable to Connect";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "This feature requires an active connection to the game server.";
-            alert.SetActive(true);
+            DisplayAlert("Unable to Connect", "This feature requires an active connection to the game server.");
         }
         else
         {
             if (Global.LoggedInPlayer.IsGuest)
             {
-                alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Restricted";
-                alert.transform.Find("AlertText").GetComponent<Text>().text = "Log in to create a profile!";
-                alert.SetActive(true);
+                DisplayAlert("Restricted", "Log in to create a profile!");
             }
             else
             {
@@ -359,6 +480,8 @@ public class MainMenuController : MonoBehaviour
     } 
     internal IEnumerator SetPlayer()
     {
+        //if(!Global.LoggedInPlayer.IsGuest)
+        //    DisplayLoading("Loading","Setting up your profile...");
         yield return StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Global.LoggedInPlayer.UserId}", GetLevelUpdateCallback));
         StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Global.LoggedInPlayer.UserId}", GetRewardCallback));
         StartCoroutine(sql.RequestRoutine($"skin/CheckForUnlocks?UserId={Global.LoggedInPlayer.UserId}", GetTitleUnlockCallback));
@@ -392,6 +515,7 @@ public class MainMenuController : MonoBehaviour
         CurrentPlayer = sql.jsonConvert<Profile>(data);
         Global.LoggedInPlayer.Wins = CurrentPlayer.AllWins ?? 0;
         SetProfileData();
+        HideLoading();
     }
 
     private void SetProfileData()
@@ -415,10 +539,10 @@ public class MainMenuController : MonoBehaviour
         CookedIngredientsText.text = $"Cooked Ingredients: {CurrentPlayer.Cooked}";
         CaloriesText.text = $"Calories: {CurrentPlayer.Calories}";
         LastLoginText.text = $"Online Status: Online";
-        //removeFriend.SetActive(false);
+        challengeFriendButton.SetActive(false);
     }
 
-    public void GetFriendProfileCallback(string data)
+    internal void GetFriendProfileCallback(string data)
     {
         YourFriend = sql.jsonConvert<Profile>(data);
 
@@ -473,7 +597,15 @@ public class MainMenuController : MonoBehaviour
             LastLoginText.color = Color.green;
         LastLoginText.text = $"Online Status: {(YourFriend.IsOnline ? "Online" : "Offline")}";
 
-        //removeFriend.SetActive(true);
+        if (YourFriend.IsOnline)
+        {
+            challengeFriendButton.SetActive(true);
+        }
+        else
+        {
+            challengeFriendButton.SetActive(false);
+        }
+
         profilePanel.SetActive(true);
     }  
 
@@ -531,15 +663,11 @@ public class MainMenuController : MonoBehaviour
         var reward = sql.jsonConvert<int>(data);
         if (reward == 0)
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Error";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "This code is invalid or already used!";
-            alert.SetActive(true);
+            DisplayAlert("Error", "This code is invalid or already used!");
         }
         else
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Success";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = $"Your code was valid! \n \n you have recieved {reward} Calories!";
-            alert.SetActive(true);
+            DisplayAlert("Success", $"Your code was valid! \n \n you have recieved {reward} Calories!");
             StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Global.LoggedInPlayer.Username}", GetPlayerCallback));
         }
     }
@@ -567,18 +695,18 @@ public class MainMenuController : MonoBehaviour
     {
         if (!Global.IsConnected && (sceneName == "Skins" || sceneName == "LeaderboardScene"))
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unable to Connect";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "This feature requires an active connection to the game server.";
-            alert.SetActive(true);
+            alertPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unable to Connect";
+            alertPanel.transform.Find("AlertText").GetComponent<Text>().text = "This feature requires an active connection to the game server.";
+            alertPanel.SetActive(true);
         }
         else
         {
             SceneManager.LoadScene(sceneName);
         }
     }
-    public void StartCPUGame(bool hardMode)
+    public void StartCPUGame()
     {
-        Global.HardMode = true;
+        Global.CPUGame = true;
         SceneManager.LoadScene("PlayScene");
     }
     

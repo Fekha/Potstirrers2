@@ -14,12 +14,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/PlayScene.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
-  - enabled: 1
-    path: Assets/Scenes/LeaderboardScene.unity
-    guid: 83ac0da56e616584088114ab30ef296d
-  - enabled: 0
-    path: Assets/Scenes/Skins.unity
-    guid: cd143cd4f3c832e43b3dfc50e573efac
   m_configObjects:
     com.unity.adaptiveperformance.loader_settings: {fileID: 11400000, guid: 3b39c267685299140b8a5868f0e033a3,
       type: 2}

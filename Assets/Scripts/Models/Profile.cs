@@ -8,6 +8,7 @@ namespace Assets.Scripts.Models
 {
     public class Profile
     {
+        public int UserId { get; set; }
         public string Username { get; set; }
         public Nullable<int> DailyWins { get; set; }
         public Nullable<int> WeeklyWins { get; set; }

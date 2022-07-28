@@ -22,13 +22,12 @@ public class ChestController : MonoBehaviour
     public Sprite UnselectedChestSprite;
     public Sprite SelectedChestSprite;
     #region Dice
-    public GameObject DiePrefab;
     public Sprite SmallPack;
     public Sprite MediumPack;
     public Sprite LargePack;
     #endregion
     #region Ings
-    public GameObject IngPrefab;
+    public GameObject ItemPrefab;
     public Sprite IngSmallPack;
     public Sprite IngMediumPack;
     public Sprite IngLargePack;
@@ -89,49 +88,30 @@ public class ChestController : MonoBehaviour
     {
         if (x.SkinType == 1)
         {
-            IngPrefab.transform.Find("IngImage").GetComponent<Image>().sprite = MainMenuController.i.IngSprites[x.SkinId - 1];
-            if (x.Rarity == 3)
-            {
-                IngPrefab.transform.Find("Rarity").GetComponent<Image>().sprite = EpicBackground;
-                IngPrefab.transform.Find("RarityText").GetComponent<Text>().text = "Epic!";
-            }
-            else if (x.Rarity == 2)
-            {
-                IngPrefab.transform.Find("Rarity").GetComponent<Image>().sprite = RareBackground;
-                IngPrefab.transform.Find("RarityText").GetComponent<Text>().text = "Rare!";
-            }
-            else
-            {
-                IngPrefab.transform.Find("Rarity").GetComponent<Image>().sprite = EmptySlot;
-                IngPrefab.transform.Find("RarityText").GetComponent<Text>().text = "";
-            }
-
-            var Ing = Instantiate(IngPrefab, RewardContent.transform);
-            RewardLog.Add(Ing);
+            ItemPrefab.transform.Find("ItemImage").GetComponent<Image>().sprite = MainMenuController.i.IngSprites[x.SkinId - 1];
         }
         if (x.SkinType == 2)
         {
-            DiePrefab.transform.Find("DieImage").GetComponent<Image>().sprite = MainMenuController.i.DieSprites[x.SkinId - 1];
-            DiePrefab.transform.Find("DieImage").transform.Find("DieNumber").GetComponent<Text>().text = x.UnlockedQty.ToString();
-            if (x.Rarity == 3)
-            {
-                DiePrefab.transform.Find("Rarity").GetComponent<Image>().sprite = EpicBackground;
-                DiePrefab.transform.Find("RarityText").GetComponent<Text>().text = "Epic!";
-            }
-            else if (x.Rarity == 2)
-            {
-                DiePrefab.transform.Find("Rarity").GetComponent<Image>().sprite = RareBackground;
-                DiePrefab.transform.Find("RarityText").GetComponent<Text>().text = "Rare!";
-            }
-            else
-            {
-                DiePrefab.transform.Find("Rarity").GetComponent<Image>().sprite = EmptySlot;
-                DiePrefab.transform.Find("RarityText").GetComponent<Text>().text = "";
-            }
-
-            var die = Instantiate(DiePrefab, RewardContent.transform);
-            RewardLog.Add(die);
+            ItemPrefab.transform.Find("ItemImage").GetComponent<Image>().sprite = MainMenuController.i.DieSprites[x.SkinId - 1];
+            //ItemPrefab.transform.Find("DieImage").transform.Find("DieNumber").GetComponent<Text>().text = x.UnlockedQty.ToString();
         }
+        if (x.Rarity == 3)
+        {
+            ItemPrefab.transform.Find("Rarity").GetComponent<Image>().sprite = EpicBackground;
+            ItemPrefab.transform.Find("RarityText").GetComponent<Text>().text = "Epic!";
+        }
+        else if (x.Rarity == 2)
+        {
+            ItemPrefab.transform.Find("Rarity").GetComponent<Image>().sprite = RareBackground;
+            ItemPrefab.transform.Find("RarityText").GetComponent<Text>().text = "Rare!";
+        }
+        else
+        {
+            ItemPrefab.transform.Find("Rarity").GetComponent<Image>().sprite = EmptySlot;
+            ItemPrefab.transform.Find("RarityText").GetComponent<Text>().text = "";
+        }
+        var Ing = Instantiate(ItemPrefab, RewardContent.transform);
+        RewardLog.Add(Ing);
     }
     public void HideUnlocks()
     {
@@ -176,9 +156,7 @@ public class ChestController : MonoBehaviour
             }
             else
             {
-                MainMenuController.i.alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Unlock In Progress";
-                MainMenuController.i.alert.transform.Find("AlertText").GetComponent<Text>().text = $"You can't select another pack to unlock until the current one is done!";
-                MainMenuController.i.alert.SetActive(true);
+                MainMenuController.i.DisplayAlert("Unlock In Progress", $"You can't select another pack to unlock until the current one is done!");
             }
         }
     }
@@ -232,9 +210,7 @@ public class ChestController : MonoBehaviour
                 }
                 else
                 {
-                    MainMenuController.i.alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Insufficent Funds";
-                    MainMenuController.i.alert.transform.Find("AlertText").GetComponent<Text>().text = $"It costs {getSpeedUpCost()} Calories to speed up this unlock but you only have {Global.LoggedInPlayer.Calories} Calories :(";
-                    MainMenuController.i.alert.SetActive(true);
+                    MainMenuController.i.DisplayAlert("Insufficent Funds", $"It costs {getSpeedUpCost()} Calories to speed up this unlock but you only have {Global.LoggedInPlayer.Calories} Calories :(");
                 }
             }
         }

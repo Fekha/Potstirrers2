@@ -8,12 +8,16 @@ public static class Global
     public static Player SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
     public static bool IsConnected = true;
     public static bool IsDebug = false;
+    public static bool OnlyGetOnlineFriends = false;
     public static bool HardMode = true;
     public static bool EnteredGame = false;
     public static bool JustWonOnline = false;
-    public static int OnlineGameId = 0;
-    public static double AppVersion = 1.16;
+    public static int GameId = 0;
+    public static double AppVersion = 1.20;
     public static bool FakeOnlineGame = false;
+    public static bool FriendlyGame = false;
+    public static bool CPUGame = false;
+
     public static bool hasNewIng = false;
     public static bool hasNewDie = false;
     public static bool hasNewTitle = false;
