@@ -23,7 +23,7 @@ public class Ingredient : MonoBehaviour
 
     [Header("Bools")]
     private int IsMovableBy; //human input
-    internal bool isCooked = false;
+    public bool isCooked = false;
     internal int Team;
 
     [Header("Selector")]
@@ -41,6 +41,17 @@ public class Ingredient : MonoBehaviour
 
     public IEnumerator Move()
     {
+        yield return StartCoroutine(BeforeMoving());
+
+        yield return StartCoroutine(DoMovement());
+
+        yield return StartCoroutine(AfterMovement());
+
+        yield return StartCoroutine(GameManager.i.DoneMoving());
+    }
+
+    private IEnumerator BeforeMoving()
+    {
         while (GameManager.i.isMoving)
         {
             yield return new WaitForSeconds(.5f);
@@ -48,26 +59,15 @@ public class Ingredient : MonoBehaviour
 
         GameManager.i.isMoving = true;
 
-        yield return StartCoroutine(BeforeMoving());
+        GameManager.i.MoveNumber++;
 
-        yield return StartCoroutine(DoMovement());
-
-        yield return StartCoroutine(AfterMovement());
-
-        GameManager.i.isMoving = false;
-
-        yield return StartCoroutine(GameManager.i.DoneMoving());
-    }
-
-    private IEnumerator BeforeMoving()
-    {
         if (GameManager.i.lastMovedIngredient != null)
         {
             GameManager.i.undoButton1.gameObject.SetActive(false);
             GameManager.i.undoButton2.gameObject.SetActive(false);
         }
 
-        anim.Play("Moving");
+        anim.Play("Selected");
 
         GameManager.i.AllIngredients.ForEach(x => x.SetSelector(false));
 
@@ -85,7 +85,7 @@ public class Ingredient : MonoBehaviour
 
     private IEnumerator DoMovement()
     {
-        bool skipped = false;
+        bool skipping = false;
         while (GameManager.i.Steps > 0)
         {
             while (GameManager.i.IsReading)
@@ -94,7 +94,7 @@ public class Ingredient : MonoBehaviour
             }
 
             GameManager.i.UpdateMoveText(GameManager.i.Steps);
-            var didMove = false;
+            var isTrashed = false;
 
             if (GameManager.i.Steps == 1 && (routePosition == 9 || routePosition == 17))
             {
@@ -111,25 +111,25 @@ public class Ingredient : MonoBehaviour
                     {
                         if (routePosition == 9)
                         {
-                            didMove = true;
+                            isTrashed = true;
                             if (!GameManager.i.IsCPUTurn() && this.Team != GameManager.i.activePlayer && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                             {
                                 CpuLogic.i.PrepShitTalk(TalkType.SentBack);
                                 CpuLogic.i.ActivateShitTalk();
                             }
                             trail.enabled = true;
-                            yield return StartCoroutine(MoveToNextTile(GameManager.i.TrashCan2.transform.position,false,35,true));
+                            yield return StartCoroutine(MoveToNextTile(GameManager.i.TrashCan2.transform.position, trash: true));
                         }
                         else if (routePosition == 17)
                         {
-                            didMove = true;
+                            isTrashed = true;
                             if (!GameManager.i.IsCPUTurn() && this.Team != GameManager.i.activePlayer && string.IsNullOrEmpty(GameManager.i.talkShitText.text))
                             {
                                 CpuLogic.i.PrepShitTalk(TalkType.SentBack);
                                 CpuLogic.i.ActivateShitTalk();
                             }
                             trail.enabled = true;
-                            yield return StartCoroutine(MoveToNextTile(GameManager.i.TrashCan3.transform.position, false, 35, true));
+                            yield return StartCoroutine(MoveToNextTile(GameManager.i.TrashCan3.transform.position, trash: true));
                         }
                         yield return new WaitForSeconds(0.2f);
                         routePosition = 0;
@@ -137,7 +137,7 @@ public class Ingredient : MonoBehaviour
                 }
             }
            
-            if (!didMove)
+            if (!isTrashed)
             {
                 if (GameManager.i.Steps == 1 && routePosition == Route.i.FullRoute.Count - 2 && Team == GameManager.i.activePlayer && !isCooked) //go to pot only if its your team
                 {
@@ -167,23 +167,23 @@ public class Ingredient : MonoBehaviour
 
             if (routePosition == 0)
             {
-                yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this, GameManager.i.Steps == 1 || didMove));
+                yield return StartCoroutine(GameManager.i.MoveToNextEmptySpace(this, GameManager.i.Steps == 1 || isTrashed));
                 GameManager.i.Steps--;
-                skipped = false;
+                skipping = false;
             }
             else if (Route.i.FullRoute[routePosition].ingredients.Count() == 0 || !Route.i.FullRoute[routePosition].ingredients.Peek().isCooked)
             {
-                yield return StartCoroutine(MoveToNextTile(null,false,35,false,skipped));
+                yield return StartCoroutine(MoveToNextTile(skipping: skipping));
                 GameManager.i.Steps--;
-                skipped = false;
+                skipping = false;
             }
             else
             {
-                skipped = true;
+                skipping = true;
             }
 
             GameManager.i.ShouldTrash = null;
-            didMove = false;
+            isTrashed = false;
         }
         if (routePosition != 0 && Route.i.FullRoute[routePosition].ingredients.Count() > 0)
         {
@@ -207,7 +207,7 @@ public class Ingredient : MonoBehaviour
         if (Route.i.FullRoute[routePosition].hasSpoon || Route.i.FullRoute[routePosition].hasSpatula)
         {
             routePosition = routePosition + (Route.i.FullRoute[routePosition].hasSpoon ? 6 : -6 );
-            yield return StartCoroutine(MoveToNextTile(null, true, 20f));
+            yield return StartCoroutine(MoveToNextTile(null,true,20f));
             if (Route.i.FullRoute[routePosition].ingredients.Count() > 0)
             {
                 var ingStomp = Route.i.FullRoute[routePosition].ingredients.Peek().stomp;
@@ -247,26 +247,17 @@ public class Ingredient : MonoBehaviour
                 if (Route.i.FullRoute[routePosition].ingredients.Count() > 0 && Route.i.FullRoute[routePosition].ingredients.Peek().isCooked)
                 {
                     var checkForInfinite = 0;
-                    var skipping = false;
                     while (Route.i.FullRoute[routePosition].ingredients.Count() > 0 && Route.i.FullRoute[routePosition].ingredients.Peek().isCooked && checkForInfinite < 12)
                     {
                         checkForInfinite++;
                         routePosition++;
-                        if (!Route.i.FullRoute[routePosition].ingredients.Peek().isCooked)
-                        {
-                            yield return StartCoroutine(MoveToNextTile(null, false, 35, false, skipping));
-                            skipping = false;
-                            yield return StartCoroutine(Slide());
-                        }
-                        else
-                        {
-                            skipping = true;
-                        }
+                        yield return StartCoroutine(MoveToNextTile(null,true,20f));
+                        yield return StartCoroutine(Slide());
                     }
                     if (checkForInfinite >= 12)
                     {
                         routePosition = 24;
-                        yield return StartCoroutine(MoveToNextTile());
+                        yield return StartCoroutine(MoveToNextTile(null,true,20f));
                     }
                 }
 
@@ -294,33 +285,41 @@ public class Ingredient : MonoBehaviour
 
         GameManager.i.ClearSelectedDie();
 
-        if (GameManager.i.IsCPUTurn())
-            yield return new WaitForSeconds(.5f);
+        GameManager.i.isMoving = false;
     }
 
     public IEnumerator MoveToNextTile(Vector3? nextPos = null, bool isforEffect=false, float speed = 35f, bool trash = false, bool skipping = false)
     {
-        var yValue = .25f;
+        float yValue = .25f;
 
         if (isforEffect)
+        {
             anim.Play("Flip");
+        }
         else if (skipping)
-            anim.Play("Jumping");
-        else if(routePosition != 0)
-            anim.Play("Moving");
+        {
+            anim.SetBool("StartedJumping", true);
+        }
+        else if (routePosition != 0)
+        {
+            anim.SetBool("StartedMoving", true);
+        }
 
-        if(nextPos == null)
+        if (nextPos == null)
+        {
             nextPos = Route.i.FullRoute[routePosition].gameObject.transform.position;
+        }
         
         if (!trash && (!Route.i.FullRoute[routePosition].isDangerZone || (Route.i.FullRoute[routePosition].isDangerZone && GameManager.i.Steps != 1)))
         {
             yValue += (.4f * Route.i.FullRoute[routePosition].ingredients.Count());
         }
 
-        var goalPos = new Vector3(nextPos.Value.x, yValue, nextPos.Value.z);
-
+        Vector3 goalPos = new Vector3(nextPos.Value.x, yValue, nextPos.Value.z);
+        //var totaltime = 0f;
         while (goalPos != (transform.position = Vector3.MoveTowards(transform.position, goalPos, speed * Time.deltaTime)))
-        { 
+        {
+            //totaltime += Time.deltaTime;
             yield return null;
         }
 
@@ -328,6 +327,9 @@ public class Ingredient : MonoBehaviour
         {
             GameManager.i.setWineMenuText((Team == 0 && !isCooked || Team == 1 && isCooked), GameManager.i.prepTiles.Count(x => x.ingredients.Count() > 0));
         }
+
+        anim.SetBool("StartedJumping", false);
+        anim.SetBool("StartedMoving", false);
 
         yield return new WaitForSeconds(0.2f);
     }
@@ -338,7 +340,7 @@ public class Ingredient : MonoBehaviour
         {
             IsMovableBy = GameManager.i.GetActivePlayer().UserId;
             if(!selector.activeInHierarchy)
-                anim.Play("Moving");
+                anim.Play("Selected");
         }
         else
         {

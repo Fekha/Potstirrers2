@@ -24,9 +24,6 @@ public class CpuLogic : MonoBehaviour
     {
         yield return new WaitForSeconds(.5f);
 
-        //if (Settings.FakeOnlineGame)
-        //    yield return new WaitForSeconds(Random.Range(.5f, 2.5f));
-
         yield return StartCoroutine(FindBestMove());
 
         if (GameManager.i.DoublesRolled())
@@ -37,8 +34,7 @@ public class CpuLogic : MonoBehaviour
             IngredientMovedWithLower = null;
         }
 
-        //if(Settings.FakeOnlineGame)
-        //    yield return new WaitForSeconds(Random.Range(.5f, 2.5f));
+        yield return new WaitForSeconds(.5f);
 
         if (!GameManager.i.GameOver && GameManager.i.IsCPUTurn() && (IngredientMovedWithLower == null || IngredientMovedWithHigher == null))
             yield return StartCoroutine(FindBestMove());
@@ -183,7 +179,7 @@ public class CpuLogic : MonoBehaviour
     }
     internal void PrepShitTalk(TalkType talk)
     {
-        if (!Global.CPUGame || !string.IsNullOrEmpty(GameManager.i.talkShitText.text) || !GameManager.i.playerList.Any(x => x.IsCPU))
+        if (!Global.CPUGame || Global.PlayingTutorial || !string.IsNullOrEmpty(GameManager.i.talkShitText.text) || !GameManager.i.playerList.Any(x => x.IsCPU))
             return;
 
         var username = GameManager.i.GetActivePlayer().Username;
@@ -954,7 +950,7 @@ public class CpuLogic : MonoBehaviour
     }
     private Ingredient BeDumb()
     {
-        if (!Global.IsDebug && !Global.FakeOnlineGame && (!hasBeenDumb && (Random.Range(0, Mathf.Min((Global.LoggedInPlayer.Wins == 0 ? 2 : Global.LoggedInPlayer.Wins*2), 50)) == 0)))
+        if (!Global.IsDebug && !Global.PlayingTutorial && !Global.FakeOnlineGame && (!hasBeenDumb && (Random.Range(0, Mathf.Min((Global.LoggedInPlayer.Wins == 0 ? 2 : Global.LoggedInPlayer.Wins*2), 50)) == 0)))
         {
             if (IngredientMovedWithHigher == null)
             {

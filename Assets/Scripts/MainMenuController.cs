@@ -96,12 +96,7 @@ public class MainMenuController : MonoBehaviour
         GetAllObjectsOnlyInScene();
         alertPanel = GetObject("AlertPanel");
         loadingPanel = GetObject("LoadingPanel");
-        Global.GameId = 0;
-        Global.FakeOnlineGame = false;
-        Global.HardMode = true;
-        Global.IsDebug = false;
-        Global.FriendlyGame = false;
-        Global.CPUGame = false;
+        Global.Reset();
 
         if (GameObject.FindGameObjectsWithTag("GameMusic").Length > 0)
         {
@@ -126,7 +121,6 @@ public class MainMenuController : MonoBehaviour
         //loading starts as true but is turned false after elements render and toggles are set correctly
         loadingToggle = false;
         toggleActivated = false;
-        Global.SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
         StartCoroutine(SetPlayer());
         if (Global.LoggedInPlayer.IsGuest && Global.EnteredGame)
         {

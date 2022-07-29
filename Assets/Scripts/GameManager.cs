@@ -12,8 +12,8 @@ public class GameManager : MonoBehaviour
     #region GameManger Variables
     private float elapsed = 0f;
     internal bool Automating = false;
-    private int aliveCheck = 0;
     internal int TurnNumber = 1;
+    internal int MoveNumber = 0;
     internal int higherMove = 0;
     internal int lowerMove = 0;
     internal bool? higherMoveSelected;
@@ -125,12 +125,11 @@ public class GameManager : MonoBehaviour
     public List<Material> allColorMaterials;
     #endregion
   
-    #region GameManager Only
     private void Awake()
     {
         Global.EnteredGame = true;
         i = this;
-        Application.targetFrameRate = 60;
+        //Application.targetFrameRate = 60;
         sql = new SqlController();
         if(GameObject.FindGameObjectsWithTag("GameMusic").Length > 0)
             audioSourceGlobal = GameObject.FindGameObjectWithTag("GameMusic").GetComponent<AudioSource>();
@@ -148,16 +147,12 @@ public class GameManager : MonoBehaviour
         {
             activePlayer = Random.Range(0, 2);
 
-            if (Global.LoggedInPlayer.Wins == 0 && !Global.IsDebug)
+            if (Global.LoggedInPlayer.Wins == 0 || Global.PlayingTutorial)
             {
                 activePlayer = 0;
             }
             playerList[0] = Global.LoggedInPlayer;
             playerList[1] = Global.SecondPlayer;
-            if (Global.IsDebug)
-            {
-                activePlayer = 0;
-            }
 
             int j = 0;
             foreach (var tile in prepTiles)
@@ -173,8 +168,7 @@ public class GameManager : MonoBehaviour
             }
 
             SetSkins();
-
-            if (!Global.LoggedInPlayer.IsGuest)
+            if (!Global.LoggedInPlayer.IsGuest && !Global.PlayingTutorial)
             {
                 StartCoroutine(sql.RequestRoutine($"multiplayer/CPUGameStart?Player1={playerList[0].UserId}&Player2={playerList[1].UserId}", GetNewGameCallback));
             }
@@ -194,7 +188,6 @@ public class GameManager : MonoBehaviour
         if (elapsed >= 1f)
         {
             elapsed = elapsed % 1f;
-            aliveCheck++;
             if (!Global.CPUGame)
             {
                 if (GetActivePlayer().UserId != Global.LoggedInPlayer.UserId && !checkingForTrash)
@@ -298,8 +291,6 @@ public class GameManager : MonoBehaviour
             }
         }
 
-
-        
         //For Wine Menu
         if (Global.IsDebug && IsReading && IsCPUTurn())
         {
@@ -321,7 +312,489 @@ public class GameManager : MonoBehaviour
             }
         }
     }
+    #region Button Clicks
+    public void GameOverClicked()
+    {
+        Global.IsDebug = false;
+        SceneManager.LoadScene("MainMenu");
+    }
+    public void promptExit()
+    {
+        exitPanel.SetActive(true);
+    }
+    public void exitChoice(bool willExit)
+    {
+        if (willExit)
+        {
+            if (!Global.LoggedInPlayer.IsGuest && !Global.PlayingTutorial)
+            {
+                var rageQuiterId = Global.LoggedInPlayer.UserId;
+                var player1Count = AllIngredients.Count(x => x.Team == 0 && x.isCooked);
+                var player2Count = AllIngredients.Count(x => x.Team == 1 && x.isCooked);
+                var player1Cooked = IsPlayer1Player1 ? player1Count : player2Count;
+                var player2Cooked = IsPlayer1Player1 ? player2Count : player1Count;
+                StartCoroutine(sql.RequestRoutine($"multiplayer/GameEnd?GameId={Global.GameId}&Player1Cooked={player1Cooked}&Player2Cooked={player2Cooked}&TotalTurns={TurnNumber}&RageQuit={(rageQuiterId)}", EndGamePopupCallback));
+            }
+            SceneManager.LoadScene("MainMenu");
+        }
+        exitPanel.SetActive(false);
+    }
+    public void promptUndo()
+    {
+        if (Global.CPUGame)
+        {
+            undoPanel.SetActive(true);
+        }
+    }
+    public void getHelp()
+    {
+        if (!IsReading)
+        {
+            pageNum = 0;
+            helpText.text = Library.helpTextList[pageNum];
+            StartReading();
+        }
+        else
+        {
+            IsReading = false;
+            IsDrinking = false;
+            pageNum = 0;
+            HelpCanvas.SetActive(false);
+        }
+    }
+    public void ShouldTrashButton(bool trash)
+    {
+        if (!Global.CPUGame)
+        {
+            if (GetActivePlayer().UserId == Global.LoggedInPlayer.UserId)
+            {
+                ShouldTrash = trash;
+                StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateShouldTrash?GameId={Global.GameId}&trash={trash}"));
+            }
+        }
+        else
+        {
+            ShouldTrash = trash;
+        }
+    }
+    public void nextPage()
+    {
+        if (IsReading && !IsDrinking)
+        {
+            if (Library.helpTextList.Count - 1 <= pageNum)
+            {
+                HelpCanvas.SetActive(false);
+                IsReading = false;
+                IsDrinking = false;
+            }
+            else
+            {
+                pageNum++;
+                helpText.text = Library.helpTextList[pageNum];
+            }
+        }
+        else
+        {
+            IsReading = false;
+            IsDrinking = false;
+            HelpCanvas.SetActive(false);
+        }
+    }
+    public void RollDice(bool HUMAN)
+    {
+        if ((!Global.CPUGame && GetActivePlayer().UserId != Global.LoggedInPlayer.UserId) || (IsCPUTurn() && HUMAN))
+        {
+            return;
+        }
 
+        var roll1 = Random.Range(0, 10);
+        var roll2 = Random.Range(0, 10);
+        if (Library.TutorialRolls.Count < MoveNumber + 1) {
+            Global.PlayingTutorial = false;
+        }
+
+        if (!Global.PlayingTutorial)
+        {
+            //extra random because it feels sticky sometimes
+            roll1 = Random.Range(0, 10);
+            roll2 = Random.Range(0, 10);
+        }
+        else
+        {
+            roll1 = Library.TutorialRolls[MoveNumber];
+            roll2 = Library.TutorialRolls[MoveNumber+1];
+        }
+
+        if (!Global.CPUGame)
+        {
+            StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateGameRoll?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.GameId}&roll1={roll1}&roll2={roll2}"));
+        }
+
+        StartCoroutine(SetRollState(roll1, roll2));
+    }
+
+    private IEnumerator SetRollState(int roll1, int roll2)
+    {
+        if (IsCPUTurn())
+        {
+            yield return new WaitForSeconds(.5f);
+        }
+
+        RollButton1.SetActive(false);
+        higherMove = roll1 > roll2 ? roll1 : roll2;
+        lowerMove = roll1 > roll2 ? roll2 : roll1;
+
+        ResetDice();
+        State = States.Moving;
+        turnTime = turnDuration;
+        if (GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
+        {
+            turnTime++;
+        }
+
+        if (ZerosRolled())
+        {
+            MoveNumber = MoveNumber + 2;
+            yield return new WaitForSeconds(2f);
+            SwitchPlayer();
+        } else {
+            if (lowerMove == 0)
+            {
+                turnTime = Mathf.Min(turnTime + 5, turnDuration);
+                firstMoveTaken = true;
+                MoveNumber++;
+            }
+            if (IsCPUTurn())
+            {
+                yield return StartCoroutine(CpuLogic.i.FindCPUIngredientMoves());
+            }
+            else
+            {
+                yield return StartCoroutine(RollSelected(true, !IsCPUTurn()));
+            }
+        }
+    }
+
+    private void ResetDice(bool undo = false)
+    {
+        if (activePlayer == 0)
+        {
+            HigherRollText1.text = higherMove.ToString();
+            LowerRollText1.text = lowerMove.ToString();
+            if (undo)
+            {
+                HigherRollButton1.interactable = true;
+                HigherRollImage1.interactable = true;
+                LowerRollButton1.interactable = true;
+                LowerRollImage1.interactable = true;
+            }
+            else
+            {
+                if (higherMove == 0)
+                {
+                    HigherRollButton1.interactable = false;
+                    HigherRollImage1.interactable = false;
+                }
+                else
+                {
+                    HigherRollButton1.interactable = true;
+                }
+                if (lowerMove == 0)
+                {
+                    LowerRollButton1.interactable = false;
+                    LowerRollImage1.interactable = false;
+                }
+                else
+                {
+                    LowerRollButton1.interactable = true;
+                }
+                HigherRollImage1.GetComponent<Animation>().Play("Roll");
+                LowerRollImage1.GetComponent<Animation>().Play("Roll2");
+            }
+        }
+        else
+        {
+            HigherRollText2.text = higherMove.ToString();
+            LowerRollText2.text = lowerMove.ToString();
+            if (undo)
+            {
+                HigherRollImage2.interactable = true;
+                LowerRollImage2.interactable = true;
+            }
+            else
+            {
+                if (higherMove == 0)
+                {
+                    HigherRollImage2.interactable = false;
+                }
+                else
+                {
+                    HigherRollImage2.interactable = true;
+                }
+                if (lowerMove == 0)
+                {
+                    LowerRollImage2.interactable = false;
+                }
+                else
+                {
+                    LowerRollImage2.interactable = true;
+                }
+                HigherRollImage2.GetComponent<Animation>().Play("Roll");
+                LowerRollImage2.GetComponent<Animation>().Play("Roll2");
+            }
+        }
+    }
+
+    private void UpdateDiceSkin(Player User = null)
+    {
+        if (User == null)
+            User = GetActivePlayer();
+        var HigherRollToChange = User.UserId == playerList[0].UserId ? HigherRollImage1 : HigherRollImage2;
+        var LowerRollToChange = User.UserId == playerList[0].UserId ? LowerRollImage1 : LowerRollImage2;
+        Sprite higherSprite = User.UserId == playerList[0].UserId ? yellowDie : purpleDie;
+        Sprite lowerSprite = User.UserId == playerList[0].UserId ? yellowDie : purpleDie;
+        if (User.IsCPU)
+        {
+            higherSprite = allD10s[Random.Range(0, allD10s.Count())];
+            lowerSprite = allD10s[Random.Range(0, allD10s.Count())];
+        }
+        else if (User.SelectedDice.Count > 0)
+        {
+            var random = new System.Random();
+            int index1 = random.Next(User.SelectedDice.Count);
+            int index2 = random.Next(User.SelectedDice.Count);
+            higherSprite = allD10s[User.SelectedDice[index1] - 1];
+            lowerSprite = allD10s[User.SelectedDice[index2] - 1];
+        }
+        HigherRollToChange.gameObject.GetComponent<Image>().sprite = higherSprite;
+        LowerRollToChange.gameObject.GetComponent<Image>().sprite = lowerSprite;
+    }
+
+    private void UpdateTitle(Player User = null)
+    {
+        if (User == null)
+            User = GetActivePlayer();
+
+        var textToChange = User.UserId == playerList[0].UserId ? TitleText1 : TitleText2;
+        if (User.UserId == 5)
+        {
+            textToChange.text = "The Dev";
+        }
+        else if (User.UserId == 43)
+        {
+            textToChange.text = "Tutorial";
+        } 
+        else if (User.IsCPU)
+        {
+            textToChange.text = "CPU";
+        }
+        else if (User.IsGuest)
+        {
+            textToChange.text = "Account Hater";
+        }
+        else if (User.SelectedTitles.Count > 0)
+        {
+            var random = new System.Random();
+            int index1 = random.Next(User.SelectedTitles.Count);
+            textToChange.text = User.SelectedTitles[index1];
+        }
+        else
+        {
+            textToChange.text = "Loser";
+        }
+
+    }
+
+    public void RollSelected(bool isHigher)
+    {
+        if (!Global.CPUGame && GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
+        {
+            return;
+        }
+
+        if (!Global.CPUGame && GetActivePlayer().UserId == Global.LoggedInPlayer.UserId)
+        {
+            StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateSelected?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.GameId}&Higher={isHigher}"));
+        }
+
+        StartCoroutine(RollSelected(isHigher, true));
+    }
+    #endregion
+
+    #region UNDO
+    public void undoChoice(bool willPay)
+    {
+        if (willPay)
+        {
+            turnTime = Mathf.Min(turnTime + 5, turnDuration);
+            higherMoveSelected = null;
+            undoButton1.interactable = false;
+            undoButton2.interactable = false;
+            lastMovedIngredient = null;
+            firstMoveTaken = false;
+            ResetDice(true);
+            ClearSelectedDie();
+            AllIngredients.ForEach(x => x.SetSelector(false));
+            for (var i = 0; i < TurnStartPositions.Count(); i++)
+            {
+                if (TurnStartPositions[i].ingPos != AllIngredients[i].routePosition || TurnStartPositions[i].ingCooked != AllIngredients[i].isCooked)
+                {
+                    StartCoroutine(RollbackIngredient(AllIngredients[i], TurnStartPositions[i]));
+                }
+            }
+        }
+        undoPanel.SetActive(false);
+    }
+
+    private IEnumerator RollbackIngredient(Ingredient ingredientToRollback, TurnPosition turnPosition)
+    {
+        ingredientToRollback.trail.enabled = true;
+
+        if (ingredientToRollback.isCooked != turnPosition.ingCooked)
+        {
+            ingredientToRollback.isCooked = false;
+            ingredientToRollback.CookedQuad.gameObject.SetActive(false);
+            ingredientToRollback.BackCookedQuad.gameObject.SetActive(true);
+        }
+
+        if (ingredientToRollback.routePosition != turnPosition.ingPos)
+        {
+            if (ingredientToRollback.routePosition != 0)
+            {
+                Route.i.FullRoute[ingredientToRollback.routePosition].ingredients.Pop();
+            }
+            else
+            {
+                prepTiles.FirstOrDefault(x => x.ingredients.Any(y => y.IngredientId == ingredientToRollback.IngredientId)).ingredients.Pop();
+            }
+            ingredientToRollback.routePosition = turnPosition.ingPos;
+            if (turnPosition.ingPos == 0)
+            {
+                yield return StartCoroutine(MoveToNextEmptySpace(ingredientToRollback));
+            }
+            else
+            {
+                yield return StartCoroutine(ingredientToRollback.MoveToNextTile(Route.i.FullRoute[turnPosition.ingPos].transform.position, true));
+                Route.i.FullRoute[turnPosition.ingPos].ingredients.Push(ingredientToRollback);
+            }
+        }
+    }
+
+    internal bool DoublesRolled()
+    {
+        return higherMove == lowerMove;
+    }
+    internal bool ZerosRolled()
+    {
+        return lowerMove == 0 && higherMove == 0;
+    }
+    #endregion
+
+    #region Used by ingredient
+    internal bool IsCPUTurn()
+    {
+        return GetActivePlayer().IsCPU;
+    }
+    internal Player GetActivePlayer()
+    {
+        return playerList[activePlayer];
+    }
+
+    internal IEnumerator DoneMoving()
+    {
+        if (IsCPUTurn())
+            yield return new WaitForSeconds(.5f);
+
+        while (IsReading && Global.CPUGame)
+        {
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        if (playerList.Where((x, i) => AllIngredients.Where(y => y.Team == i).All(y => y.isCooked)).Count() > 0)
+        {
+            GameIsOver();
+        }
+        else if (firstMoveTaken || lowerMove == 0)
+        {
+            yield return new WaitForSeconds(.5f);
+            SwitchPlayer();
+        }
+        else
+        {
+            checkingForTrash = false;
+            turnTime = Mathf.Min(turnTime + 5, turnDuration);
+            if (GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
+            {
+                turnTime++;
+            }
+            firstMoveTaken = true;
+
+            if (!Global.CPUGame && GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
+                LookingForTurn = true;
+
+            if (!IsCPUTurn())
+            {
+                //todo add undo to multiplayer
+                if (Global.CPUGame && !Global.PlayingTutorial)
+                {
+                    if (activePlayer == 0)
+                    {
+                        undoButton1.gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        undoButton2.gameObject.SetActive(true);
+                    }
+                }
+                yield return StartCoroutine(RollSelected(!(bool)higherMoveSelected, !IsCPUTurn()));
+            }
+        }
+    }
+    internal IEnumerator MoveToNextEmptySpace(Ingredient ingredientToMove, bool shouldPush = true)
+    {
+        ingredientToMove.routePosition = 0;
+        var prepTile = prepTiles.FirstOrDefault(x => x.ingredients.Count() == 0);
+        if (shouldPush)
+            prepTile.ingredients.Push(ingredientToMove);
+        yield return ingredientToMove.MoveToNextTile(prepTile.transform.position, shouldPush);
+    }
+    internal void setWineMenuText(bool teamYellow, int v)
+    {
+        IsDrinking = true;
+        helpText.text = (teamYellow ? "Yellow" : "Purple") + " team drinks for " + v + (v == 1 ? " second" : " seconds") + ". \n \n Math: 1 second for each ingredient in Prep, other team drinks if cooked.";
+        StartReading();
+    }
+    internal void UpdateMoveText(int? moveAmount = null)
+    {
+        //actionText.text = moveAmount != null ? "Move: " + moveAmount : "";
+    }
+    internal IEnumerator AskShouldTrash()
+    {
+        turnTime = Mathf.Min(turnTime + 5, turnDuration);
+        if (GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
+        {
+            ShouldTrashPopup2.SetActive(true);
+
+        }
+        else
+        {
+            ShouldTrashPopup.SetActive(true);
+        }
+
+        while (ShouldTrash == null)
+        {
+            checkingForTrash = true;
+            if (!Global.CPUGame && GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
+            {
+                StartCoroutine(sql.RequestRoutine($"multiplayer/GetShouldTrash?GameId={Global.GameId}", GetShouldTrashCallback));
+            }
+            yield return new WaitForSeconds(.5f);
+        }
+
+        ShouldTrashPopup.SetActive(false);
+        ShouldTrashPopup2.SetActive(false);
+    }
+    #endregion
     private void AfterTrashingCallback(string obj)
     {
         checkingForTrash = false;
@@ -711,7 +1184,7 @@ public class GameManager : MonoBehaviour
     }
     private IEnumerator SetSelectableIngredients()
     {
-        GameManager.i.AllIngredients.ForEach(x => x.SetSelector(false));
+        AllIngredients.ForEach(x => x.SetSelector(false));
 
         if (ZerosRolled())
             MoveableList = new List<Ingredient>();
@@ -724,7 +1197,7 @@ public class GameManager : MonoBehaviour
 
         if (MoveableList.Count() == 0)
         {
-            yield return new WaitForSeconds(.1f);
+            yield return new WaitForSeconds(.5f);
             SwitchPlayer();
         }
         else
@@ -734,10 +1207,8 @@ public class GameManager : MonoBehaviour
             if (IsCPUTurn())
                 yield return new WaitForSeconds(.5f);
         }
-
-        //if (IsCPUTurn() && Settings.FakeOnlineGame)
-        //    yield return new WaitForSeconds(Random.Range(.5f, 2.5f));
     }
+
     private void GameIsOver(int rageQuiterId = 0)
     {
         GameOver = true;
@@ -746,13 +1217,13 @@ public class GameManager : MonoBehaviour
         var player2Count = AllIngredients.Count(x => x.Team == 1 && x.isCooked);
         if (rageQuiterId != 0)
         {
-            playerWhoWon = playerList.FirstOrDefault(x=>x.UserId != rageQuiterId);
+            playerWhoWon = playerList.FirstOrDefault(x => x.UserId != rageQuiterId);
         }
         else
         {
             playerWhoWon = playerList.Where((x, i) => AllIngredients.Where(y => y.Team == i).All(y => y.isCooked)).FirstOrDefault();
         }
-        if (!Global.LoggedInPlayer.IsGuest)
+        if (!Global.LoggedInPlayer.IsGuest && !Global.PlayingTutorial)
         {
             var player1Cooked = IsPlayer1Player1 ? player1Count : player2Count;
             var player2Cooked = IsPlayer1Player1 ? player2Count : player1Count;
@@ -784,482 +1255,10 @@ public class GameManager : MonoBehaviour
 
         if (Global.LoggedInPlayer.WineMenu)
             eventText.text += "\n \n" + (playerWhoWon.UserId == Global.LoggedInPlayer.UserId ? " Purple" : " Yellow") + " Team finish your drinks!";
-        
-        if(TurnNumber > 19 && !Global.FriendlyGame && (!Global.CPUGame || Global.FakeOnlineGame))
+
+        if (TurnNumber > 19 && !Global.FriendlyGame && (!Global.CPUGame || Global.FakeOnlineGame))
             Global.JustWonOnline = playerWhoWon.UserId == Global.LoggedInPlayer.UserId;
 
-        //Settings.HardMode = false;
         EventCanvas.SetActive(true);
     }
-    #endregion
-
-    #region Used by ingredient
-    internal bool IsCPUTurn()
-    {
-        return GetActivePlayer().IsCPU;
-    }
-    internal Player GetActivePlayer()
-    {
-        return playerList[activePlayer];
-    }
-
-    internal IEnumerator DoneMoving()
-    {
-        while (IsReading && Global.CPUGame)
-        {
-            yield return new WaitForSeconds(0.5f);
-        }
-
-        if (playerList.Where((x,i) => AllIngredients.Where(y => y.Team == i).All(y => y.isCooked)).Count() > 0)
-        {
-            GameIsOver();
-        }
-        else if (firstMoveTaken || lowerMove == 0)
-        {
-            yield return new WaitForSeconds(.1f);
-            SwitchPlayer();
-        }
-        else
-        {
-            checkingForTrash = false;
-            turnTime = Mathf.Min(turnTime + 5, turnDuration);
-            if (GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
-            {
-                turnTime++;
-            }
-            firstMoveTaken = true;
-
-            if (!Global.CPUGame && GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
-                LookingForTurn = true;
-
-            if (!IsCPUTurn())
-            {
-                //todo add undo to multiplayer
-                if (Global.CPUGame)
-                {
-                    if (activePlayer == 0)
-                    {
-                        undoButton1.gameObject.SetActive(true);
-                    }
-                    else
-                    {
-                        undoButton2.gameObject.SetActive(true);
-                    }
-                }
-                yield return StartCoroutine(RollSelected(!(bool)higherMoveSelected, !IsCPUTurn()));
-            }
-        }
-    }
-    internal IEnumerator MoveToNextEmptySpace(Ingredient ingredientToMove, bool shouldPush = true)
-    {
-        ingredientToMove.routePosition = 0;
-        var prepTile = prepTiles.FirstOrDefault(x => x.ingredients.Count() == 0);
-        if (shouldPush)
-            prepTile.ingredients.Push(ingredientToMove);
-        yield return ingredientToMove.MoveToNextTile(prepTile.transform.position, shouldPush, 45f);
-    }
-    internal void setWineMenuText(bool teamYellow, int v)
-    {
-        IsDrinking = true;
-        helpText.text = (teamYellow ? "Yellow" : "Purple") + " team drinks for " + v + (v == 1 ? " second" : " seconds") + ". \n \n Math: 1 second for each ingredient in Prep, other team drinks if cooked.";
-        StartReading();
-    }
-    internal void UpdateMoveText(int? moveAmount = null)
-    {
-        //actionText.text = moveAmount != null ? "Move: " + moveAmount : "";
-    }
-    internal IEnumerator AskShouldTrash()
-    {
-        turnTime = Mathf.Min(turnTime + 5, turnDuration);
-        if (GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
-        {
-            ShouldTrashPopup2.SetActive(true);
-
-        }
-        else
-        {
-            ShouldTrashPopup.SetActive(true);
-        }
-
-        while (ShouldTrash == null)
-        {
-            checkingForTrash = true;
-            if (!Global.CPUGame && GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
-            {
-                StartCoroutine(sql.RequestRoutine($"multiplayer/GetShouldTrash?GameId={Global.GameId}", GetShouldTrashCallback));
-            }
-            yield return new WaitForSeconds(.5f);
-        }
-
-        ShouldTrashPopup.SetActive(false);
-        ShouldTrashPopup2.SetActive(false);
-    }
-    #endregion
-
-    #region Button Clicks
-    public void GameOverClicked()
-    {
-        Global.IsDebug = false;
-        SceneManager.LoadScene("MainMenu");
-    }
-    public void promptExit()
-    {
-        exitPanel.SetActive(true);
-    }
-    public void exitChoice(bool willExit)
-    {
-        if (willExit)
-        {
-            if (!Global.LoggedInPlayer.IsGuest)
-            {
-                var rageQuiterId = Global.LoggedInPlayer.UserId;
-                var player1Count = AllIngredients.Count(x => x.Team == 0 && x.isCooked);
-                var player2Count = AllIngredients.Count(x => x.Team == 1 && x.isCooked);
-                var player1Cooked = IsPlayer1Player1 ? player1Count : player2Count;
-                var player2Cooked = IsPlayer1Player1 ? player2Count : player1Count;
-                StartCoroutine(sql.RequestRoutine($"multiplayer/GameEnd?GameId={Global.GameId}&Player1Cooked={player1Cooked}&Player2Cooked={player2Cooked}&TotalTurns={TurnNumber}&RageQuit={(rageQuiterId)}", EndGamePopupCallback));
-            }
-            SceneManager.LoadScene("MainMenu");
-        }
-        exitPanel.SetActive(false);
-    }
-    public void promptUndo()
-    {
-        if (Global.CPUGame)
-        {
-            undoPanel.SetActive(true);
-        }
-    }
-    public void getHelp()
-    {
-        if (!IsReading)
-        {
-            pageNum = 0;
-            helpText.text = Library.helpTextList[pageNum];
-            StartReading();
-        }
-        else
-        {
-            IsReading = false;
-            IsDrinking = false;
-            pageNum = 0;
-            HelpCanvas.SetActive(false);
-        }
-    }
-    public void ShouldTrashButton(bool trash)
-    {
-        if (!Global.CPUGame)
-        {
-            if (GetActivePlayer().UserId == Global.LoggedInPlayer.UserId)
-            {
-                ShouldTrash = trash;
-                StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateShouldTrash?GameId={Global.GameId}&trash={trash}"));
-            }
-        }
-        else
-        {
-            ShouldTrash = trash;
-        }
-    }
-    public void nextPage()
-    {
-        if (IsReading && !IsDrinking)
-        {
-            if (Library.helpTextList.Count - 1 <= pageNum)
-            {
-                HelpCanvas.SetActive(false);
-                IsReading = false;
-                IsDrinking = false;
-            }
-            else
-            {
-                pageNum++;
-                helpText.text = Library.helpTextList[pageNum];
-            }
-        }
-        else
-        {
-            IsReading = false;
-            IsDrinking = false; 
-            HelpCanvas.SetActive(false);
-        }
-    }
-    public void RollDice(bool HUMAN)
-    {
-        if ((!Global.CPUGame && GetActivePlayer().UserId != Global.LoggedInPlayer.UserId) || (IsCPUTurn() && HUMAN))
-        {
-            return;
-        }
-
-        var roll1 = Random.Range(0, 10);
-        var roll2 = Random.Range(0, 10);
-        //extra random because it feels sticky sometimes
-        roll1 = Random.Range(0, 10);
-        roll2 = Random.Range(0, 10);
-
-        if (!Global.CPUGame)
-        {
-            StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateGameRoll?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.GameId}&roll1={roll1}&roll2={roll2}"));
-        }
-
-        StartCoroutine(SetRollState(roll1, roll2));
-    }
-
-    private IEnumerator SetRollState(int roll1, int roll2)
-    {
-        if (IsCPUTurn())
-        {
-            yield return new WaitForSeconds(.5f);
-        }
-
-        //if (IsCPUTurn() && Settings.FakeOnlineGame)
-        //    yield return new WaitForSeconds(Random.Range(.5f, 2.5f));
-
-        RollButton1.SetActive(false);
-        higherMove = roll1 > roll2 ? roll1 : roll2;
-        lowerMove = roll1 > roll2 ? roll2 : roll1;
-
-        ResetDice();
-        State = States.Moving;
-        turnTime = turnDuration;
-        if (GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
-        {
-            turnTime++;
-        }
-
-        if (ZerosRolled())
-        {
-            yield return new WaitForSeconds(2f);
-            SwitchPlayer();
-        } 
-        else if (IsCPUTurn())
-        {
-            yield return StartCoroutine(CpuLogic.i.FindCPUIngredientMoves());
-        }
-        else
-        {
-            if (lowerMove == 0)
-            {
-                turnTime = Mathf.Min(turnTime + 5, turnDuration);
-                firstMoveTaken = true;
-                yield return StartCoroutine(RollSelected(true, !IsCPUTurn()));
-            }
-            if (DoublesRolled())
-            {
-                yield return StartCoroutine(RollSelected(true, !IsCPUTurn()));
-            }
-        }
-    }
-
-    private void ResetDice(bool undo = false)
-    {
-        if (activePlayer == 0)
-        {
-            HigherRollText1.text = higherMove.ToString();
-            LowerRollText1.text = lowerMove.ToString();
-            if (undo)
-            {
-                HigherRollButton1.interactable = true;
-                HigherRollImage1.interactable = true;
-                LowerRollButton1.interactable = true;
-                LowerRollImage1.interactable = true;
-            }
-            else
-            {
-                if (higherMove == 0)
-                {
-                    HigherRollButton1.interactable = false;
-                    HigherRollImage1.interactable = false;
-                }
-                else
-                {
-                    HigherRollButton1.interactable = true;
-                }
-                if (lowerMove == 0)
-                {
-                    LowerRollButton1.interactable = false;
-                    LowerRollImage1.interactable = false;
-                }
-                else
-                {
-                    LowerRollButton1.interactable = true;
-                }
-                HigherRollImage1.GetComponent<Animation>().Play("Roll");
-                LowerRollImage1.GetComponent<Animation>().Play("Roll2");
-            }
-        }
-        else
-        {
-            HigherRollText2.text = higherMove.ToString();
-            LowerRollText2.text = lowerMove.ToString();
-            if (undo)
-            {
-                HigherRollImage2.interactable = true;
-                LowerRollImage2.interactable = true;
-            }
-            else
-            {
-                if (higherMove == 0)
-                {
-                    HigherRollImage2.interactable = false;
-                }
-                else
-                {
-                    HigherRollImage2.interactable = true;
-                }
-                if (lowerMove == 0)
-                {
-                    LowerRollImage2.interactable = false;
-                }
-                else
-                {
-                    LowerRollImage2.interactable = true;
-                }
-                HigherRollImage2.GetComponent<Animation>().Play("Roll");
-                LowerRollImage2.GetComponent<Animation>().Play("Roll2");
-            }
-        } 
-    }
-
-    private void UpdateDiceSkin(Player User = null)
-    {
-        if (User == null)
-            User = GetActivePlayer();
-        var HigherRollToChange = User.UserId == playerList[0].UserId ? HigherRollImage1 : HigherRollImage2;
-        var LowerRollToChange = User.UserId == playerList[0].UserId ? LowerRollImage1 : LowerRollImage2;
-        Sprite higherSprite = User.UserId == playerList[0].UserId ? yellowDie : purpleDie;
-        Sprite lowerSprite = User.UserId == playerList[0].UserId ? yellowDie : purpleDie;
-        if (User.IsCPU)
-        {
-            higherSprite = allD10s[Random.Range(0, allD10s.Count())];
-            lowerSprite = allD10s[Random.Range(0, allD10s.Count())];
-        }
-        else if (User.SelectedDice.Count > 0)
-        {
-            var random = new System.Random();
-            int index1 = random.Next(User.SelectedDice.Count);
-            int index2 = random.Next(User.SelectedDice.Count);
-            higherSprite = allD10s[User.SelectedDice[index1]-1];
-            lowerSprite = allD10s[User.SelectedDice[index2]-1];
-        }
-        HigherRollToChange.gameObject.GetComponent<Image>().sprite = higherSprite;
-        LowerRollToChange.gameObject.GetComponent<Image>().sprite = lowerSprite;
-    }    
-    
-    private void UpdateTitle(Player User = null)
-    {
-        if (User == null)
-            User = GetActivePlayer();
-
-        var textToChange = User.UserId == playerList[0].UserId ? TitleText1 : TitleText2;
-        if (User.UserId == 5)
-        {
-            textToChange.text = "The Dev";
-        }
-        else if (User.IsCPU)
-        {
-            textToChange.text = "CPU";
-        }
-        else if (User.IsGuest)
-        {
-            textToChange.text = "Account Hater";
-        }
-        else if(User.SelectedTitles.Count > 0)
-        {
-            var random = new System.Random();
-            int index1 = random.Next(User.SelectedTitles.Count);
-            textToChange.text = User.SelectedTitles[index1];
-        }
-        else
-        {
-            textToChange.text = "Loser";
-        }
-
-    }
-
-    public void RollSelected(bool isHigher)
-    {
-        if (!Global.CPUGame && GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
-        {
-            return;
-        }
-
-        if (!Global.CPUGame && GetActivePlayer().UserId == Global.LoggedInPlayer.UserId)
-        {
-            StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateSelected?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.GameId}&Higher={isHigher}"));
-        }
-
-        StartCoroutine(RollSelected(isHigher, true));
-    }
-    #endregion
-
-   
-    #region UNDO
-    public void undoChoice(bool willPay)
-    {
-        if (willPay)
-        {
-            turnTime = Mathf.Min(turnTime + 5, turnDuration);
-            higherMoveSelected = null;
-            undoButton1.interactable = false;
-            undoButton2.interactable = false;
-            lastMovedIngredient = null;
-            firstMoveTaken = false;
-            ResetDice(true);
-            ClearSelectedDie();
-            AllIngredients.ForEach(x => x.SetSelector(false));
-            for (var i = 0; i < TurnStartPositions.Count(); i++)
-            {
-                if (TurnStartPositions[i].ingPos != AllIngredients[i].routePosition || TurnStartPositions[i].ingCooked != AllIngredients[i].isCooked)
-                {
-                    StartCoroutine(RollbackIngredient(AllIngredients[i], TurnStartPositions[i]));
-                }
-            }
-        }
-        undoPanel.SetActive(false);
-    }
-
-    private IEnumerator RollbackIngredient(Ingredient ingredientToRollback, TurnPosition turnPosition)
-    {
-        ingredientToRollback.trail.enabled = true;
-
-        if (ingredientToRollback.isCooked != turnPosition.ingCooked)
-        {
-            ingredientToRollback.isCooked = false;
-            ingredientToRollback.CookedQuad.gameObject.SetActive(false);
-            ingredientToRollback.BackCookedQuad.gameObject.SetActive(true);
-        }
-
-        if (ingredientToRollback.routePosition != turnPosition.ingPos)
-        {
-            if (ingredientToRollback.routePosition != 0)
-            {
-                Route.i.FullRoute[ingredientToRollback.routePosition].ingredients.Pop();
-            }
-            else
-            {
-                prepTiles.FirstOrDefault(x => x.ingredients.Any(y => y.IngredientId == ingredientToRollback.IngredientId)).ingredients.Pop();
-            }
-            ingredientToRollback.routePosition = turnPosition.ingPos;
-            if (turnPosition.ingPos == 0)
-            {
-                yield return StartCoroutine(MoveToNextEmptySpace(ingredientToRollback));
-            }
-            else
-            {
-                yield return StartCoroutine(ingredientToRollback.MoveToNextTile(Route.i.FullRoute[turnPosition.ingPos].transform.position,true));
-                Route.i.FullRoute[turnPosition.ingPos].ingredients.Push(ingredientToRollback);
-            }
-        }
-    }
-
-    internal bool DoublesRolled()
-    {
-        return higherMove == lowerMove;
-    }  
-    internal bool ZerosRolled()
-    {
-        return lowerMove == 0 && higherMove == 0;
-    }
-    #endregion
 }

@@ -6,31 +6,41 @@ public static class Global
 {
     public static Player LoggedInPlayer = new Player();
     public static Player SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
+    public static int GameId = 0;
+    public static double AppVersion = 1.21;
     public static bool IsConnected = true;
     public static bool IsDebug = false;
     public static bool OnlyGetOnlineFriends = false;
-    public static bool HardMode = true;
     public static bool EnteredGame = false;
     public static bool JustWonOnline = false;
-    public static int GameId = 0;
-    public static double AppVersion = 1.20;
     public static bool FakeOnlineGame = false;
     public static bool FriendlyGame = false;
     public static bool CPUGame = false;
-
+    public static bool PlayingTutorial = false;
     public static bool hasNewIng = false;
     public static bool hasNewDie = false;
     public static bool hasNewTitle = false;
 
-    //public static List<Player> CPUPlayers = new List<Player>() { 
-    //    new Player() { Username = "Joe", IsCPU = true, UserId = 43 },
-    //    new Player() { Username = "Ethan", IsCPU = true, UserId = 42  },
-    //    new Player() { Username = "Chrissy", IsCPU = true, UserId = 44  },
-    //    new Player() { Username = "Jenn", IsCPU = true, UserId = 41  }
-    //};
+    public static void Reset()
+    {
+        SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
+        GameId = 0;
+        IsConnected = true;
+        IsDebug = false;
+        OnlyGetOnlineFriends = false;
+        FakeOnlineGame = false;
+        FriendlyGame = false;
+        CPUGame = false;
+        PlayingTutorial = false;
+        hasNewIng = false;
+        hasNewDie = false;
+        hasNewTitle = false;
+    }
 }
 public static class Library
 {
+    public static List<int> TutorialRolls = new List<int>(new[] { 7,3,4,8,4,2,7,1,8,3,5,6,3,0,8,4,8,1,7,1,8,6,3,2,9,4,7,3,2,2,0,0,4,4 });
+    public static List<string> TutorialHelpQueue = new List<string>(new[] { "Welcome to Potstirrers!" });
     public static List<string> helpTextList = new List<string>() { @"Welcome, " + Global.LoggedInPlayer.Username.Trim() +"!"+
 @"
 

@@ -172,7 +172,6 @@ public class ChestController : MonoBehaviour
         if (SelectedChest != null && SelectedChest.FinishUnlock != null)
         {
             UpdateTime();
-            HelpText.text = "";
         }
         else {
             HelpText.text = $"Press to start unlocking your {(PlayerChests[slotSelected].ChestSize == 3 ? "large" : PlayerChests[slotSelected].ChestSize == 2 ? "medium" : "small")} {(PlayerChests[slotSelected].ChestTypeId == 2 ? "dice pack" : "ingredient crate")}!";
@@ -236,22 +235,28 @@ public class ChestController : MonoBehaviour
         TimeNow = DateTime.UtcNow.AddHours(-4);
         if (SelectedChest != null && SelectedChest.FinishUnlock != null)
         {
-            HelpText.text = "";
             TimeSpan time = (DateTime)SelectedChest.FinishUnlock - TimeNow;
             if (time.Hours > 0)
             {
+                HelpText.text = "Press again to unlock immediately!";
                 TimerText.text = "Time until unlock: " + time.ToString(@"h\:mm\:ss");
             }
             else if (time.Seconds > 0)
             {
+                HelpText.text = "Press again to unlock immediately!";
                 TimerText.text = "Time until unlock: " + time.ToString(@"m\:ss");
             }
             else
             {
-                if(!isOpening)
-                    TimerText.text = "Press to open your pack!!!";
+                TimerText.text = "";
+                if (!isOpening)
+                {
+                    HelpText.text = "Press to open your pack!";
+                }
                 else
-                    TimerText.text = "";
+                {
+                    HelpText.text = "";
+                }
             }
         }
         else
@@ -294,7 +299,7 @@ public class ChestController : MonoBehaviour
             {
                 RewardContent.GetComponent<GridLayoutGroup>().cellSize = new Vector2(200, 200);
             }
-            HelpText.text = "";
+            HelpText.text = "Press to speed this up!";
             ChestToOpenSlot.gameObject.GetComponent<Animation>().Play("DiceShaker");
             yield return StartCoroutine(sql.RequestRoutine($"skin/OpenMyChest?UserId={Global.LoggedInPlayer.UserId}&ChestId={SelectedChest.ChestId}", OpenChestsCallback));
             yield return new WaitForSeconds(1.25f);

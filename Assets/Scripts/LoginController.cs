@@ -26,8 +26,10 @@ public class LoginController : MonoBehaviour
     private int tick = 10;
     private bool isLoading = false;
 
-    private void Start()
+    private void Awake()
     {
+        Global.Reset();
+        Global.EnteredGame = false;
         AppVersion.text = "Ver. " + Global.AppVersion.ToString();
         sql = new SqlController();
         system = EventSystem.current;
@@ -67,7 +69,6 @@ public class LoginController : MonoBehaviour
         username.GetComponent<InputField>().text = "Ecaflip";
         password.GetComponent<InputField>().text = "1234";
 #endif
-
     }
 
     void Update()
@@ -156,7 +157,12 @@ public class LoginController : MonoBehaviour
         {
             alert.SetActive(false);
             Global.LoggedInPlayer.IsGuest = false;
-            SceneManager.LoadScene("MainMenu");
+
+            Global.PlayingTutorial = true;
+            Global.CPUGame = true;
+            Global.SecondPlayer = new Player() { Username = "Michael", IsCPU = true, UserId = 43 };
+            SceneManager.LoadScene("PlayScene");
+            //SceneManager.LoadScene("MainMenu");
         }
     }
     public void LoginButton()
