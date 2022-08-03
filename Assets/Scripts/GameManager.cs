@@ -13,7 +13,8 @@ public class GameManager : MonoBehaviour
     private float elapsed = 0f;
     internal bool Automating = false;
     internal int TurnNumber = 1;
-    internal int MoveNumber = 0;
+    private int MoveNumber = 0;
+    private int TutorialAction = 0;
     internal int higherMove = 0;
     internal int lowerMove = 0;
     internal bool? higherMoveSelected;
@@ -23,6 +24,7 @@ public class GameManager : MonoBehaviour
     private int pageNum = 0;
     private float readingTimeStart;
     internal float talkingTimeStart;
+    internal int TutorialIngId;
     private float turnTime = 0;
     private float rollDuration = 5;
     private float turnDuration = 35;
@@ -36,15 +38,17 @@ public class GameManager : MonoBehaviour
     List<Ingredient> MoveableList = new List<Ingredient>();
     public GameObject XpText;
     public AudioSource AudioSource;
+    public AudioSource TutorialSource;
     private AudioSource audioSourceGlobal;
     public AudioClip turnClip;
-    public Slider VolumeSlider;
+    public AudioClip[] tutorialClips;
+    public Slider GameMusicSlider;
     public Slider TurnVolumeSlider;
-    private bool loadingToggle = true;
     public GameObject SelectedDieHigher1;
     public GameObject SelectedDieLower1;
     public GameObject SelectedDieHigher2;
     public GameObject SelectedDieLower2;
+    public GameObject TutorialChangeDiceArrow;
     private enum States
     {
         Switching,
@@ -114,6 +118,8 @@ public class GameManager : MonoBehaviour
     public Text eventText;
     public Text helpText;
     public Text talkShitText;
+    private GameObject tutorialPanel;
+    private Text tutorialText;
 
     [Header("Sprite")]
     public Sprite yellowDie;
@@ -123,20 +129,44 @@ public class GameManager : MonoBehaviour
     [Header("Material")]
     public List<Material> allIngredientMaterials;
     public List<Material> allColorMaterials;
+    private List<GameObject> objectsInScene;
+    private int readClicks = 0;
+    internal bool TutorialStopActions = false;
+    private bool firstRollUpdate = false;
+    private List<int> actions = new List<int>();
+    private bool wasTutorial;
     #endregion
-  
+    private void GetAllObjectsOnlyInScene()
+    {
+        objectsInScene = new List<GameObject>();
+
+        foreach (GameObject go in Resources.FindObjectsOfTypeAll(typeof(GameObject)) as GameObject[])
+        {
+            if (!(go.hideFlags == HideFlags.NotEditable || go.hideFlags == HideFlags.HideAndDontSave))
+                objectsInScene.Add(go);
+        }
+    }
+    private GameObject GetObject(string v)
+    {
+        return objectsInScene.FirstOrDefault(x => x.name == v);
+    }
     private void Awake()
     {
         Global.EnteredGame = true;
+        wasTutorial = Global.IsTutorial;
+        GetAllObjectsOnlyInScene();
+        tutorialPanel = GetObject("TutorialPanel");
+        tutorialText = tutorialPanel.GetComponentInChildren<Text>();
+        GameMusicSlider = GetObject("MusicVolumeSlider").GetComponent<Slider>();
+        TurnVolumeSlider = GetObject("TurnVolumeSlider").GetComponent<Slider>();
         i = this;
         //Application.targetFrameRate = 60;
         sql = new SqlController();
         if(GameObject.FindGameObjectsWithTag("GameMusic").Length > 0)
             audioSourceGlobal = GameObject.FindGameObjectWithTag("GameMusic").GetComponent<AudioSource>();
 
-        VolumeSlider.value = Global.LoggedInPlayer.MusicVolume;
+        GameMusicSlider.value = Global.LoggedInPlayer.MusicVolume;
         TurnVolumeSlider.value = Global.LoggedInPlayer.TurnVolume;
-        loadingToggle = false;
 #if UNITY_EDITOR
         //Global.IsDebug = true;
         //Settings.LoggedInPlayer.Experimental = true;
@@ -147,7 +177,7 @@ public class GameManager : MonoBehaviour
         {
             activePlayer = Random.Range(0, 2);
 
-            if (Global.LoggedInPlayer.Wins == 0 || Global.PlayingTutorial)
+            if (Global.LoggedInPlayer.Wins == 0 || Global.IsTutorial)
             {
                 activePlayer = 0;
             }
@@ -168,7 +198,7 @@ public class GameManager : MonoBehaviour
             }
 
             SetSkins();
-            if (!Global.LoggedInPlayer.IsGuest && !Global.PlayingTutorial)
+            if (!Global.LoggedInPlayer.IsGuest && !Global.IsTutorial)
             {
                 StartCoroutine(sql.RequestRoutine($"multiplayer/CPUGameStart?Player1={playerList[0].UserId}&Player2={playerList[1].UserId}", GetNewGameCallback));
             }
@@ -184,6 +214,138 @@ public class GameManager : MonoBehaviour
     }
     private void Update()
     {
+        if (Input.GetKeyUp(KeyCode.Mouse0) && (TutorialStopActions || (tutorialPanel.activeInHierarchy && IsCPUTurn())))
+        {
+            readClicks++;
+        }
+
+        if (Global.IsTutorial)
+        {
+            switch (TutorialAction)
+            {
+                case 0:
+                    TutorialTextTurns(0, 2, 0);
+                    if (readClicks == 2)
+                    {
+                        RollButton1.SetActive(true);
+                    }
+                    break;
+                case 1:
+                    TutorialTextTurns(3, 0, 6);
+                    break;
+                case 3:
+                    TutorialTextTurns(4, 2, 2);
+                    break;
+                case 5:
+                    TutorialTextTurns(7, 0, 0, false);
+                    break;
+                case 7:
+                    TutorialTextTurns(8, 0, 0, false);
+                    break;
+                case 9:
+                    TutorialTextTurns(9, 1, 4);
+                    break;
+                case 11:
+                    TutorialTextTurns(11, 2, 8);
+                    break;
+                case 13:
+                    TutorialTextTurns(14, 1, 0, false);
+                    break;
+                case 15:
+                    TutorialTextTurns(16, 0, 0, false);
+                    break;
+                case 17:
+                    TutorialTextTurns(17, 0);
+                    TutorialChangeDiceArrow.SetActive(true);
+                    break;
+                case 18:
+                    TutorialChangeDiceArrow.SetActive(false);
+                    TutorialTextTurns(18, 0, 3);
+                    break;
+                case 20:
+                    TutorialTextTurns(19, 1, 6);
+                    break;
+                case 22:
+                    TutorialTextTurns(21, 0, 0, false);
+                    break;
+                case 26:
+                    TutorialTextTurns(22, 1, 6);
+                    break;
+                case 30:
+                    TutorialTextTurns(24, 0, 0, false);
+                    break;
+                case 32:
+                    TutorialTextTurns(25, 1, 6);
+                    break;
+                case 34:
+                    TutorialTextTurns(27, 1, 7);
+                    break;
+                case 36:
+                    TutorialTextTurns(29, 0, 0, false);
+                    break;
+                case 38:
+                    TutorialTextTurns(30, 1, 0, false);
+                    break;
+                case 40:
+                    TutorialTextTurns(32, 1);
+                    if (readClicks == 33)
+                    {
+                        TutorialChangeDiceArrow.SetActive(true);
+                    }
+                    break;
+                case 41:
+                    TutorialChangeDiceArrow.SetActive(false);
+                    TutorialTextTurns(34, 0, 3);
+                    break;
+                case 43:
+                    TutorialTextTurns(35, 0, 2);
+                    break;
+                case 45:
+                    TutorialTextTurns(36, 0, 0, false);
+                    break;
+                case 49:
+                    TutorialTextTurns(37);
+                    TutorialChangeDiceArrow.SetActive(true);
+                    break;
+                case 50:
+                    TutorialChangeDiceArrow.SetActive(false);
+                    TutorialTextTurns(38, 0, 6);
+                    break;
+                case 52:
+                    TutorialTextTurns(39, 0, 4);
+                    break;
+                case 56:
+                    TutorialTextTurns(40, 0, 0, false);
+                    break;
+                case 58:
+                    TutorialTextTurns(41, 1, 1);
+                    break;
+                case 60:
+                    TutorialTextTurns(43, 0, 4);
+                    break;
+                case 62:
+                    TutorialTextTurns(44, 0, 0, false);
+                    break;
+                case 63:
+                    TutorialTextTurns(45, 1, 4);
+                    break;
+                case 65:
+                    TutorialTextTurns(47, 0, 4);
+                    break;
+                case 67:
+                    TutorialTextTurns(48, 1);
+                    break;
+                case 68:
+                    tutorialPanel.SetActive(false);
+                    Global.IsTutorial = false;
+                    UpdateTitle();
+                    break;
+                default:
+                    tutorialPanel.SetActive(false);
+                    break;
+            }
+        }
+
         elapsed += Time.deltaTime;
         if (elapsed >= 1f)
         {
@@ -209,7 +371,7 @@ public class GameManager : MonoBehaviour
                 StartCoroutine(sql.RequestRoutine($"multiplayer/CheckGameAlive?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.GameId}&OtherUserId={Global.SecondPlayer.UserId}", GameIsAliveCallback));
             }
         }
-
+        
         if (!Global.FriendlyGame && (!Global.CPUGame || Global.FakeOnlineGame))
         {
             switch (State)
@@ -312,6 +474,60 @@ public class GameManager : MonoBehaviour
             }
         }
     }
+
+    private void TutorialTextTurns(int start, int turns = 0, int toMoveId = 0, bool remain = true)
+    {
+        if (readClicks <= start + turns)
+        {
+            if (!actions.Contains(readClicks))
+            {
+                TutorialSource.Stop();
+                TutorialSource.clip = tutorialClips[readClicks];
+                TutorialSource.volume = Global.LoggedInPlayer.VoiceVolume;
+                TutorialSource.Play();
+                actions.Add(readClicks);
+            }
+            tutorialText.text = Library.tutorialTextList[readClicks];
+        }
+        if (readClicks == start)
+        {
+            TutorialStopActions = true;
+            tutorialPanel.SetActive(true);
+        }
+        if (readClicks == start + turns)
+        {
+            TutorialStopActions = false;
+            TutorialIngId = toMoveId;
+            if(TutorialIngId != 0)
+                AllIngredients.FirstOrDefault(x => x.IngredientId == TutorialIngId).SetSelector(true);
+        }
+        if (readClicks > start + turns)
+        {
+            if (!remain || readClicks > start + turns + 1)
+            {
+                tutorialPanel.SetActive(false);
+            }
+        }
+    }
+
+    internal IEnumerator StartedMoving()
+    {
+        isMoving = true;
+        TutorialIngId = 0;
+        MoveNumber++;
+        if(!IsCPUTurn())
+            readClicks++;
+        yield return StartCoroutine(TutorialUpdate()); 
+    }
+
+    private IEnumerator TutorialUpdate()
+    {
+        while (tutorialPanel.activeInHierarchy && IsCPUTurn())
+        {
+            yield return new WaitForSeconds(.1f);
+        }
+        TutorialAction++;
+    }
     #region Button Clicks
     public void GameOverClicked()
     {
@@ -326,7 +542,7 @@ public class GameManager : MonoBehaviour
     {
         if (willExit)
         {
-            if (!Global.LoggedInPlayer.IsGuest && !Global.PlayingTutorial)
+            if (!Global.LoggedInPlayer.IsGuest && !Global.IsTutorial)
             {
                 var rageQuiterId = Global.LoggedInPlayer.UserId;
                 var player1Count = AllIngredients.Count(x => x.Team == 0 && x.isCooked);
@@ -402,27 +618,29 @@ public class GameManager : MonoBehaviour
     }
     public void RollDice(bool HUMAN)
     {
-        if ((!Global.CPUGame && GetActivePlayer().UserId != Global.LoggedInPlayer.UserId) || (IsCPUTurn() && HUMAN))
+        if ((Global.IsTutorial && TutorialStopActions) || (!Global.CPUGame && GetActivePlayer().UserId != Global.LoggedInPlayer.UserId) || (IsCPUTurn() && HUMAN))
         {
             return;
         }
 
+        if (!firstRollUpdate)
+        {
+            firstRollUpdate = true;
+            readClicks++;
+        }
         var roll1 = Random.Range(0, 10);
         var roll2 = Random.Range(0, 10);
-        if (Library.TutorialRolls.Count < MoveNumber + 1) {
-            Global.PlayingTutorial = false;
-        }
 
-        if (!Global.PlayingTutorial)
+        if (!Global.IsTutorial || Library.TutorialRolls.Count < MoveNumber + 1)
         {
-            //extra random because it feels sticky sometimes
+            //extra random because it feels sticky sometimes, #sanitycheck
             roll1 = Random.Range(0, 10);
             roll2 = Random.Range(0, 10);
         }
         else
         {
             roll1 = Library.TutorialRolls[MoveNumber];
-            roll2 = Library.TutorialRolls[MoveNumber+1];
+            roll2 = Library.TutorialRolls[MoveNumber + 1];
         }
 
         if (!Global.CPUGame)
@@ -455,8 +673,19 @@ public class GameManager : MonoBehaviour
         if (ZerosRolled())
         {
             MoveNumber = MoveNumber + 2;
-            yield return new WaitForSeconds(2f);
+            TutorialAction++;
+
+            if (Global.IsTutorial) {
+                while (readClicks == 44)
+                {
+                    yield return new WaitForSeconds(.1f);
+                }
+            } else {
+                yield return new WaitForSeconds(2f);
+            }
+
             SwitchPlayer();
+
         } else {
             if (lowerMove == 0)
             {
@@ -470,7 +699,7 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                yield return StartCoroutine(RollSelected(true, !IsCPUTurn()));
+                yield return StartCoroutine(RollSelected(true, false));
             }
         }
     }
@@ -582,11 +811,18 @@ public class GameManager : MonoBehaviour
         }
         else if (User.UserId == 43)
         {
-            textToChange.text = "Tutorial";
-        } 
+            if (Global.IsTutorial)
+                textToChange.text = "Teacher";
+            else
+                textToChange.text = "Your worst nightmare";
+        }
         else if (User.IsCPU)
         {
             textToChange.text = "CPU";
+        }
+        else if (Global.IsTutorial)
+        {
+            textToChange.text = "Student";
         }
         else if (User.IsGuest)
         {
@@ -602,7 +838,6 @@ public class GameManager : MonoBehaviour
         {
             textToChange.text = "Loser";
         }
-
     }
 
     public void RollSelected(bool isHigher)
@@ -735,7 +970,7 @@ public class GameManager : MonoBehaviour
             if (!IsCPUTurn())
             {
                 //todo add undo to multiplayer
-                if (Global.CPUGame && !Global.PlayingTutorial)
+                if (Global.CPUGame && !Global.IsTutorial)
                 {
                     if (activePlayer == 0)
                     {
@@ -746,7 +981,7 @@ public class GameManager : MonoBehaviour
                         undoButton2.gameObject.SetActive(true);
                     }
                 }
-                yield return StartCoroutine(RollSelected(!(bool)higherMoveSelected, !IsCPUTurn()));
+                yield return StartCoroutine(RollSelected(!(bool)higherMoveSelected, false));
             }
         }
     }
@@ -801,17 +1036,31 @@ public class GameManager : MonoBehaviour
         StartCoroutine(TimeRanOut());
     }
 
-    public void OnVolumeChanged(bool turn)
+    public void OnVolumeChanged(string type)
     {
-        if (turn)
+        if (type == "turn")
         {
             Global.LoggedInPlayer.TurnVolume = TurnVolumeSlider.value;
         }
-        else
+        else if (type == "music")
         {
-            Global.LoggedInPlayer.MusicVolume = VolumeSlider.value;
-            if(audioSourceGlobal != null)
-                audioSourceGlobal.volume = VolumeSlider.value;
+            Global.LoggedInPlayer.MusicVolume = GameMusicSlider.value;
+            if (audioSourceGlobal != null)
+                audioSourceGlobal.volume = Global.LoggedInPlayer.MusicVolume;
+        }
+        else if (type == "master")
+        {
+            Global.LoggedInPlayer.MasterVolume = GetObject("MasterVolumeSlider").GetComponent<Slider>().value;
+            AudioListener.volume = Global.LoggedInPlayer.MasterVolume;
+        }
+        else if (type == "voice")
+        {
+            Global.LoggedInPlayer.VoiceVolume = GetObject("VoiceVolumeSlider").GetComponent<Slider>().value;
+            TutorialSource.volume = Global.LoggedInPlayer.VoiceVolume;
+        }
+        else if (type == "effect")
+        {
+            Global.LoggedInPlayer.EffectsVolume = GetObject("EffectsVolumeSlider").GetComponent<Slider>().value;
         }
     }
     public void ExitSettings()
@@ -828,12 +1077,12 @@ public class GameManager : MonoBehaviour
         {
             if (lowerMove == 0)
             {
-                yield return StartCoroutine(RollSelected(true, true));
+                yield return StartCoroutine(RollSelected(true, false));
             }
         }
         else
         {
-            yield return StartCoroutine(RollSelected(true, true));
+            yield return StartCoroutine(RollSelected(true, false));
             yield return new WaitForSeconds(0.5f);
             var ing = MoveableList[Random.Range(0, MoveableList.Count())];
             yield return StartCoroutine(ing.Move());
@@ -864,8 +1113,18 @@ public class GameManager : MonoBehaviour
         {
             if (playerList[i].IsCPU)
             {
-                int k = 0;
-                allIngredientMaterials.ForEach(x => { unusedMats[i].Add(k); k++; });
+                if (!Global.IsTutorial)
+                {
+                    int k = 0;
+                    allIngredientMaterials.ForEach(x => { unusedMats[i].Add(k); k++; });
+                }
+                else
+                {
+                    originalMats[i].Add(allIngredientMaterials.Count - 1);
+                    originalMats[i].Add(allIngredientMaterials.Count - 2);
+                    originalMats[i].Add(allIngredientMaterials.Count - 3);
+                    originalMats[i].Add(allIngredientMaterials.Count - 4);
+                }
             }
             else
             {
@@ -1049,7 +1308,8 @@ public class GameManager : MonoBehaviour
             BlockPlayerActionPanel.SetActive(false);
             HigherRollText1.text = "";
             LowerRollText1.text = "";
-            RollButton1.SetActive(true);
+            if(TurnNumber != 1 || !Global.IsTutorial)
+                RollButton1.SetActive(true);
             TurnBorder1.SetActive(true);
             HigherRollImage1.interactable = true;
             LowerRollImage1.interactable = true;
@@ -1086,14 +1346,19 @@ public class GameManager : MonoBehaviour
 
     internal IEnumerator RollSelected(bool isHigher, bool HUMAN)
     {
-        if (isMoving || (IsCPUTurn() && HUMAN))
+        if (isMoving)
         {
             yield return new WaitForSeconds(0.5f);
         }
         else
         {
-            if (higherMoveSelected != isHigher)
+            if (higherMoveSelected != isHigher && (!HUMAN || (!Global.IsTutorial || TutorialChangeDiceArrow.activeInHierarchy)))
             {
+                if (TutorialChangeDiceArrow.activeInHierarchy)
+                {
+                    readClicks++;
+                }
+                yield return StartCoroutine(TutorialUpdate());
                 higherMoveSelected = isHigher;
                 Steps = higherMoveSelected == true ? higherMove : lowerMove;
                 SetDice();
@@ -1223,7 +1488,7 @@ public class GameManager : MonoBehaviour
         {
             playerWhoWon = playerList.Where((x, i) => AllIngredients.Where(y => y.Team == i).All(y => y.isCooked)).FirstOrDefault();
         }
-        if (!Global.LoggedInPlayer.IsGuest && !Global.PlayingTutorial)
+        if (!Global.LoggedInPlayer.IsGuest && !wasTutorial)
         {
             var player1Cooked = IsPlayer1Player1 ? player1Count : player2Count;
             var player2Cooked = IsPlayer1Player1 ? player2Count : player1Count;
@@ -1233,14 +1498,28 @@ public class GameManager : MonoBehaviour
         {
             eventText.text = (player1Count > player2Count ? "You Won!" : "You Lost!");
 
-            eventText.text += "\n \n Create an account to track your games!";
+            eventText.text += "\n \n Create an account to track your games and get rewards!";
 
-            eventText.text += "\n \n Once you are ready, play online for better rewards!";
+            if (wasTutorial)
+            {
+                if (player1Count > player2Count)
+                {
+                    eventText.text += "\n \n Great work beating the tutorial! Now go try out the game online!";
+                }
+                else
+                {
+                    eventText.text += "\n \n No worries, many of the greats have lost vs Mike, try again from the main menu!";
+                }
+            }
+            else
+            {
+                eventText.text += "\n \n Once you are ready, play online for better rewards!";
+            }
 
             if (Global.LoggedInPlayer.WineMenu)
                 eventText.text += "\n \n" + (playerWhoWon.UserId == Global.LoggedInPlayer.UserId ? " Purple" : " Yellow") + " Team finish your drinks!";
 
-            eventText.text += "\n \n (Press anywhere to continue)";
+            eventText.text += "\n \n (Click to continue)";
 
             EventCanvas.SetActive(true);
         }

@@ -97,7 +97,6 @@ public class MainMenuController : MonoBehaviour
         alertPanel = GetObject("AlertPanel");
         loadingPanel = GetObject("LoadingPanel");
         Global.Reset();
-
         if (GameObject.FindGameObjectsWithTag("GameMusic").Length > 0)
         {
             audioSourceGlobal = GameObject.FindGameObjectWithTag("GameMusic").GetComponent<AudioSource>();
@@ -191,7 +190,7 @@ public class MainMenuController : MonoBehaviour
             }
             catch (Exception ex)
             {
-                DisplayAlert("Network Failure", "Can not connect to server.");
+                DisplayAlert("Network Failure", ex.Message);
             }
 
             if (!LookingForFriendGame && !FriendChallengePanel.activeInHierarchy)
@@ -214,19 +213,38 @@ public class MainMenuController : MonoBehaviour
                 objectsInScene.Add(go);
         }
     }
-
-    public void OnVolumeChanged(bool turn)
+    public void TutorialButton()
+    {
+        Global.IsTutorial = true;
+        Global.CPUGame = true;
+        Global.SecondPlayer = new Player() { Username = "Mike", IsCPU = true, UserId = 43 };
+        SceneManager.LoadScene("PlayScene");
+    }
+    public void OnVolumeChanged(string type)
     {
         toggleActivated = true;
-        if (turn)
+        if (type == "turn")
         {
             Global.LoggedInPlayer.TurnVolume = TurnVolumeSlider.value;
         }
-        else
+        else if (type == "music")
         {
             Global.LoggedInPlayer.MusicVolume = VolumeSlider.value;
-            if(audioSourceGlobal != null)
-                audioSourceGlobal.volume = VolumeSlider.value;
+            if (audioSourceGlobal != null)
+                audioSourceGlobal.volume = Global.LoggedInPlayer.MusicVolume;
+        }
+        else if (type == "master")
+        {
+            Global.LoggedInPlayer.MasterVolume = settings.transform.Find("MasterVolumeSlider").GetComponent<Slider>().value;
+            AudioListener.volume = Global.LoggedInPlayer.MasterVolume;
+        }
+        else if (type == "voice")
+        {
+            Global.LoggedInPlayer.VoiceVolume = settings.transform.Find("VoiceVolumeSlider").GetComponent<Slider>().value;
+        }
+        else if (type == "effect")
+        {
+            Global.LoggedInPlayer.EffectsVolume = settings.transform.Find("EffectsVolumeSlider").GetComponent<Slider>().value;
         }
     }  
     private void GetGameUpdate(string data)
@@ -479,7 +497,7 @@ public class MainMenuController : MonoBehaviour
         yield return StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Global.LoggedInPlayer.UserId}", GetLevelUpdateCallback));
         StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Global.LoggedInPlayer.UserId}", GetRewardCallback));
         StartCoroutine(sql.RequestRoutine($"skin/CheckForUnlocks?UserId={Global.LoggedInPlayer.UserId}", GetTitleUnlockCallback));
-        StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Global.LoggedInPlayer.Username}", GetPlayerCallback));
+        StartCoroutine(sql.RequestRoutine($"player/GetUserById?UserId={Global.LoggedInPlayer.UserId}", GetPlayerCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetProfile?UserId={Global.LoggedInPlayer.UserId}", GetProfileCallback));
     }
 
@@ -662,7 +680,7 @@ public class MainMenuController : MonoBehaviour
         else
         {
             DisplayAlert("Success", $"Your code was valid! \n \n you have recieved {reward} Calories!");
-            StartCoroutine(sql.RequestRoutine($"player/GetUserByName?username={Global.LoggedInPlayer.Username}", GetPlayerCallback));
+            StartCoroutine(sql.RequestRoutine($"player/GetUserById?UserId={Global.LoggedInPlayer.UserId}", GetPlayerCallback));
         }
     }
    

@@ -291,14 +291,14 @@ public class ChestController : MonoBehaviour
                 x.GetComponent<Button>().interactable = false;
             });
             PlayerChests.RemoveAt((int)SlotSelected);
-            if (SelectedChest.ChestTypeId == 1)
-            {
-                RewardContent.GetComponent<GridLayoutGroup>().cellSize = new Vector2(300, 300);
-            }
-            else if (SelectedChest.ChestTypeId == 2)
-            {
-                RewardContent.GetComponent<GridLayoutGroup>().cellSize = new Vector2(200, 200);
-            }
+            //if (SelectedChest.ChestTypeId == 1)
+            //{
+            //    RewardContent.GetComponent<GridLayoutGroup>().cellSize = new Vector2(300, 300);
+            //}
+            //else if (SelectedChest.ChestTypeId == 2)
+            //{
+            //    RewardContent.GetComponent<GridLayoutGroup>().cellSize = new Vector2(200, 200);
+            //}
             HelpText.text = "Press to speed this up!";
             ChestToOpenSlot.gameObject.GetComponent<Animation>().Play("DiceShaker");
             yield return StartCoroutine(sql.RequestRoutine($"skin/OpenMyChest?UserId={Global.LoggedInPlayer.UserId}&ChestId={SelectedChest.ChestId}", OpenChestsCallback));

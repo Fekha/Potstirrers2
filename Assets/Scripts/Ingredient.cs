@@ -9,10 +9,10 @@ public class Ingredient : MonoBehaviour
     public int IngredientId = 0;
     private SqlController sql;
     public Animator anim;
+    public GameObject TutorialArrow;
     public TrailRenderer trail;
     public ParticleSystem fire;
     public ParticleSystem stomp;
-    public ParticleSystem landOn;
 
     internal int routePosition = 0;
     internal int endLowerPosition = 0;
@@ -57,9 +57,7 @@ public class Ingredient : MonoBehaviour
             yield return new WaitForSeconds(.5f);
         }
 
-        GameManager.i.isMoving = true;
-
-        GameManager.i.MoveNumber++;
+        yield return StartCoroutine(GameManager.i.StartedMoving()); 
 
         if (GameManager.i.lastMovedIngredient != null)
         {
@@ -88,7 +86,7 @@ public class Ingredient : MonoBehaviour
         bool skipping = false;
         while (GameManager.i.Steps > 0)
         {
-            while (GameManager.i.IsReading)
+            while (GameManager.i.IsReading || GameManager.i.TutorialStopActions)
             {
                 yield return new WaitForSeconds(0.5f);
             }
@@ -294,6 +292,8 @@ public class Ingredient : MonoBehaviour
 
         if (isforEffect)
         {
+            anim.SetBool("StartedJumping", false);
+            anim.SetBool("StartedMoving", false);
             anim.Play("Flip");
         }
         else if (skipping)
@@ -338,13 +338,20 @@ public class Ingredient : MonoBehaviour
         trail.enabled = false;
         if (on)
         {
-            IsMovableBy = GameManager.i.GetActivePlayer().UserId;
-            if(!selector.activeInHierarchy)
+            var currentPlayer = GameManager.i.GetActivePlayer();
+            if (currentPlayer.IsCPU || !Global.IsTutorial || GameManager.i.TutorialIngId == IngredientId)
+                IsMovableBy = currentPlayer.UserId;
+            else
+                IsMovableBy = 0;
+            if (GameManager.i.TutorialIngId == IngredientId)
+                TutorialArrow.SetActive(true);
+            if (!selector.activeInHierarchy)
                 anim.Play("Selected");
         }
         else
         {
             IsMovableBy = 0;
+            TutorialArrow.SetActive(false);
         }
         selector.SetActive(on);
     }
@@ -355,7 +362,8 @@ public class Ingredient : MonoBehaviour
             && IsMovableBy == Global.LoggedInPlayer.UserId 
             && !GameManager.i.isMoving 
             && !GameManager.i.IsCPUTurn() 
-            && !GameManager.i.Automating)
+            && !GameManager.i.Automating
+            && !GameManager.i.TutorialStopActions)
         {
             StartCoroutine(Move());
         }

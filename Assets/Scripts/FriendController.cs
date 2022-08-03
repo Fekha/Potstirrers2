@@ -84,7 +84,7 @@ public class FriendController : MonoBehaviour
 
     public void AddFriend()
     {
-        StartCoroutine(sql.RequestRoutine("player/GetUserByName?username=" + FriendText.GetComponent<InputField>().text, this.GetFriendByUsernameCallback));
+        StartCoroutine(sql.RequestRoutine("player/GetUserById?UserId=" + FriendText.GetComponent<InputField>().text, this.GetFriendByUsernameCallback));
     }  
     
     private void RemoveFriend(string FriendName)

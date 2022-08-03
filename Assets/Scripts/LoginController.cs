@@ -60,7 +60,7 @@ public class LoginController : MonoBehaviour
         
             StartCoroutine(sql.RequestRoutine($"player/GetDevice?deviceId={deviceId}", GetDeviceCallback, true));
         }
-        catch(Exception ex){
+        catch(Exception){
             isLoading = false;
             alert.SetActive(false);
         }
@@ -105,7 +105,7 @@ public class LoginController : MonoBehaviour
                 catch (Exception ex)
                 {
                     alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Network Failure";
-                    alert.transform.Find("AlertText").GetComponent<Text>().text = "Can't connect to the server.";
+                    alert.transform.Find("AlertText").GetComponent<Text>().text = ex.Message;
                     alert.SetActive(true);
                 }
             }
@@ -157,12 +157,7 @@ public class LoginController : MonoBehaviour
         {
             alert.SetActive(false);
             Global.LoggedInPlayer.IsGuest = false;
-
-            Global.PlayingTutorial = true;
-            Global.CPUGame = true;
-            Global.SecondPlayer = new Player() { Username = "Michael", IsCPU = true, UserId = 43 };
-            SceneManager.LoadScene("PlayScene");
-            //SceneManager.LoadScene("MainMenu");
+            SceneManager.LoadScene("MainMenu");
         }
     }
     public void LoginButton()
@@ -194,7 +189,10 @@ public class LoginController : MonoBehaviour
     {
         Global.LoggedInPlayer = new Player() { Username = "Guest" + UnityEngine.Random.Range(1000, 10000) };
         Global.LoggedInPlayer.IsGuest = true;
-        SceneManager.LoadScene("MainMenu");
+        Global.IsTutorial = true;
+        Global.CPUGame = true;
+        Global.SecondPlayer = new Player() { Username = "Mike", IsCPU = true, UserId = 43 };
+        SceneManager.LoadScene("PlayScene");
     }
 
     private IEnumerator Login()
@@ -232,7 +230,10 @@ public class LoginController : MonoBehaviour
         {
             Global.LoggedInPlayer = Player;
             Global.LoggedInPlayer.IsGuest = false;
-            SceneManager.LoadScene("MainMenu");
+            Global.IsTutorial = true;
+            Global.CPUGame = true;
+            Global.SecondPlayer = new Player() { Username = "Mike", IsCPU = true, UserId = 43 };
+            SceneManager.LoadScene("PlayScene");
         }
         else
         {

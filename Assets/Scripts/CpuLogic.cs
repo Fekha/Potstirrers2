@@ -111,9 +111,7 @@ public class CpuLogic : MonoBehaviour
         UseableIngredients = UseableIngredients.OrderBy(x => x.isCooked).ThenBy(x => x.distanceFromScore).ToList();
         UseableTeamIngredients = UseableIngredients.Where(x => x.Team == GameManager.i.activePlayer).ToList();
         UseableEnemyIngredients = UseableIngredients.Where(x => x.Team != GameManager.i.activePlayer).ToList();
-
-        //If reading wait
-        while (GameManager.i.IsReading)
+        while (GameManager.i.IsReading || GameManager.i.TutorialStopActions)
         {
             yield return new WaitForSeconds(0.5f);
         }
@@ -179,7 +177,7 @@ public class CpuLogic : MonoBehaviour
     }
     internal void PrepShitTalk(TalkType talk)
     {
-        if (!Global.CPUGame || Global.PlayingTutorial || !string.IsNullOrEmpty(GameManager.i.talkShitText.text) || !GameManager.i.playerList.Any(x => x.IsCPU))
+        if (!Global.CPUGame || Global.IsTutorial || !string.IsNullOrEmpty(GameManager.i.talkShitText.text) || !GameManager.i.playerList.Any(x => x.IsCPU))
             return;
 
         var username = GameManager.i.GetActivePlayer().Username;
@@ -197,7 +195,7 @@ public class CpuLogic : MonoBehaviour
                     case "Jenn":
                         GameManager.i.talkShitText.text = "#ImNotEvenTrying";
                         break;
-                    case "Chrissy":
+                    case "Mike":
                         GameManager.i.talkShitText.text = "You did't leave me any good moves!";
                         break;
                     default:
@@ -216,8 +214,8 @@ public class CpuLogic : MonoBehaviour
                     case "Jenn":
                         GameManager.i.talkShitText.text = "#YouAreTrash";
                         break;
-                    case "Chrissy":
-                        GameManager.i.talkShitText.text = "Watch out for the trash cans!";
+                    case "Mike":
+                        GameManager.i.talkShitText.text = "What did I teach you about the trash cans!";
                         break;
                     default:
                         break;
@@ -235,8 +233,8 @@ public class CpuLogic : MonoBehaviour
                     case "Jenn":
                         GameManager.i.talkShitText.text = "#SorryNotSorry";
                         break;
-                    case "Chrissy":
-                        GameManager.i.talkShitText.text = "Oops, didn't see you there!";
+                    case "Mike":
+                        GameManager.i.talkShitText.text = "It's called a DANGER zone for a reason!";
                         break;
                     default:
                         break;
@@ -254,8 +252,8 @@ public class CpuLogic : MonoBehaviour
                     case "Jenn":
                         GameManager.i.talkShitText.text = "#GetRekt";
                         break;
-                    case "Chrissy":
-                        GameManager.i.talkShitText.text = "Oh no, I was trying to help!";
+                    case "Mike":
+                        GameManager.i.talkShitText.text = "Oh no, was that your ingredient!?";
                         break;
                     default:
                         break;
@@ -265,16 +263,16 @@ public class CpuLogic : MonoBehaviour
                 switch (username)
                 {
                     case "Zach":
-                        GameManager.i.talkShitText.text = "Safe for me, not you!";
+                        GameManager.i.talkShitText.text = "";
                         break;
                     case "Ethan":
-                        GameManager.i.talkShitText.text = "You owe me one for moving you...";
+                        GameManager.i.talkShitText.text = "Safe for me, not you!";
                         break;
                     case "Jenn":
                         GameManager.i.talkShitText.text = "#SickBurn";
                         break;
-                    case "Chrissy":
-                        GameManager.i.talkShitText.text = "I'm just teaching you how the safe zone works";
+                    case "Mike":
+                        GameManager.i.talkShitText.text = "It's called a DANGER zone for a reason!";
                         break;
                     default:
                         break;
@@ -292,8 +290,8 @@ public class CpuLogic : MonoBehaviour
                     case "Jenn":
                         GameManager.i.talkShitText.text = "#Winning";
                         break;
-                    case "Chrissy":
-                        GameManager.i.talkShitText.text = "This is fun!";
+                    case "Mike":
+                        GameManager.i.talkShitText.text = "I'm catching up!";
                         break;
                     default:
                         break;
@@ -311,8 +309,8 @@ public class CpuLogic : MonoBehaviour
                     case "Jenn":
                         GameManager.i.talkShitText.text = "#StrategicAF";
                         break;
-                    case "Chrissy":
-                        GameManager.i.talkShitText.text = "Teamwork makes the dreamwork!";
+                    case "Mike":
+                        GameManager.i.talkShitText.text = "This is a lesson on Teamwork!";
                         break;
                     default:
                         break;
@@ -330,8 +328,8 @@ public class CpuLogic : MonoBehaviour
                     case "Jenn":
                         GameManager.i.talkShitText.text = "#ByeFelicia";
                         break;
-                    case "Chrissy":
-                        GameManager.i.talkShitText.text = "I'm sorry, I just had to!";
+                    case "Mike":
+                        GameManager.i.talkShitText.text = "I'm sorry, I couldn't resist!";
                         break;
                     default:
                         break;
@@ -343,7 +341,7 @@ public class CpuLogic : MonoBehaviour
                 var EthanOptions = new List<string>() { "", "Man it sucks to suck...", "Dag Nabbit!", "What do you think your doing!?" };
                 var JoeOptions = new List<string>() { "", "Wait, you can't do that to me!!", "Watch your back!", "I'll remember that!" };
                 var JennOptions = new List<string>() { "", "#Oooof", "#Toxic", "#OhNoYouDidnt" };
-                var ChrissyOptions = new List<string>() { "", "Well that wasn't very nice!", "Hey, quit doing that!", "Treat others how you want to be treated..." };
+                var MikeOptions = new List<string>() { "", "Hey, who taught you that!", "Oh man, I underestimated you!", "Treat others how you want to be treated..." };
                 switch (username)
                 {
                     case "Zach":
@@ -355,8 +353,8 @@ public class CpuLogic : MonoBehaviour
                     case "Jenn":
                         GameManager.i.talkShitText.text = JennOptions[Random.Range(0, JennOptions.Count())];
                         break;
-                    case "Chrissy":
-                        GameManager.i.talkShitText.text = ChrissyOptions[Random.Range(0, ChrissyOptions.Count())];
+                    case "Mike":
+                        GameManager.i.talkShitText.text = MikeOptions[Random.Range(0, MikeOptions.Count())];
                         break;
                     default:
                         break;
@@ -950,7 +948,7 @@ public class CpuLogic : MonoBehaviour
     }
     private Ingredient BeDumb()
     {
-        if (!Global.IsDebug && !Global.PlayingTutorial && !Global.FakeOnlineGame && (!hasBeenDumb && (Random.Range(0, Mathf.Min((Global.LoggedInPlayer.Wins == 0 ? 2 : Global.LoggedInPlayer.Wins*2), 50)) == 0)))
+        if (!Global.IsDebug && !Global.IsTutorial && !Global.FakeOnlineGame && (!hasBeenDumb && (Random.Range(0, Mathf.Min((Global.LoggedInPlayer.Wins == 0 ? 2 : Global.LoggedInPlayer.Wins*2), 50)) == 0)))
         {
             if (IngredientMovedWithHigher == null)
             {

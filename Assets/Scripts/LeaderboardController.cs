@@ -43,7 +43,7 @@ public class LeaderboardController : MonoBehaviour
             }
             catch (Exception ex)
             {
-                MainMenuController.i.DisplayAlert("Network Failure", "Can't connect to the server.");
+                MainMenuController.i.DisplayAlert("Network Failure", ex.Message);
             }
         }
     }
