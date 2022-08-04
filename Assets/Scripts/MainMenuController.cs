@@ -68,7 +68,7 @@ public class MainMenuController : MonoBehaviour
     #endregion
     public static MainMenuController i;
     #region Internal Varibales
-    private Profile CurrentPlayer;
+    private Player CurrentProfile;
 
     private bool toggleActivated;
     private bool loadingToggle = true; 
@@ -82,7 +82,7 @@ public class MainMenuController : MonoBehaviour
     public List<Sprite> DieSprites;
     public List<Sprite> IngSprites;
     private int tick = 10;
-    public Profile YourFriend;
+    public Player YourFriend;
     public GameObject HasMessage;
     public GameObject HasChest;
     public GameObject HasUnlock;
@@ -492,12 +492,9 @@ public class MainMenuController : MonoBehaviour
     } 
     internal IEnumerator SetPlayer()
     {
-        //if(!Global.LoggedInPlayer.IsGuest)
-        //    DisplayLoading("Loading","Setting up your profile...");
         yield return StartCoroutine(sql.RequestRoutine($"player/UpdateLevel?UserId={Global.LoggedInPlayer.UserId}", GetLevelUpdateCallback));
         StartCoroutine(sql.RequestRoutine($"player/CheckForReward?UserId={Global.LoggedInPlayer.UserId}", GetRewardCallback));
         StartCoroutine(sql.RequestRoutine($"skin/CheckForUnlocks?UserId={Global.LoggedInPlayer.UserId}", GetTitleUnlockCallback));
-        StartCoroutine(sql.RequestRoutine($"player/GetUserById?UserId={Global.LoggedInPlayer.UserId}", GetPlayerCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetProfile?UserId={Global.LoggedInPlayer.UserId}", GetProfileCallback));
     }
 
@@ -507,26 +504,22 @@ public class MainMenuController : MonoBehaviour
         xpText.text = $"XP To Next Level: {Global.LoggedInPlayer.Xp}/{xpNeeded}";
         xpSlider.value = ((float)Global.LoggedInPlayer.Xp / xpNeeded);
     }
-    private void GetPlayerCallback(string data)
-    {
-        var player = sql.jsonConvert<Player>(data);
-
-        if (player.HasNewMessage)
-            HasMessage.SetActive(true);
-        
-        if (player.HasNewChest)
-            HasChest.SetActive(true);
-
-        Global.LoggedInPlayer.Calories = player.Calories;
-        Global.LoggedInPlayer.Level = player.Level;
-        Global.LoggedInPlayer.Xp = player.Xp;
-        UpdateLvlText();
-    } 
     private void GetProfileCallback(string data)
     {
-        CurrentPlayer = sql.jsonConvert<Profile>(data);
-        Global.LoggedInPlayer.Wins = CurrentPlayer.AllWins ?? 0;
+        CurrentProfile = sql.jsonConvert<Player>(data);
+        Global.LoggedInPlayer.Wins = CurrentProfile.AllWins;
         SetProfileData();
+
+        if (CurrentProfile.HasNewMessage)
+            HasMessage.SetActive(true);
+
+        if (CurrentProfile.HasNewChest)
+            HasChest.SetActive(true);
+
+        Global.LoggedInPlayer.Calories = CurrentProfile.Calories;
+        Global.LoggedInPlayer.Level = CurrentProfile.Level;
+        Global.LoggedInPlayer.Xp = CurrentProfile.Xp;
+        UpdateLvlText();
         HideLoading();
     }
 
@@ -541,22 +534,22 @@ public class MainMenuController : MonoBehaviour
         CaloriesText.color = Color.white;
         LastLoginText.color = Color.white;
 
-        ProfileText.text = $"{CurrentPlayer.Username}'s Profile";
-        MainProfileText.text = $"{CurrentPlayer.Username}";
+        ProfileText.text = $"{CurrentProfile.Username}'s Profile";
+        MainProfileText.text = $"{CurrentProfile.Username}";
         CurrentLevelText.text = $"";
-        DailyWinsText.text = $"Daily CPU Wins: {CurrentPlayer.DailyWins}";
-        WeeklyWinsText.text = $"Weekly CPU Wins: {CurrentPlayer.WeeklyWins}";
-        AllCPUWinsText.text = $"All CPU Wins: {CurrentPlayer.AllWins}";
-        AllPVPWinsText.text = $"All PVP Wins: {CurrentPlayer.AllPVPWins}";
-        CookedIngredientsText.text = $"Cooked Ingredients: {CurrentPlayer.Cooked}";
-        CaloriesText.text = $"Calories: {CurrentPlayer.Calories}";
+        DailyWinsText.text = $"Daily CPU Wins: {CurrentProfile.DailyWins}";
+        WeeklyWinsText.text = $"Weekly CPU Wins: {CurrentProfile.WeeklyWins}";
+        AllCPUWinsText.text = $"All CPU Wins: {CurrentProfile.AllWins}";
+        AllPVPWinsText.text = $"All PVP Wins: {CurrentProfile.AllPVPWins}";
+        CookedIngredientsText.text = $"Cooked Ingredients: {CurrentProfile.Cooked}";
+        CaloriesText.text = $"Calories: {CurrentProfile.Calories}";
         LastLoginText.text = $"Online Status: Online";
         challengeFriendButton.SetActive(false);
     }
 
     internal void GetFriendProfileCallback(string data)
     {
-        YourFriend = sql.jsonConvert<Profile>(data);
+        YourFriend = sql.jsonConvert<Player>(data);
 
         CurrentLevelText.color = Color.white;
         DailyWinsText.color = Color.white;
@@ -568,39 +561,39 @@ public class MainMenuController : MonoBehaviour
         LastLoginText.color = Color.white;
 
         ProfileText.text = $"{YourFriend.Username}'s Profile";
-        if (YourFriend.Level > CurrentPlayer.Level)
+        if (YourFriend.Level > CurrentProfile.Level)
             CurrentLevelText.color = Color.red;
-        else if(YourFriend.Level < CurrentPlayer.Level)
+        else if(YourFriend.Level < CurrentProfile.Level)
             CurrentLevelText.color = Color.green;
         CurrentLevelText.text = $"Level: {YourFriend.Level}";
-        if (YourFriend.DailyWins > CurrentPlayer.DailyWins)
+        if (YourFriend.DailyWins > CurrentProfile.DailyWins)
             DailyWinsText.color = Color.red;
-        else if (YourFriend.DailyWins < CurrentPlayer.DailyWins)
+        else if (YourFriend.DailyWins < CurrentProfile.DailyWins)
             DailyWinsText.color = Color.green;
         DailyWinsText.text = $"Daily CPU Wins: {YourFriend.DailyWins}";
-        if (YourFriend.WeeklyWins > CurrentPlayer.WeeklyWins)
+        if (YourFriend.WeeklyWins > CurrentProfile.WeeklyWins)
             WeeklyWinsText.color = Color.red;
-        else if (YourFriend.WeeklyWins < CurrentPlayer.WeeklyWins)
+        else if (YourFriend.WeeklyWins < CurrentProfile.WeeklyWins)
             WeeklyWinsText.color = Color.green;
         WeeklyWinsText.text = $"Weekly CPU Wins: {YourFriend.WeeklyWins}";
-        if (YourFriend.AllWins > CurrentPlayer.AllWins)
+        if (YourFriend.AllWins > CurrentProfile.AllWins)
             AllCPUWinsText.color = Color.red;
-        else if (YourFriend.AllWins < CurrentPlayer.AllWins)
+        else if (YourFriend.AllWins < CurrentProfile.AllWins)
             AllCPUWinsText.color = Color.green;
         AllCPUWinsText.text = $"All CPU Wins: {YourFriend.AllWins}";
-        if (YourFriend.AllPVPWins > CurrentPlayer.AllPVPWins)
+        if (YourFriend.AllPVPWins > CurrentProfile.AllPVPWins)
             AllPVPWinsText.color = Color.red;
-        else if (YourFriend.AllPVPWins < CurrentPlayer.AllPVPWins)
+        else if (YourFriend.AllPVPWins < CurrentProfile.AllPVPWins)
             AllPVPWinsText.color = Color.green;
         AllPVPWinsText.text = $"All PVP Wins: {YourFriend.AllPVPWins}";
-        if (YourFriend.Cooked > CurrentPlayer.Cooked)
+        if (YourFriend.Cooked > CurrentProfile.Cooked)
             CookedIngredientsText.color = Color.red;
-        else if (YourFriend.Cooked < CurrentPlayer.Cooked)
+        else if (YourFriend.Cooked < CurrentProfile.Cooked)
             CookedIngredientsText.color = Color.green;
         CookedIngredientsText.text = $"Cooked Ingredients: {YourFriend.Cooked}";
-        if (YourFriend.Calories > CurrentPlayer.Calories)
+        if (YourFriend.Calories > CurrentProfile.Calories)
             CaloriesText.color = Color.red;
-        else if (YourFriend.Calories < CurrentPlayer.Calories)
+        else if (YourFriend.Calories < CurrentProfile.Calories)
             CaloriesText.color = Color.green;
         CaloriesText.text = $"Calories: {YourFriend.Calories}";
         if (!YourFriend.IsOnline)
@@ -621,9 +614,8 @@ public class MainMenuController : MonoBehaviour
         profilePanel.SetActive(true);
     }  
 
-    private void GetRewardCallback(string data)
+    private void GetRewardCallback(string rewardText)
     {
-        var rewardText = sql.jsonConvert<string>(data);      
         if (!String.IsNullOrEmpty(rewardText))
         {
             rewardAlert3.transform.Find("Banner").GetComponentInChildren<Text>().text = "Congrats!";
@@ -631,9 +623,8 @@ public class MainMenuController : MonoBehaviour
             rewardAlert3.SetActive(true);
         }
     } 
-    private void GetLevelUpdateCallback(string data)
-    {
-        var rewardText = sql.jsonConvert<string>(data);      
+    private void GetLevelUpdateCallback(string rewardText)
+    {    
         if (!String.IsNullOrEmpty(rewardText))
         {
             rewardAlert4.transform.Find("Banner").GetComponentInChildren<Text>().text = "Congrats!";
@@ -642,9 +633,8 @@ public class MainMenuController : MonoBehaviour
         }
     }
     
-    private void GetTitleUnlockCallback(string data)
-    {
-        var rewardText = sql.jsonConvert<string>(data);      
+    private void GetTitleUnlockCallback(string rewardText)
+    {    
         if (!String.IsNullOrEmpty(rewardText))
         {
             HasUnlock.SetActive(true);
@@ -660,7 +650,14 @@ public class MainMenuController : MonoBehaviour
         settings.SetActive(false);
         if (toggleActivated)
         {
-            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(Global.LoggedInPlayer.UserId)}&GameVolume={(Global.LoggedInPlayer.MusicVolume)}&TurnVolume={(Global.LoggedInPlayer.TurnVolume)}&WineMenu={(Global.LoggedInPlayer.WineMenu)}&PlayAsPurple={(Global.LoggedInPlayer.PlayAsPurple)}"));
+            StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(Global.LoggedInPlayer.UserId)}" +
+                $"&MasterVolume={(Global.LoggedInPlayer.MasterVolume)}" +
+                $"&MusicVolme={(Global.LoggedInPlayer.MusicVolume)}" +
+                $"&TurnVolume={(Global.LoggedInPlayer.TurnVolume)}" +
+                $"&VoiceVolume={(Global.LoggedInPlayer.VoiceVolume)}" +
+                $"&EffectVolume={(Global.LoggedInPlayer.EffectsVolume)}" +
+                $"&WineMenu={(Global.LoggedInPlayer.WineMenu)}" +
+                $"&PlayAsPurple={(Global.LoggedInPlayer.PlayAsPurple)}"));
         }
         toggleActivated = false;
     }
@@ -680,7 +677,7 @@ public class MainMenuController : MonoBehaviour
         else
         {
             DisplayAlert("Success", $"Your code was valid! \n \n you have recieved {reward} Calories!");
-            StartCoroutine(sql.RequestRoutine($"player/GetUserById?UserId={Global.LoggedInPlayer.UserId}", GetPlayerCallback));
+            StartCoroutine(sql.RequestRoutine($"player/GetUserById?UserId={Global.LoggedInPlayer.UserId}", GetProfileCallback));
         }
     }
    

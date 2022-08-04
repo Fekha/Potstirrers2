@@ -205,7 +205,7 @@ public class Ingredient : MonoBehaviour
         if (Route.i.FullRoute[routePosition].hasSpoon || Route.i.FullRoute[routePosition].hasSpatula)
         {
             routePosition = routePosition + (Route.i.FullRoute[routePosition].hasSpoon ? 6 : -6 );
-            yield return StartCoroutine(MoveToNextTile(null,true,20f));
+            yield return StartCoroutine(MoveToNextTile(null,true));
             if (Route.i.FullRoute[routePosition].ingredients.Count() > 0)
             {
                 var ingStomp = Route.i.FullRoute[routePosition].ingredients.Peek().stomp;
@@ -249,13 +249,13 @@ public class Ingredient : MonoBehaviour
                     {
                         checkForInfinite++;
                         routePosition++;
-                        yield return StartCoroutine(MoveToNextTile(null,true,20f));
+                        yield return StartCoroutine(MoveToNextTile(null,true));
                         yield return StartCoroutine(Slide());
                     }
                     if (checkForInfinite >= 12)
                     {
                         routePosition = 24;
-                        yield return StartCoroutine(MoveToNextTile(null,true,20f));
+                        yield return StartCoroutine(MoveToNextTile(null,true));
                     }
                 }
 
@@ -286,19 +286,20 @@ public class Ingredient : MonoBehaviour
         GameManager.i.isMoving = false;
     }
 
-    public IEnumerator MoveToNextTile(Vector3? nextPos = null, bool isforEffect=false, float speed = 35f, bool trash = false, bool skipping = false)
+    public IEnumerator MoveToNextTile(Vector3? nextPos = null, bool isforEffect = false, bool trash = false, bool skipping = false)
     {
+        float time = .25f;
         float yValue = .25f;
 
         if (isforEffect)
         {
-            anim.SetBool("StartedJumping", false);
-            anim.SetBool("StartedMoving", false);
             anim.Play("Flip");
+            time += .25f;
         }
-        else if (skipping)
+        else if (skipping || routePosition == 1)
         {
             anim.SetBool("StartedJumping", true);
+            time += .15f;
         }
         else if (routePosition != 0)
         {
@@ -316,22 +317,27 @@ public class Ingredient : MonoBehaviour
         }
 
         Vector3 goalPos = new Vector3(nextPos.Value.x, yValue, nextPos.Value.z);
-        //var totaltime = 0f;
-        while (goalPos != (transform.position = Vector3.MoveTowards(transform.position, goalPos, speed * Time.deltaTime)))
-        {
-            //totaltime += Time.deltaTime;
-            yield return null;
-        }
 
+        float elapsedTime = 0;
+        Vector3 startingPos = transform.position;
+        while (elapsedTime < time)
+        {
+            transform.position = Vector3.Lerp(startingPos, goalPos, (elapsedTime / time));
+            elapsedTime += Time.deltaTime;
+            yield return new WaitForEndOfFrame();
+            if (elapsedTime >= time - .15f)
+            {
+                anim.SetBool("StartedJumping", false);
+                anim.SetBool("StartedMoving", false);
+            }
+        }
+        transform.position = goalPos;
         if (routePosition == 0 && Global.LoggedInPlayer.WineMenu)
         {
             GameManager.i.setWineMenuText((Team == 0 && !isCooked || Team == 1 && isCooked), GameManager.i.prepTiles.Count(x => x.ingredients.Count() > 0));
         }
 
-        anim.SetBool("StartedJumping", false);
-        anim.SetBool("StartedMoving", false);
-
-        yield return new WaitForSeconds(0.2f);
+        yield return new WaitForSeconds(.15f);
     }
     public void SetSelector(bool on)
     {

@@ -34,5 +34,13 @@ namespace Assets.Models
         public float VoiceVolume = .5f;
         public float EffectsVolume = .5f;
         public float MasterVolume = .5f;
+        public int DailyWins = 0;
+        public int WeeklyWins = 0;
+        public int AllWins = 0;
+        public int AllPVPWins = 0;
+        public int SeasonScore = 0;
+        public bool IsOnline = false;
+        public DateTime? LastLogin = null;
+        public DateTime? CreatedDate = null;
     }
 }

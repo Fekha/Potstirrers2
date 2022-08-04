@@ -20,7 +20,7 @@ public class LeaderboardController : MonoBehaviour
     public GameObject eventLogTextContent;
     public GameObject eventLogTextObject;
     private List<GameObject> eventLogList = new List<GameObject>();
-    public List<Profile> leaderData;
+    public List<Player> leaderData;
     private SqlController sql;
     private int numLeaderboards = 3;
     private int currentShowing = 0; 
@@ -61,7 +61,7 @@ public class LeaderboardController : MonoBehaviour
     }
     private void leaderboardCallback(string jdata)
     {
-        leaderData = sql.jsonConvert<List<Profile>>(jdata);
+        leaderData = sql.jsonConvert<List<Player>>(jdata);
         currentShowing = 0;// Random.Range(0, numLeaderboards);
         ShowLeaderboard();
         MainMenuController.i.HideLoading();

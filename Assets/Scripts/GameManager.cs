@@ -160,7 +160,7 @@ public class GameManager : MonoBehaviour
         GameMusicSlider = GetObject("MusicVolumeSlider").GetComponent<Slider>();
         TurnVolumeSlider = GetObject("TurnVolumeSlider").GetComponent<Slider>();
         i = this;
-        //Application.targetFrameRate = 60;
+        Application.targetFrameRate = 60;
         sql = new SqlController();
         if(GameObject.FindGameObjectsWithTag("GameMusic").Length > 0)
             audioSourceGlobal = GameObject.FindGameObjectWithTag("GameMusic").GetComponent<AudioSource>();
@@ -1065,7 +1065,12 @@ public class GameManager : MonoBehaviour
     }
     public void ExitSettings()
     {
-        StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(Global.LoggedInPlayer.UserId)}&GameVolume={(Global.LoggedInPlayer.MusicVolume)}&TurnVolume={(Global.LoggedInPlayer.TurnVolume)}"));
+        StartCoroutine(sql.RequestRoutine($"player/UpdateSettings?UserId={(Global.LoggedInPlayer.UserId)}" +
+                $"&MasterVolume={(Global.LoggedInPlayer.MasterVolume)}" +
+                $"&MusicVolme={(Global.LoggedInPlayer.MusicVolume)}" +
+                $"&TurnVolume={(Global.LoggedInPlayer.TurnVolume)}" +
+                $"&VoiceVolume={(Global.LoggedInPlayer.VoiceVolume)}" +
+                $"&EffectVolume={(Global.LoggedInPlayer.EffectsVolume)}"));
     }
     private IEnumerator TimeRanOut()
     {
@@ -1498,22 +1503,34 @@ public class GameManager : MonoBehaviour
         {
             eventText.text = (player1Count > player2Count ? "You Won!" : "You Lost!");
 
-            eventText.text += "\n \n Create an account to track your games and get rewards!";
+            if(Global.LoggedInPlayer.IsGuest)
+                eventText.text += "\n \n Create an account to track your games and get rewards!";
+            else
+                eventText.text += "\n \n Once you are ready, play online for better rewards!";
 
-            if (wasTutorial)
+            
+            if (player1Count > player2Count)
             {
-                if (player1Count > player2Count)
+                if (wasTutorial)
                 {
                     eventText.text += "\n \n Great work beating the tutorial! Now go try out the game online!";
                 }
-                else
+                else if (Global.SecondPlayer.UserId == 41)
                 {
-                    eventText.text += "\n \n No worries, many of the greats have lost vs Mike, try again from the main menu!";
+                    Global.LoggedInPlayer.Wins++;
+                    eventText.text += $" \n \n Jenn gets better each time you win against her, so play again and see if you got what it takes! You earned 50 Calories.";
                 }
             }
             else
             {
-                eventText.text += "\n \n Once you are ready, play online for better rewards!";
+                if (wasTutorial)
+                {
+                    eventText.text += "\n \n No worries, many of the greats have lost vs Mike, try again from the main menu!";
+                }
+                else if (Global.SecondPlayer.UserId == 41)
+                {
+                    eventText.text += "\n \n Keep practicing, there's more skill to the game than you might think!";
+                }
             }
 
             if (Global.LoggedInPlayer.WineMenu)
@@ -1530,7 +1547,7 @@ public class GameManager : MonoBehaviour
 
     private void EndGamePopupCallback(string data)
     {
-        eventText.text = sql.jsonConvert<string>(data);
+        eventText.text = data;
 
         if (Global.LoggedInPlayer.WineMenu)
             eventText.text += "\n \n" + (playerWhoWon.UserId == Global.LoggedInPlayer.UserId ? " Purple" : " Yellow") + " Team finish your drinks!";

@@ -7,7 +7,7 @@ public static class Global
     public static Player LoggedInPlayer = new Player();
     public static Player SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
     public static int GameId = 0;
-    public static double AppVersion = 1.22;
+    public static double AppVersion = 1.23;
     public static bool IsConnected = true;
     public static bool IsDebug = false;
     public static bool OnlyGetOnlineFriends = false;
