@@ -95,10 +95,10 @@ public class LeaderboardController : MonoBehaviour
     {
         headerText.text = "All-Time Wins vs CPU";
         ClearMessages();
-        var i = 0;
-        foreach (var d in leaderData.Where(x => x.AllWins > 0).OrderByDescending(x => x.AllWins))
+        var i = 1;
+        foreach (var player in leaderData.Where(x => x.AllWins > 0).OrderByDescending(x => x.AllWins))
         {
-            SendEventToLog((i + 1) + ") ", d.Username + " - " + d.AllWins);
+            SendEventToLog(player,i,player.AllWins);
             i++;
         }
     }  
@@ -106,10 +106,10 @@ public class LeaderboardController : MonoBehaviour
     {
         headerText.text = "All-Time Wins vs Players";
         ClearMessages();
-        var i = 0;
-        foreach (var d in leaderData.Where(x => x.AllPVPWins > 0).OrderByDescending(x => x.AllPVPWins))
+        var i = 1;
+        foreach (var player in leaderData.Where(x => x.AllPVPWins > 0).OrderByDescending(x => x.AllPVPWins))
         {
-            SendEventToLog((i + 1) + ") ", d.Username + " - " + d.AllPVPWins);
+            SendEventToLog(player, i, player.AllPVPWins);
             i++;
         }
     }
@@ -118,10 +118,10 @@ public class LeaderboardController : MonoBehaviour
     {
         headerText.text = "Daily Wins vs CPU";
         ClearMessages();
-        var i = 0;
-        foreach (var d in leaderData.Where(x => x.DailyWins > 0).OrderByDescending(x => x.DailyWins))
+        var i = 1;
+        foreach (var player in leaderData.Where(x => x.DailyWins > 0).OrderByDescending(x => x.DailyWins))
         {
-            SendEventToLog((i + 1) + ") ", d.Username + " - " + d.DailyWins);
+            SendEventToLog(player, i, player.DailyWins);
             i++;
         }
     }
@@ -130,10 +130,10 @@ public class LeaderboardController : MonoBehaviour
     {
         headerText.text = "Calories Earned Online";
         ClearMessages();
-        var i = 0;
-        foreach (var d in leaderData.Where(x => x.SeasonScore > 0).OrderByDescending(x => x.SeasonScore))
+        var i = 1;
+        foreach (var player in leaderData.Where(x => x.SeasonScore > 0).OrderByDescending(x => x.SeasonScore))
         {
-            SendEventToLog((i + 1) + ") ", d.Username + " - " + d.SeasonScore);
+            SendEventToLog(player, i, player.SeasonScore);
             i++;
         }
     }
@@ -164,11 +164,12 @@ public class LeaderboardController : MonoBehaviour
             }
         }
     }
-    private void SendEventToLog(string rank, string player)
+    private void SendEventToLog(Player player, int rank, int wins)
     {
         GameObject newMessage = Instantiate(eventLogTextObject, eventLogTextContent.transform);
-        newMessage.transform.Find("RankText").gameObject.GetComponent<Text>().text = rank;
-        newMessage.transform.Find("PlayerText").gameObject.GetComponent<Text>().text = player;
+        newMessage.transform.Find("RankText").gameObject.GetComponent<Text>().text = rank + ") ";
+        newMessage.transform.Find("PlayerText").gameObject.GetComponent<Text>().text = player.Username + " - " + wins;
+        newMessage.GetComponent<Button>().onClick.AddListener(() => MainMenuController.i.OpenFriendProfile(player.UserId));
         eventLogList.Add(newMessage);
     }
 }

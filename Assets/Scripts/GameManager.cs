@@ -42,8 +42,8 @@ public class GameManager : MonoBehaviour
     private AudioSource audioSourceGlobal;
     public AudioClip turnClip;
     public AudioClip[] tutorialClips;
-    public Slider GameMusicSlider;
-    public Slider TurnVolumeSlider;
+    private Slider GameMusicSlider;
+    private Slider TurnVolumeSlider;
     public GameObject SelectedDieHigher1;
     public GameObject SelectedDieLower1;
     public GameObject SelectedDieHigher2;
@@ -78,7 +78,7 @@ public class GameManager : MonoBehaviour
     public GameObject EventCanvas;
     public GameObject ShouldTrashPopup;
     public GameObject ShouldTrashPopup2;
-    public GameObject HelpCanvas;
+    public GameObject WineCanvas;
     public GameObject TrashCan2;
     public GameObject TrashCan3;
     public GameObject exitPanel;
@@ -360,7 +360,6 @@ public class GameManager : MonoBehaviour
                     }
                     if (LookingForTurn == true)
                     {
-                        StartCoroutine(sql.RequestRoutine($"multiplayer/GetSelected?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.GameId}", CheckSelectedCallback));
                         StartCoroutine(sql.RequestRoutine($"multiplayer/GetTurn?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.GameId}", CheckForGameTurnsCallback));
                     }
                 }
@@ -459,7 +458,7 @@ public class GameManager : MonoBehaviour
             var timeSince = Time.time - readingTimeStart;
             if (timeSince > 2.0)
             {
-                HelpCanvas.SetActive(false);
+                WineCanvas.SetActive(false);
                 IsReading = false;
                 IsDrinking = false;
             }
@@ -575,7 +574,7 @@ public class GameManager : MonoBehaviour
             IsReading = false;
             IsDrinking = false;
             pageNum = 0;
-            HelpCanvas.SetActive(false);
+            WineCanvas.SetActive(false);
         }
     }
     public void ShouldTrashButton(bool trash)
@@ -599,7 +598,7 @@ public class GameManager : MonoBehaviour
         {
             if (Library.helpTextList.Count - 1 <= pageNum)
             {
-                HelpCanvas.SetActive(false);
+                WineCanvas.SetActive(false);
                 IsReading = false;
                 IsDrinking = false;
             }
@@ -613,7 +612,7 @@ public class GameManager : MonoBehaviour
         {
             IsReading = false;
             IsDrinking = false;
-            HelpCanvas.SetActive(false);
+            WineCanvas.SetActive(false);
         }
     }
     public void RollDice(bool HUMAN)
@@ -847,10 +846,10 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        if (!Global.CPUGame && GetActivePlayer().UserId == Global.LoggedInPlayer.UserId)
-        {
-            StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateSelected?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.GameId}&Higher={isHigher}"));
-        }
+        //if (!Global.CPUGame && GetActivePlayer().UserId == Global.LoggedInPlayer.UserId)
+        //{
+        //    StartCoroutine(sql.RequestRoutine($"multiplayer/UpdateSelected?UserId={Global.LoggedInPlayer.UserId}&GameId={Global.GameId}&Higher={isHigher}"));
+        //}
 
         StartCoroutine(RollSelected(isHigher, true));
     }
@@ -909,7 +908,7 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                yield return StartCoroutine(ingredientToRollback.MoveToNextTile(Route.i.FullRoute[turnPosition.ingPos].transform.position, true));
+                yield return StartCoroutine(ingredientToRollback.MoveToNextTile(Route.i.FullRoute[turnPosition.ingPos].transform.position, sentBack:true));
                 Route.i.FullRoute[turnPosition.ingPos].ingredients.Push(ingredientToRollback);
             }
         }
@@ -963,12 +962,13 @@ public class GameManager : MonoBehaviour
                 turnTime++;
             }
             firstMoveTaken = true;
-
+            
             if (!Global.CPUGame && GetActivePlayer().UserId != Global.LoggedInPlayer.UserId)
                 LookingForTurn = true;
 
             if (!IsCPUTurn())
             {
+                ClearSelectedDie();
                 //todo add undo to multiplayer
                 if (Global.CPUGame && !Global.IsTutorial)
                 {
@@ -985,13 +985,13 @@ public class GameManager : MonoBehaviour
             }
         }
     }
-    internal IEnumerator MoveToNextEmptySpace(Ingredient ingredientToMove, bool shouldPush = true)
+    internal IEnumerator MoveToNextEmptySpace(Ingredient ingredientToMove, bool shouldPush = true, bool sentBack = true)
     {
         ingredientToMove.routePosition = 0;
         var prepTile = prepTiles.FirstOrDefault(x => x.ingredients.Count() == 0);
         if (shouldPush)
             prepTile.ingredients.Push(ingredientToMove);
-        yield return ingredientToMove.MoveToNextTile(prepTile.transform.position, shouldPush);
+        yield return ingredientToMove.MoveToNextTile(prepTile.transform.position, isforEffect: shouldPush, sentBack: sentBack);
     }
     internal void setWineMenuText(bool teamYellow, int v)
     {
@@ -1264,6 +1264,7 @@ public class GameManager : MonoBehaviour
     internal void SwitchPlayer()
     {
         State = States.Switching;
+        ClearSelectedDie();
         higherMoveSelected = null;
         TurnNumber++;
         Player1Turn = null;
@@ -1296,7 +1297,7 @@ public class GameManager : MonoBehaviour
     {
         IsReading = true;
         readingTimeStart = Time.time;
-        HelpCanvas.SetActive(true);
+        WineCanvas.SetActive(true);
     }
     private void TakeTurn()
     {
@@ -1394,29 +1395,34 @@ public class GameManager : MonoBehaviour
                     SelectedDieLower1.SetActive(true);
                     SelectedDieHigher1.SetActive(false);
                 }
-                if (!firstMoveTaken && lowerMove != 0)
+                if (lowerMove == 0)
+                {
+                    LowerRollImage1.interactable = false;
+                    LowerRollButton1.interactable = false;
+                }
+                if (firstMoveTaken)
                 {
                     if ((bool)higherMoveSelected)
+                    {
+                        HigherRollImage1.interactable = true;
+                        LowerRollImage1.interactable = false;
+                        HigherRollButton1.interactable = true;
+                        LowerRollButton1.interactable = false;
+                    }
+                    else
                     {
                         HigherRollImage1.interactable = false;
                         LowerRollImage1.interactable = true;
                         HigherRollButton1.interactable = false;
                         LowerRollButton1.interactable = true;
                     }
-                    else
-                    {
-                        LowerRollImage1.interactable = false;
-                        HigherRollImage1.interactable = true;
-                        LowerRollButton1.interactable = false;
-                        HigherRollButton1.interactable = true;
-                    }
                 }
-                else
+                if(!firstMoveTaken && lowerMove != 0)
                 {
-                    HigherRollImage1.interactable = false;
-                    LowerRollImage1.interactable = false;
-                    HigherRollButton1.interactable = false;
-                    LowerRollButton1.interactable = false;
+                    HigherRollImage1.interactable = true;
+                    LowerRollImage1.interactable = true;
+                    HigherRollButton1.interactable = true;
+                    LowerRollButton1.interactable = true;
                 }
             }
             else
@@ -1431,23 +1437,27 @@ public class GameManager : MonoBehaviour
                     SelectedDieLower2.SetActive(true);
                     SelectedDieHigher2.SetActive(false);
                 }
-                if (!firstMoveTaken && lowerMove != 0)
+                if (lowerMove == 0)
+                {
+                    LowerRollImage2.interactable = false;
+                }
+                if (firstMoveTaken)
                 {
                     if ((bool)higherMoveSelected)
+                    {
+                        HigherRollImage2.interactable = true;
+                        LowerRollImage2.interactable = false;
+                    }
+                    else
                     {
                         HigherRollImage2.interactable = false;
                         LowerRollImage2.interactable = true;
                     }
-                    else
-                    {
-                        LowerRollImage2.interactable = false;
-                        HigherRollImage2.interactable = true;
-                    }
                 }
-                else
+                if (!firstMoveTaken && lowerMove != 0)
                 {
-                    HigherRollImage2.interactable = false;
-                    LowerRollImage2.interactable = false;
+                    HigherRollImage2.interactable = true;
+                    LowerRollImage2.interactable = true;
                 }
             }
         }

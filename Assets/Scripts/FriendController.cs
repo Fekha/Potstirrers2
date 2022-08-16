@@ -53,7 +53,7 @@ public class FriendController : MonoBehaviour
     }
     private void OnEnable()
     {
-        MainMenuController.i.DisplayLoading("Loading", "Finding all of your friends...");
+        //MainMenuController.i.DisplayLoading("Loading", "Finding all of your friends...");
         StartCoroutine(sql.RequestRoutine($"player/GetFriends?userId={Global.LoggedInPlayer.UserId}&onlyOnline={Global.OnlyGetOnlineFriends}", GetFriendCallback));
         StartCoroutine(sql.RequestRoutine($"player/GetMessages?userId={Global.LoggedInPlayer.UserId}", GetMessageCallback));
     }
@@ -160,7 +160,7 @@ public class FriendController : MonoBehaviour
         ViewMessagePanel.SetActive(false);
     }
 
-    private void CreateFriend(FriendDTO user, bool realFriend)
+    private void CreateFriend(Friend user, bool realFriend)
     {
         if (realFriend)
         {
@@ -173,7 +173,7 @@ public class FriendController : MonoBehaviour
         MessagePrefabObj.transform.Find("Delete").gameObject.SetActive(realFriend);
         MessagePrefabObj.GetComponentInChildren<Text>().text = user.Username;
         Button newButton = Instantiate(MessagePrefabObj, FriendButtonContent.transform);
-        newButton.onClick.AddListener(() => StartCoroutine(sql.RequestRoutine($"player/GetProfile?UserId={user.UserId}", MainMenuController.i.GetFriendProfileCallback)));
+        newButton.onClick.AddListener(() => MainMenuController.i.OpenFriendProfile(user.UserId));
         newButton.transform.Find("Image").GetComponent<Button>().onClick.AddListener(()=> NotRealFriendPopup(user.Username));
         newButton.transform.Find("Delete").GetComponent<Button>().onClick.AddListener(()=> RemoveFriend(user.Username));
         newButton.name = user.UserId.ToString();
@@ -231,7 +231,7 @@ public class FriendController : MonoBehaviour
 
     private void AddFriendCallback(string data)
     {
-        var player = sql.jsonConvert<FriendDTO>(data);
+        var player = sql.jsonConvert<Friend>(data);
         if (player == null)
         {
             MainMenuController.i.DisplayAlert("Failure", "Player not found.");
@@ -245,10 +245,10 @@ public class FriendController : MonoBehaviour
     }
     private void DeleteFriendCallback(string data)
     {
-        var player = sql.jsonConvert<FriendDTO>(data);
+        var player = sql.jsonConvert<Friend>(data);
         if (player == null)
         {
-            MainMenuController.i.DisplayAlert("Failure", "Player not found.");
+            MainMenuController.i.DisplayAlert("Failure", "Player not found or was already deleted.");
         }
         else
         {
@@ -262,7 +262,7 @@ public class FriendController : MonoBehaviour
 
     private void GetFriendCallback(string data)
     {
-        var friends = sql.jsonConvert<List<FriendDTO>>(data);
+        var friends = sql.jsonConvert<List<Friend>>(data);
         ClearFriends();
         if (friends.Count == 0)
         {
@@ -277,11 +277,5 @@ public class FriendController : MonoBehaviour
         }
         MainMenuController.i.HideLoading();
     }
-    private class FriendDTO
-    {
-        public int UserId { get; set; }
-        public string Username { get; set; }
-        public bool RealFriend { get; set; }
-        public int Level { get; set; }
-    }
+
 }

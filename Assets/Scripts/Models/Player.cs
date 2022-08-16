@@ -14,6 +14,7 @@ namespace Assets.Models
         public bool IsCPU = false;
         public int Wins = 0;
         public int LocalWins = 0;
+        public List<int> Friends = new List<int>();
         public List<int> SelectedDice = new List<int>();
         public List<int> SelectedIngs = new List<int>();
         public List<string> SelectedTitles = new List<string>();

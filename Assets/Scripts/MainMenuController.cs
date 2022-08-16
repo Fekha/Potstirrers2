@@ -37,7 +37,8 @@ public class MainMenuController : MonoBehaviour
     [Header("Profile")]
     #region Profile
     public GameObject profilePanel;
-    public GameObject challengeFriendButton;
+    private GameObject challengeFriendButton;
+    private GameObject addFriendButton;
     public Text ProfileText;
     public Text MainProfileText;
     public Text CurrentLevelText;
@@ -96,6 +97,8 @@ public class MainMenuController : MonoBehaviour
         GetAllObjectsOnlyInScene();
         alertPanel = GetObject("AlertPanel");
         loadingPanel = GetObject("LoadingPanel");
+        addFriendButton = GetObject("AddFriendButton");
+        challengeFriendButton = GetObject("ChallengeFriendButton");
         Global.Reset();
         if (GameObject.FindGameObjectsWithTag("GameMusic").Length > 0)
         {
@@ -111,8 +114,6 @@ public class MainMenuController : MonoBehaviour
         playAsPurple.isOn = Global.LoggedInPlayer.PlayAsPurple;
         VolumeSlider.value = Global.LoggedInPlayer.MusicVolume;
         TurnVolumeSlider.value = Global.LoggedInPlayer.TurnVolume;
-        if(!Global.LoggedInPlayer.IsGuest)
-            DisplayLoading("Loading Profile", "Putting everything back where it was...");
     }
 
     private void Start()
@@ -120,6 +121,8 @@ public class MainMenuController : MonoBehaviour
         //loading starts as true but is turned false after elements render and toggles are set correctly
         loadingToggle = false;
         toggleActivated = false;
+        MainProfileText.text = $"{Global.LoggedInPlayer.Username}";
+        UpdateLvlText();
         StartCoroutine(SetPlayer());
         if (Global.LoggedInPlayer.IsGuest && Global.EnteredGame)
         {
@@ -133,7 +136,6 @@ public class MainMenuController : MonoBehaviour
             HasChest.SetActive(true);
             rewardAlert2.SetActive(true);
         }
-
     }
 
     private void Update()
@@ -199,6 +201,12 @@ public class MainMenuController : MonoBehaviour
             }
         }
     }
+
+    internal void OpenFriendProfile(int userId)
+    {
+        StartCoroutine(sql.RequestRoutine($"player/GetProfile?UserId={userId}", GetFriendProfileCallback, true));
+    }
+
     private GameObject GetObject(string v)
     {
         return objectsInScene.FirstOrDefault(x => x.name == v);
@@ -414,6 +422,12 @@ public class MainMenuController : MonoBehaviour
     {
         loadingPanel.SetActive(false);
     }
+
+    public void AddFriend()
+    {
+        StartCoroutine(sql.RequestRoutine($"player/EditFriend?userId={Global.LoggedInPlayer.UserId}&username={YourFriend.Username}&add={true}", AddFriendCallback));
+    }
+
     public void EditWager(bool more)
     {
         if (!LookingForGame)
@@ -470,17 +484,21 @@ public class MainMenuController : MonoBehaviour
         }
         else
         {
-            if (Global.LoggedInPlayer.IsGuest)
+            if (open)
             {
-                DisplayAlert("Restricted", "Log in to create a profile!");
+                if (Global.LoggedInPlayer.IsGuest)
+                {
+                    DisplayAlert("Restricted", "Log in to create a profile!");
+                }
+                else
+                {
+                    profilePanel.SetActive(open);
+                }
             }
             else
             {
-                if (!open)
-                {
-                    SetProfileData(); //reset
-                }
-
+                if (!Global.LoggedInPlayer.IsGuest)
+                    SetProfileData(Global.LoggedInPlayer); //reset
                 profilePanel.SetActive(open);
             }
         }
@@ -508,7 +526,7 @@ public class MainMenuController : MonoBehaviour
     {
         CurrentProfile = sql.jsonConvert<Player>(data);
         Global.LoggedInPlayer.Wins = CurrentProfile.AllWins;
-        SetProfileData();
+        SetProfileData(Global.LoggedInPlayer);
 
         if (CurrentProfile.HasNewMessage)
             HasMessage.SetActive(true);
@@ -523,7 +541,7 @@ public class MainMenuController : MonoBehaviour
         HideLoading();
     }
 
-    private void SetProfileData()
+    private void SetProfileData(Player CurrentProfile)
     {
         CurrentLevelText.color = Color.white;
         DailyWinsText.color = Color.white;
@@ -532,85 +550,68 @@ public class MainMenuController : MonoBehaviour
         AllPVPWinsText.color = Color.white;
         CookedIngredientsText.color = Color.white;
         CaloriesText.color = Color.white;
-        LastLoginText.color = Color.white;
 
         ProfileText.text = $"{CurrentProfile.Username}'s Profile";
-        MainProfileText.text = $"{CurrentProfile.Username}";
-        CurrentLevelText.text = $"";
+        
+        CurrentLevelText.text = $"Current Level: {CurrentProfile.Level}"; ;
         DailyWinsText.text = $"Daily CPU Wins: {CurrentProfile.DailyWins}";
         WeeklyWinsText.text = $"Weekly CPU Wins: {CurrentProfile.WeeklyWins}";
         AllCPUWinsText.text = $"All CPU Wins: {CurrentProfile.AllWins}";
         AllPVPWinsText.text = $"All PVP Wins: {CurrentProfile.AllPVPWins}";
         CookedIngredientsText.text = $"Cooked Ingredients: {CurrentProfile.Cooked}";
         CaloriesText.text = $"Calories: {CurrentProfile.Calories}";
-        LastLoginText.text = $"Online Status: Online";
-        challengeFriendButton.SetActive(false);
-    }
+        LastLoginText.text = "";
 
+        if (Global.LoggedInPlayer.UserId != CurrentProfile.UserId)
+        {
+            if (!CurrentProfile.IsOnline)
+                LastLoginText.color = Color.red;
+            else if (CurrentProfile.IsOnline)
+                LastLoginText.color = Color.green;
+            LastLoginText.text = $"Online Status: {(CurrentProfile.IsOnline ? "Online" : "Offline")}";
+
+            if (!Global.LoggedInPlayer.IsGuest)
+            {
+                if (Global.LoggedInPlayer.Friends.Contains(CurrentProfile.UserId))
+                {
+                    challengeFriendButton.SetActive(true);
+                    addFriendButton.SetActive(false);
+
+                    if (CurrentProfile.IsOnline)
+                    {
+                        challengeFriendButton.GetComponent<Button>().interactable = true;
+                        challengeFriendButton.GetComponentInChildren<Text>().color = Color.white;
+                    }
+                    else
+                    {
+                        challengeFriendButton.GetComponent<Button>().interactable = false;
+                        challengeFriendButton.GetComponentInChildren<Text>().color = Color.grey;
+                    }
+                }
+                else
+                {
+                    addFriendButton.SetActive(true);
+                    challengeFriendButton.SetActive(false);
+                }
+            }
+            else
+            {
+                addFriendButton.SetActive(false);
+                challengeFriendButton.SetActive(false);
+            }
+        }
+       
+    }
+    private void AddFriendCallback(string data)
+    {
+        var player = sql.jsonConvert<Friend>(data);
+        Global.LoggedInPlayer.Friends.Add(player.UserId);
+        OpenFriendProfile(player.UserId);
+    }
     internal void GetFriendProfileCallback(string data)
     {
         YourFriend = sql.jsonConvert<Player>(data);
-
-        CurrentLevelText.color = Color.white;
-        DailyWinsText.color = Color.white;
-        WeeklyWinsText.color = Color.white;
-        AllCPUWinsText.color = Color.white;
-        AllPVPWinsText.color = Color.white;
-        CookedIngredientsText.color = Color.white;
-        CaloriesText.color = Color.white;
-        LastLoginText.color = Color.white;
-
-        ProfileText.text = $"{YourFriend.Username}'s Profile";
-        if (YourFriend.Level > CurrentProfile.Level)
-            CurrentLevelText.color = Color.red;
-        else if(YourFriend.Level < CurrentProfile.Level)
-            CurrentLevelText.color = Color.green;
-        CurrentLevelText.text = $"Level: {YourFriend.Level}";
-        if (YourFriend.DailyWins > CurrentProfile.DailyWins)
-            DailyWinsText.color = Color.red;
-        else if (YourFriend.DailyWins < CurrentProfile.DailyWins)
-            DailyWinsText.color = Color.green;
-        DailyWinsText.text = $"Daily CPU Wins: {YourFriend.DailyWins}";
-        if (YourFriend.WeeklyWins > CurrentProfile.WeeklyWins)
-            WeeklyWinsText.color = Color.red;
-        else if (YourFriend.WeeklyWins < CurrentProfile.WeeklyWins)
-            WeeklyWinsText.color = Color.green;
-        WeeklyWinsText.text = $"Weekly CPU Wins: {YourFriend.WeeklyWins}";
-        if (YourFriend.AllWins > CurrentProfile.AllWins)
-            AllCPUWinsText.color = Color.red;
-        else if (YourFriend.AllWins < CurrentProfile.AllWins)
-            AllCPUWinsText.color = Color.green;
-        AllCPUWinsText.text = $"All CPU Wins: {YourFriend.AllWins}";
-        if (YourFriend.AllPVPWins > CurrentProfile.AllPVPWins)
-            AllPVPWinsText.color = Color.red;
-        else if (YourFriend.AllPVPWins < CurrentProfile.AllPVPWins)
-            AllPVPWinsText.color = Color.green;
-        AllPVPWinsText.text = $"All PVP Wins: {YourFriend.AllPVPWins}";
-        if (YourFriend.Cooked > CurrentProfile.Cooked)
-            CookedIngredientsText.color = Color.red;
-        else if (YourFriend.Cooked < CurrentProfile.Cooked)
-            CookedIngredientsText.color = Color.green;
-        CookedIngredientsText.text = $"Cooked Ingredients: {YourFriend.Cooked}";
-        if (YourFriend.Calories > CurrentProfile.Calories)
-            CaloriesText.color = Color.red;
-        else if (YourFriend.Calories < CurrentProfile.Calories)
-            CaloriesText.color = Color.green;
-        CaloriesText.text = $"Calories: {YourFriend.Calories}";
-        if (!YourFriend.IsOnline)
-            LastLoginText.color = Color.red;
-        else if (YourFriend.IsOnline)
-            LastLoginText.color = Color.green;
-        LastLoginText.text = $"Online Status: {(YourFriend.IsOnline ? "Online" : "Offline")}";
-
-        if (YourFriend.IsOnline)
-        {
-            challengeFriendButton.SetActive(true);
-        }
-        else
-        {
-            challengeFriendButton.SetActive(false);
-        }
-
+        SetProfileData(YourFriend);
         profilePanel.SetActive(true);
     }  
 

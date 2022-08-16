@@ -11,7 +11,7 @@ using Assets.Models;
 
 public class LoginController : MonoBehaviour
 {
-    public GameObject alert;
+    public GameObject alertPanel;
     public GameObject VersionPanel;
     public GameObject password;
     public GameObject username;
@@ -23,8 +23,10 @@ public class LoginController : MonoBehaviour
     Player Player;
     private SqlController sql;
     private float elapsed;
+    private float elapsed2;
     private int tick = 10;
     private bool isLoading = false;
+    private string isLoadingPhrase = "";
 
     private void Awake()
     {
@@ -35,10 +37,7 @@ public class LoginController : MonoBehaviour
         system = EventSystem.current;
         //alert.transform.Find("AlertText").GetComponent<Text>().text = "Sorry, I messed up.. \n \n Until July 1st only playing as guest will work..";
         //alert.SetActive(true);
-        isLoading = true;
-        alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Loading";
-        alert.transform.Find("AlertText").GetComponent<Text>().text = "Any second now...";
-        alert.SetActive(true);
+        DisplayAlert("Loading", "Checking if we recognize you",true);
         try {
             FileStream stream = File.Open("idbfs/PotstirrersDevice.json", FileMode.OpenOrCreate, FileAccess.ReadWrite);
             using (StreamReader sr = new StreamReader(stream))
@@ -61,23 +60,39 @@ public class LoginController : MonoBehaviour
             StartCoroutine(sql.RequestRoutine($"player/GetDevice?deviceId={deviceId}", GetDeviceCallback, true));
         }
         catch(Exception){
-            isLoading = false;
-            alert.SetActive(false);
+            HideAlert();
         }
 
 #if UNITY_EDITOR
         username.GetComponent<InputField>().text = "Ecaflip";
         password.GetComponent<InputField>().text = "1234";
+        HideAlert();
 #endif
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Mouse0) && alert.activeInHierarchy && !isLoading)
+        if (Input.GetKeyDown(KeyCode.Mouse0) && alertPanel.activeInHierarchy && !isLoading)
         {
-            alert.SetActive(false);
+            HideAlert();
         }
-
+        if (!String.IsNullOrEmpty(isLoadingPhrase))
+        {
+            elapsed2 += Time.deltaTime;
+            if (elapsed2 >= .5f)
+            {
+                elapsed2 = elapsed2 % .5f;
+                var text = alertPanel.transform.Find("AlertText").GetComponent<Text>().text;
+                if (text == $"{isLoadingPhrase}")
+                    alertPanel.transform.Find("AlertText").GetComponent<Text>().text = $"{isLoadingPhrase}.";
+                else if (text == $"{isLoadingPhrase}.")
+                    alertPanel.transform.Find("AlertText").GetComponent<Text>().text = $"{isLoadingPhrase}..";
+                else if (text == $"{isLoadingPhrase}..")
+                    alertPanel.transform.Find("AlertText").GetComponent<Text>().text = $"{isLoadingPhrase}...";
+                else
+                    alertPanel.transform.Find("AlertText").GetComponent<Text>().text = $"{isLoadingPhrase}";
+            }
+        }
         if (Input.GetKeyDown(KeyCode.Tab))
         {
             Selectable next = system.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnDown();
@@ -104,13 +119,32 @@ public class LoginController : MonoBehaviour
                 }
                 catch (Exception ex)
                 {
-                    alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Network Failure";
-                    alert.transform.Find("AlertText").GetComponent<Text>().text = ex.Message;
-                    alert.SetActive(true);
+                    DisplayAlert("Network Failure", ex.Message);
                 }
             }
         }
+    }
 
+    public void DisplayAlert(string title, string body, bool isLoadingPanel = false)
+    {
+        isLoading = isLoadingPanel;
+        if (isLoadingPanel)
+        {
+            isLoadingPhrase = body;
+        }
+        else
+        {
+            isLoadingPhrase = "";
+        }
+        alertPanel.transform.Find("Banner").GetComponentInChildren<Text>().text = title;
+        alertPanel.transform.Find("AlertText").GetComponent<Text>().text = body;
+        alertPanel.SetActive(true);
+    }
+    public void HideAlert()
+    {
+        isLoading = false;
+        isLoadingPhrase = "";
+        alertPanel.SetActive(false);
     }
     public void RememberMe()
     {
@@ -120,8 +154,7 @@ public class LoginController : MonoBehaviour
     {
         Player = sql.jsonConvert<Player>(data);
         Global.LoggedInPlayer = Player;
-        isLoading = false;
-        alert.SetActive(false);
+        HideAlert();
         if (Player != null)
         {
             username.GetComponent<InputField>().text = Player.Username;
@@ -141,85 +174,48 @@ public class LoginController : MonoBehaviour
             }
         }
     } 
-    
-    private void GetPlayerCallback(string data)
+  
+    private bool CheckForValidFields()
     {
-        Player = sql.jsonConvert<Player>(data);
-        Global.LoggedInPlayer = Player;
-        isLoading = false;
-        if (Player == null)
+        if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "Username and/or password do not match.";
-            alert.SetActive(true);
+            DisplayAlert("Loading", "Any second now", true);
+            return true;
         }
         else
         {
-            alert.SetActive(false);
-            Global.LoggedInPlayer.IsGuest = false;
-            SceneManager.LoadScene("MainMenu");
+            DisplayAlert("Invalid", $"{(String.IsNullOrEmpty(username.GetComponent<InputField>().text) ? "Username" : "Password")} may not be blank.");
+            return false;
         }
     }
     public void LoginButton()
     {
-        if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
+        if (CheckForValidFields())
         {
-            isLoading = true;
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Loading";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "Any second now...";
-            alert.SetActive(true);
-            StartCoroutine(Login());
+            StartCoroutine(sql.RequestRoutine($"player/LoginUser?username={username.GetComponent<InputField>().text}&rememberMe={rememberMe}&deviceId={deviceId}&password={Encrypt(password.GetComponent<InputField>().text)}", GetPlayerCallback, true));
+        }
+    }
+
+    private void GetPlayerCallback(string data)
+    {
+        Player = sql.jsonConvert<Player>(data);
+        if (Player != null)
+        {
+            Global.LoggedInPlayer = Player;
+            Global.LoggedInPlayer.IsGuest = false;
+            SceneManager.LoadScene("MainMenu");
         }
         else
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Invalid";
-            if (String.IsNullOrEmpty(username.GetComponent<InputField>().text))
-            {
-                alert.transform.Find("AlertText").GetComponent<Text>().text = "Username may not be blank.";
-            }
-            else
-            {
-                alert.transform.Find("AlertText").GetComponent<Text>().text = "Password may not be blank.";
-            }
-            alert.SetActive(true);
+            DisplayAlert("Failure", "Username and/or password do not match.");
         }
-
-    }
-    public void GuestButton()
-    {
-        Global.LoggedInPlayer = new Player() { Username = "Guest" + UnityEngine.Random.Range(1000, 10000) };
-        Global.LoggedInPlayer.IsGuest = true;
-        Global.IsTutorial = true;
-        Global.CPUGame = true;
-        Global.SecondPlayer = new Player() { Username = "Mike", IsCPU = true, UserId = 43 };
-        SceneManager.LoadScene("PlayScene");
-    }
-
-    private IEnumerator Login()
-    {
-        var url = $"player/LoginUser?username={username.GetComponent<InputField>().text}&rememberMe={rememberMe}&deviceId={deviceId}&password={Encrypt(password.GetComponent<InputField>().text)}";
-        yield return StartCoroutine(sql.RequestRoutine(url, GetPlayerCallback, true));  
     }
 
     public void RegisterButton()
     {
-        if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
+        if (CheckForValidFields())
         {
             StartCoroutine(sql.RequestRoutine($"player/RegisterUser?username={username.GetComponent<InputField>().text.Trim()}&password={Encrypt(password.GetComponent<InputField>().text)}&rememberMe={rememberMe}&deviceId={deviceId}", RegisterCallback, true));
-        }
-        else
-        {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Invalid";
-
-            if (String.IsNullOrEmpty(username.GetComponent<InputField>().text))
-            {
-                alert.transform.Find("AlertText").GetComponent<Text>().text = "Username may not be blank.";
-            }
-            else
-            {
-                alert.transform.Find("AlertText").GetComponent<Text>().text = "Password may not be blank.";
-            }
-            alert.SetActive(true);
         }
     }
 
@@ -237,12 +233,18 @@ public class LoginController : MonoBehaviour
         }
         else
         {
-            alert.transform.Find("Banner").GetComponentInChildren<Text>().text = "Failure";
-            alert.transform.Find("AlertText").GetComponent<Text>().text = "Username already taken. Be unique, geez.";
-            alert.SetActive(true);
+            DisplayAlert("Failure", $"Username already taken. Be unique, geez.");
         }
     }
- 
+    public void GuestButton()
+    {
+        Global.LoggedInPlayer = new Player() { Username = "Guest" + UnityEngine.Random.Range(1000, 10000) };
+        Global.LoggedInPlayer.IsGuest = true;
+        Global.IsTutorial = true;
+        Global.CPUGame = true;
+        Global.SecondPlayer = new Player() { Username = "Mike", IsCPU = true, UserId = 43 };
+        SceneManager.LoadScene("PlayScene");
+    }
 
     public static string Encrypt(string encryptString)
     {

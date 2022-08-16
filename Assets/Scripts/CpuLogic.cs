@@ -259,25 +259,6 @@ public class CpuLogic : MonoBehaviour
                         break;
                 }
                 break;
-            case TalkType.SafeZoned:
-                switch (username)
-                {
-                    case "Zach":
-                        GameManager.i.talkShitText.text = "";
-                        break;
-                    case "Ethan":
-                        GameManager.i.talkShitText.text = "Safe for me, not you!";
-                        break;
-                    case "Jenn":
-                        GameManager.i.talkShitText.text = "#SickBurn";
-                        break;
-                    case "Mike":
-                        GameManager.i.talkShitText.text = "It's called a DANGER zone for a reason!";
-                        break;
-                    default:
-                        break;
-                }
-                break;
             case TalkType.Cook:
                 switch (username)
                 {
@@ -806,22 +787,6 @@ public class CpuLogic : MonoBehaviour
 
         return null;
     }
-    //private Ingredient StompSafeZone()   
-    //{
-    //    if (IngredientMovedWithLower == null && GameManager.i.lowerMove != 0)
-    //    {
-    //        IngredientMovedWithLower = UseableEnemyIngredients.FirstOrDefault(x => x.endLowerPosition < 26 //Dont move past preparation
-    //        && x.routePosition != 0 //dont move them from prep
-    //        && GameManager.i.AllIngredients.Any(y => !y.isCooked && y.routePosition == x.endLowerPosition % 26) //anyone there?
-    //        && Route.i.FullRoute[x.endLowerPosition % 26].isSafe);
-    //        if (IngredientMovedWithLower != null)
-    //        {
-    //            PrepShitTalk(TalkType.SafeZoned);
-    //            return IngredientMovedWithLower;
-    //        }
-    //    }
-    //    return null;
-    //}
     private Ingredient CookIngredient()
     {
         if (IngredientMovedWithHigher == null)
