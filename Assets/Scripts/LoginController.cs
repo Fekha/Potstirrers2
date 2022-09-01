@@ -9,6 +9,11 @@ using System.Security.Cryptography;
 using System.IO;
 using Assets.Models;
 
+#if UNITY_ANDROID
+using GooglePlayGames;
+using GooglePlayGames.BasicApi;
+#endif
+
 public class LoginController : MonoBehaviour
 {
     public GameObject alertPanel;
@@ -20,13 +25,14 @@ public class LoginController : MonoBehaviour
     private bool rememberMe = false; 
     public Toggle rememberToggle;
     private EventSystem system;
-    Player Player;
+    private Assets.Models.Player Player;
     private SqlController sql;
     private float elapsed;
     private float elapsed2;
     private int tick = 10;
     private bool isLoading = false;
     private string isLoadingPhrase = "";
+    private bool isGooglePlay = false;
 
     private void Awake()
     {
@@ -35,39 +41,17 @@ public class LoginController : MonoBehaviour
         AppVersion.text = "Ver. " + Global.AppVersion.ToString();
         sql = new SqlController();
         system = EventSystem.current;
-        //alert.transform.Find("AlertText").GetComponent<Text>().text = "Sorry, I messed up.. \n \n Until July 1st only playing as guest will work..";
-        //alert.SetActive(true);
-        DisplayAlert("Loading", "Checking if we recognize you",true);
-        try {
-            FileStream stream = File.Open("idbfs/PotstirrersDevice.json", FileMode.OpenOrCreate, FileAccess.ReadWrite);
-            using (StreamReader sr = new StreamReader(stream))
-            {
-                string line = sr.ReadLine();
-                if (line != null)
-                {
-                    Guid.TryParse(line, out deviceId);
-                }
-            }
-            if (deviceId == new Guid()) {
-                stream = File.Open("idbfs/PotstirrersDevice.json", FileMode.OpenOrCreate, FileAccess.ReadWrite);
-                deviceId = Guid.NewGuid();
-                using (StreamWriter sw = new StreamWriter(stream))
-                {
-                    sw.Write(deviceId.ToString());
-                }
-            }
-        
-            StartCoroutine(sql.RequestRoutine($"player/GetDevice?deviceId={deviceId}", GetDeviceCallback, true));
-        }
-        catch(Exception){
-            HideAlert();
-        }
+    }
 
-#if UNITY_EDITOR
-        username.GetComponent<InputField>().text = "Ecaflip";
-        password.GetComponent<InputField>().text = "1234";
-        HideAlert();
+    private void Start()
+    {
+#if UNITY_ANDROID
+            DisplayAlert("Loading", "Logging in with Google Play", true);
+            PlayGamesPlatform.Instance.Authenticate(ProcessAuthentication);
+#else
+        CheckRememberMe();
 #endif
+
     }
 
     void Update()
@@ -115,7 +99,7 @@ public class LoginController : MonoBehaviour
             {
                 tick = 0;
                 try{
-                StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
+                    StartCoroutine(sql.RequestRoutine($"player/GetAppVersion", GetAppVersionCallback, true));
                 }
                 catch (Exception ex)
                 {
@@ -123,6 +107,62 @@ public class LoginController : MonoBehaviour
                 }
             }
         }
+    }
+#if UNITY_ANDROID
+    internal void ProcessAuthentication(SignInStatus status)
+    {
+        if (status == SignInStatus.Success)
+        {
+            isGooglePlay = true;
+            //DisplayAlert("Success", $"Logged in {PlayGamesPlatform.Instance.GetUserDisplayName()} with Google Play");
+            username.GetComponent<InputField>().text = PlayGamesPlatform.Instance.GetUserDisplayName();
+            StartCoroutine(sql.RequestRoutine($"player/LoginUser?username={username.GetComponent<InputField>().text}&rememberMe={rememberMe}&deviceId={deviceId}&password={Encrypt(password.GetComponent<InputField>().text)}&isGooglePlay={isGooglePlay}", GetPlayerCallback, true));
+        }
+        else
+        {
+            DisplayAlert("Failure", "Couldn't connect to google play, try manual login.");
+        }
+    }
+#endif
+
+    private void CheckRememberMe()
+    {
+        //alert.transform.Find("AlertText").GetComponent<Text>().text = "Sorry, I messed up.. \n \n Until July 1st only playing as guest will work..";
+        //alert.SetActive(true);
+        DisplayAlert("Loading", "Checking if we recognize you", true);
+        try
+        {
+            FileStream stream = File.Open("idbfs/PotstirrersDevice.json", FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            using (StreamReader sr = new StreamReader(stream))
+            {
+                string line = sr.ReadLine();
+                if (line != null)
+                {
+                    Guid.TryParse(line, out deviceId);
+                }
+            }
+            if (deviceId == new Guid())
+            {
+                stream = File.Open("idbfs/PotstirrersDevice.json", FileMode.OpenOrCreate, FileAccess.ReadWrite);
+                deviceId = Guid.NewGuid();
+                using (StreamWriter sw = new StreamWriter(stream))
+                {
+                    sw.Write(deviceId.ToString());
+                }
+            }
+
+            StartCoroutine(sql.RequestRoutine($"player/GetDevice?deviceId={deviceId}", GetDeviceCallback, true));
+        }
+        catch (Exception)
+        {
+            HideAlert();
+        }
+
+#if UNITY_EDITOR
+        username.GetComponent<InputField>().text = "Ecaflip";
+        password.GetComponent<InputField>().text = "1234";
+        HideAlert();
+#endif
     }
 
     public void DisplayAlert(string title, string body, bool isLoadingPanel = false)
@@ -152,7 +192,7 @@ public class LoginController : MonoBehaviour
     }
     private void GetDeviceCallback(string data)
     {
-        Player = sql.jsonConvert<Player>(data);
+        Player = sql.jsonConvert<Assets.Models.Player>(data);
         Global.LoggedInPlayer = Player;
         HideAlert();
         if (Player != null)
@@ -198,7 +238,7 @@ public class LoginController : MonoBehaviour
 
     private void GetPlayerCallback(string data)
     {
-        Player = sql.jsonConvert<Player>(data);
+        Player = sql.jsonConvert<Assets.Models.Player>(data);
         if (Player != null)
         {
             Global.LoggedInPlayer = Player;
@@ -207,7 +247,14 @@ public class LoginController : MonoBehaviour
         }
         else
         {
-            DisplayAlert("Failure", "Username and/or password do not match.");
+            if (isGooglePlay)
+            {
+                StartCoroutine(sql.RequestRoutine($"player/RegisterUser?username={username.GetComponent<InputField>().text.Trim()}&password={Encrypt("G00GL3PlAyLooogin123")}&rememberMe={rememberMe}&deviceId={deviceId}", RegisterCallback, true));
+            }
+            else
+            {
+                DisplayAlert("Failure", "Username and/or password do not match.");
+            }
         }
     }
 
@@ -221,14 +268,14 @@ public class LoginController : MonoBehaviour
 
     private void RegisterCallback(string data)
     {
-        Player = sql.jsonConvert<Player>(data);
+        Player = sql.jsonConvert<Assets.Models.Player>(data);
         if (Player != null)
         {
             Global.LoggedInPlayer = Player;
             Global.LoggedInPlayer.IsGuest = false;
             Global.IsTutorial = true;
             Global.CPUGame = true;
-            Global.SecondPlayer = new Player() { Username = "Mike", IsCPU = true, UserId = 43 };
+            Global.SecondPlayer = new Assets.Models.Player() { Username = "Mike", IsCPU = true, UserId = 43 };
             SceneManager.LoadScene("PlayScene");
         }
         else
@@ -238,11 +285,11 @@ public class LoginController : MonoBehaviour
     }
     public void GuestButton()
     {
-        Global.LoggedInPlayer = new Player() { Username = "Guest" + UnityEngine.Random.Range(1000, 10000) };
+        Global.LoggedInPlayer = new Assets.Models.Player() { Username = "Guest" + UnityEngine.Random.Range(1000, 10000) };
         Global.LoggedInPlayer.IsGuest = true;
         Global.IsTutorial = true;
         Global.CPUGame = true;
-        Global.SecondPlayer = new Player() { Username = "Mike", IsCPU = true, UserId = 43 };
+        Global.SecondPlayer = new Assets.Models.Player() { Username = "Mike", IsCPU = true, UserId = 43 };
         SceneManager.LoadScene("PlayScene");
     }
 

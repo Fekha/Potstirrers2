@@ -1,0 +1,3 @@
+﻿<linker>
+	<assembly fullname="UnityEngine.TestRunner" preserve="all"/>
+</linker>
