@@ -186,19 +186,19 @@ public class MainMenuController : MonoBehaviour
                 loadingTimer.text = "Time in queue: 0:00";
             }
 
-            try
-            {
-                StartCoroutine(sql.RequestRoutine($"player/GetAppVersion?UserId={Global.LoggedInPlayer.UserId}", GetAppVersionCallback, true));
-            }
-            catch (Exception ex)
-            {
-                DisplayAlert("Network Failure", ex.Message);
-            }
+            //try
+            //{
+            //    StartCoroutine(sql.RequestRoutine($"player/GetAppVersion?UserId={Global.LoggedInPlayer.UserId}", GetAppVersionCallback, true));
+            //}
+            //catch (Exception ex)
+            //{
+            //    DisplayAlert("Network Failure", ex.Message);
+            //}
 
-            if (!LookingForFriendGame && !FriendChallengePanel.activeInHierarchy)
-            {
-                StartCoroutine(sql.RequestRoutine($"multiplayer/CheckForFriendGameInvite?UserId={Global.LoggedInPlayer.UserId}", GetInviteUpdate));
-            }
+            //if (!LookingForFriendGame && !FriendChallengePanel.activeInHierarchy)
+            //{
+            //    StartCoroutine(sql.RequestRoutine($"multiplayer/CheckForFriendGameInvite?UserId={Global.LoggedInPlayer.UserId}", GetInviteUpdate));
+            //}
         }
     }
 
@@ -377,7 +377,7 @@ public class MainMenuController : MonoBehaviour
     {
         if (Global.LoggedInPlayer.IsGuest) 
         {
-            DisplayAlert("Restricted", "Guests can only play vs the computer, try that or create an account!");
+            StartFakeOnlineGame();
         }
         else if (Global.LoggedInPlayer.Calories < 100)
         {

@@ -207,24 +207,37 @@ public class LoginController : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(data))
         {
+            Global.IsConnected = true;
             var version = sql.jsonConvert<double>(data);
             if (Global.AppVersion < version)
             {
                 VersionPanel.SetActive(true);
             }
         }
+        else
+        {
+            Global.IsConnected = false;
+        }
     } 
   
     private bool CheckForValidFields()
     {
-        if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
+        if (Global.IsConnected)
         {
-            DisplayAlert("Loading", "Any second now", true);
-            return true;
+            if (!String.IsNullOrEmpty(username.GetComponent<InputField>().text) && !String.IsNullOrEmpty(password.GetComponent<InputField>().text))
+            {
+                DisplayAlert("Loading", "Any second now", true);
+                return true;
+            }
+            else
+            {
+                DisplayAlert("Invalid", $"{(String.IsNullOrEmpty(username.GetComponent<InputField>().text) ? "Username" : "Password")} may not be blank.");
+                return false;
+            }
         }
         else
         {
-            DisplayAlert("Invalid", $"{(String.IsNullOrEmpty(username.GetComponent<InputField>().text) ? "Username" : "Password")} may not be blank.");
+            DisplayAlert("Not Connected", "Could not connect to server");
             return false;
         }
     }

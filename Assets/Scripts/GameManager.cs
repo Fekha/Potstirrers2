@@ -221,129 +221,7 @@ public class GameManager : MonoBehaviour
 
         if (Global.IsTutorial)
         {
-            switch (TutorialAction)
-            {
-                case 0:
-                    TutorialTextTurns(0, 2, 0);
-                    if (readClicks == 2)
-                    {
-                        RollButton1.SetActive(true);
-                    }
-                    break;
-                case 1:
-                    TutorialTextTurns(3, 0, 6);
-                    break;
-                case 3:
-                    TutorialTextTurns(4, 2, 2);
-                    break;
-                case 5:
-                    TutorialTextTurns(7, 0, 0, false);
-                    break;
-                case 7:
-                    TutorialTextTurns(8, 0, 0, false);
-                    break;
-                case 9:
-                    TutorialTextTurns(9, 1, 4);
-                    break;
-                case 11:
-                    TutorialTextTurns(11, 2, 8);
-                    break;
-                case 13:
-                    TutorialTextTurns(14, 1, 0, false);
-                    break;
-                case 15:
-                    TutorialTextTurns(16, 0, 0, false);
-                    break;
-                case 17:
-                    TutorialTextTurns(17, 0);
-                    TutorialChangeDiceArrow.SetActive(true);
-                    break;
-                case 18:
-                    TutorialChangeDiceArrow.SetActive(false);
-                    TutorialTextTurns(18, 0, 3);
-                    break;
-                case 20:
-                    TutorialTextTurns(19, 1, 6);
-                    break;
-                case 22:
-                    TutorialTextTurns(21, 0, 0, false);
-                    break;
-                case 26:
-                    TutorialTextTurns(22, 1, 6);
-                    break;
-                case 30:
-                    TutorialTextTurns(24, 0, 0, false);
-                    break;
-                case 32:
-                    TutorialTextTurns(25, 1, 6);
-                    break;
-                case 34:
-                    TutorialTextTurns(27, 1, 7);
-                    break;
-                case 36:
-                    TutorialTextTurns(29, 0, 0, false);
-                    break;
-                case 38:
-                    TutorialTextTurns(30, 1, 0, false);
-                    break;
-                case 40:
-                    TutorialTextTurns(32, 1);
-                    if (readClicks == 33)
-                    {
-                        TutorialChangeDiceArrow.SetActive(true);
-                    }
-                    break;
-                case 41:
-                    TutorialChangeDiceArrow.SetActive(false);
-                    TutorialTextTurns(34, 0, 3);
-                    break;
-                case 43:
-                    TutorialTextTurns(35, 0, 2);
-                    break;
-                case 45:
-                    TutorialTextTurns(36, 0, 0, false);
-                    break;
-                case 49:
-                    TutorialTextTurns(37);
-                    TutorialChangeDiceArrow.SetActive(true);
-                    break;
-                case 50:
-                    TutorialChangeDiceArrow.SetActive(false);
-                    TutorialTextTurns(38, 0, 6);
-                    break;
-                case 52:
-                    TutorialTextTurns(39, 0, 4);
-                    break;
-                case 56:
-                    TutorialTextTurns(40, 0, 0, false);
-                    break;
-                case 58:
-                    TutorialTextTurns(41, 1, 1);
-                    break;
-                case 60:
-                    TutorialTextTurns(43, 0, 4);
-                    break;
-                case 62:
-                    TutorialTextTurns(44, 0, 0, false);
-                    break;
-                case 63:
-                    TutorialTextTurns(45, 1, 4);
-                    break;
-                case 65:
-                    TutorialTextTurns(47, 0, 4);
-                    break;
-                case 67:
-                    TutorialTextTurns(48, 1);
-                    break;
-                case 68:
-                    tutorialPanel.SetActive(false);
-                    Global.IsTutorial = false;
-                    UpdateTitle();
-                    break;
-                default:
-                    tutorialPanel.SetActive(false);
-                    break;
-            }
+            CheckTutorial();
         }
 
         elapsed += Time.deltaTime;
@@ -471,6 +349,133 @@ public class GameManager : MonoBehaviour
                 talkShitText.text = "";
                 TalkShitPanel.SetActive(false);
             }
+        }
+    }
+
+    private void CheckTutorial()
+    {
+        switch (TutorialAction)
+        {
+            case 0:
+                TutorialTextTurns(0, 2, 0);
+                if (readClicks == 2)
+                {
+                    RollButton1.SetActive(true);
+                }
+                break;
+            case 1:
+                TutorialTextTurns(3, 0, 6);
+                break;
+            case 3:
+                TutorialTextTurns(4, 2, 2);
+                break;
+            case 5:
+                TutorialTextTurns(7, 0, 0, false);
+                break;
+            case 7:
+                TutorialTextTurns(8, 0, 0, false);
+                break;
+            case 9:
+                TutorialTextTurns(9, 1, 4);
+                break;
+            case 11:
+                TutorialTextTurns(11, 2, 8);
+                break;
+            case 13:
+                TutorialTextTurns(14, 1, 0, false);
+                break;
+            case 15:
+                TutorialTextTurns(16, 0, 0, false);
+                break;
+            case 17:
+                TutorialTextTurns(17, 0);
+                TutorialChangeDiceArrow.SetActive(true);
+                break;
+            case 18:
+                TutorialChangeDiceArrow.SetActive(false);
+                TutorialTextTurns(18, 0, 3);
+                break;
+            case 20:
+                TutorialTextTurns(19, 1, 6);
+                break;
+            case 22:
+                TutorialTextTurns(21, 0, 0, false);
+                break;
+            case 26:
+                TutorialTextTurns(22, 1, 6);
+                break;
+            case 30:
+                TutorialTextTurns(24, 0, 0, false);
+                break;
+            case 32:
+                TutorialTextTurns(25, 1, 6);
+                break;
+            case 34:
+                TutorialTextTurns(27, 1, 7);
+                break;
+            case 36:
+                TutorialTextTurns(29, 0, 0, false);
+                break;
+            case 38:
+                TutorialTextTurns(30, 1, 0, false);
+                break;
+            case 40:
+                TutorialTextTurns(32, 1);
+                if (readClicks == 33)
+                {
+                    TutorialChangeDiceArrow.SetActive(true);
+                }
+                break;
+            case 41:
+                TutorialChangeDiceArrow.SetActive(false);
+                TutorialTextTurns(34, 0, 3);
+                break;
+            case 43:
+                TutorialTextTurns(35, 0, 2);
+                break;
+            case 45:
+                TutorialTextTurns(36, 0, 0, false);
+                break;
+            case 49:
+                TutorialTextTurns(37);
+                TutorialChangeDiceArrow.SetActive(true);
+                break;
+            case 50:
+                TutorialChangeDiceArrow.SetActive(false);
+                TutorialTextTurns(38, 0, 6);
+                break;
+            case 52:
+                TutorialTextTurns(39, 0, 4);
+                break;
+            case 56:
+                TutorialTextTurns(40, 0, 0, false);
+                break;
+            case 58:
+                TutorialTextTurns(41, 1, 1);
+                break;
+            case 60:
+                TutorialTextTurns(43, 0, 4);
+                break;
+            case 62:
+                TutorialTextTurns(44, 0, 0, false);
+                break;
+            case 63:
+                TutorialTextTurns(45, 1, 4);
+                break;
+            case 65:
+                TutorialTextTurns(47, 0, 4);
+                break;
+            case 67:
+                TutorialTextTurns(48, 1);
+                break;
+            case 68:
+                tutorialPanel.SetActive(false);
+                Global.IsTutorial = false;
+                UpdateTitle();
+                break;
+            default:
+                tutorialPanel.SetActive(false);
+                break;
         }
     }
 

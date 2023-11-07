@@ -8,7 +8,7 @@ public static class Global
     public static Player SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
     public static int GameId = 0;
     public static double AppVersion = 1.25;
-    public static bool IsConnected = true;
+    public static bool IsConnected = false;
     public static bool IsDebug = false;
     public static bool OnlyGetOnlineFriends = false;
     public static bool EnteredGame = false;
@@ -25,7 +25,7 @@ public static class Global
     {
         SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
         GameId = 0;
-        IsConnected = true;
+        IsConnected = false;
         IsDebug = false;
         OnlyGetOnlineFriends = false;
         FakeOnlineGame = false;

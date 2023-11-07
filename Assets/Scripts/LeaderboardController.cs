@@ -69,21 +69,28 @@ public class LeaderboardController : MonoBehaviour
 
     private void ShowLeaderboard()
     {
-        //if (currentShowing == 0)
-        //{
-        //    ShowDailyWins();
-        //}
-        if (currentShowing == 0)
+        try
         {
-            ShowSeasonScore();
-        }
-        else if (currentShowing == 1)
+            //if (currentShowing == 0)
+            //{
+            //    ShowDailyWins();
+            //}
+            if (currentShowing == 0)
+            {
+                ShowSeasonScore();
+            }
+            else if (currentShowing == 1)
+            {
+                ShowWins();
+            }
+            else
+            {
+                ShowLocalWins();
+            }
+        }catch(Exception ex)
         {
-            ShowWins();
-        }
-        else
-        {
-            ShowLocalWins();
+            MainMenuController.i.HideLoading();
+            MainMenuController.i.DisplayAlert("Network Failure", "No internet connection");
         }
     }
 
