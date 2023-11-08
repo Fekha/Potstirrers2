@@ -525,7 +525,7 @@ public class MainMenuController : MonoBehaviour
     private void GetProfileCallback(string data)
     {
         CurrentProfile = sql.jsonConvert<Player>(data);
-        Global.LoggedInPlayer.Wins = CurrentProfile.AllWins;
+        //Global.LoggedInPlayer.Wins = CurrentProfile.AllWins;
         SetProfileData(Global.LoggedInPlayer);
 
         if (CurrentProfile.HasNewMessage)
@@ -554,10 +554,10 @@ public class MainMenuController : MonoBehaviour
         ProfileText.text = $"{CurrentProfile.Username}'s Profile";
         
         CurrentLevelText.text = $"Current Level: {CurrentProfile.Level}"; ;
-        DailyWinsText.text = $"Daily CPU Wins: {CurrentProfile.DailyWins}";
-        WeeklyWinsText.text = $"Weekly CPU Wins: {CurrentProfile.WeeklyWins}";
-        AllCPUWinsText.text = $"All CPU Wins: {CurrentProfile.AllWins}";
-        AllPVPWinsText.text = $"All PVP Wins: {CurrentProfile.AllPVPWins}";
+        //DailyWinsText.text = $"Daily CPU Wins: {CurrentProfile.DailyWins}";
+        //WeeklyWinsText.text = $"Weekly CPU Wins: {CurrentProfile.WeeklyWins}";
+        //AllCPUWinsText.text = $"All CPU Wins: {CurrentProfile.AllWins}";
+        //AllPVPWinsText.text = $"All PVP Wins: {CurrentProfile.AllPVPWins}";
         CookedIngredientsText.text = $"Cooked Ingredients: {CurrentProfile.Cooked}";
         CaloriesText.text = $"Calories: {CurrentProfile.Calories}";
         LastLoginText.text = "";

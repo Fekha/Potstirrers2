@@ -159,7 +159,7 @@ public class LoginController : MonoBehaviour
         }
 
 #if UNITY_EDITOR
-        username.GetComponent<InputField>().text = "Ecaflip";
+        username.GetComponent<InputField>().text = "Feca";
         password.GetComponent<InputField>().text = "1234";
         HideAlert();
 #endif
@@ -251,7 +251,7 @@ public class LoginController : MonoBehaviour
 
     private void GetPlayerCallback(string data)
     {
-        Player = sql.jsonConvert<Assets.Models.Player>(data);
+        Player = sql.jsonConvert<Player>(data);
         if (Player != null)
         {
             Global.LoggedInPlayer = Player;

@@ -103,22 +103,22 @@ public class LeaderboardController : MonoBehaviour
         headerText.text = "All-Time Wins vs CPU";
         ClearMessages();
         var i = 1;
-        foreach (var player in leaderData.Where(x => x.AllWins > 0).OrderByDescending(x => x.AllWins))
-        {
-            SendEventToLog(player,i,player.AllWins);
-            i++;
-        }
+        //foreach (var player in leaderData.Where(x => x.AllWins > 0).OrderByDescending(x => x.AllWins))
+        //{
+        //    SendEventToLog(player,i,player.AllWins);
+        //    i++;
+        //}
     }  
     private void ShowLocalWins()
     {
         headerText.text = "All-Time Wins vs Players";
         ClearMessages();
         var i = 1;
-        foreach (var player in leaderData.Where(x => x.AllPVPWins > 0).OrderByDescending(x => x.AllPVPWins))
-        {
-            SendEventToLog(player, i, player.AllPVPWins);
-            i++;
-        }
+        //foreach (var player in leaderData.Where(x => x.AllPVPWins > 0).OrderByDescending(x => x.AllPVPWins))
+        //{
+        //    SendEventToLog(player, i, player.AllPVPWins);
+        //    i++;
+        //}
     }
 
     private void ShowDailyWins()
@@ -126,11 +126,11 @@ public class LeaderboardController : MonoBehaviour
         headerText.text = "Daily Wins vs CPU";
         ClearMessages();
         var i = 1;
-        foreach (var player in leaderData.Where(x => x.DailyWins > 0).OrderByDescending(x => x.DailyWins))
-        {
-            SendEventToLog(player, i, player.DailyWins);
-            i++;
-        }
+        //foreach (var player in leaderData.Where(x => x.DailyWins > 0).OrderByDescending(x => x.DailyWins))
+        //{
+        //    SendEventToLog(player, i, player.DailyWins);
+        //    i++;
+        //}
     }
     
     private void ShowSeasonScore()

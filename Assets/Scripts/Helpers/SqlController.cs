@@ -11,7 +11,7 @@ public class SqlController
     {
         apiUrl = "https://potstirrersapi.azurewebsites.net/api/";
 #if UNITY_EDITOR
-        apiUrl = "https://localhost:7001/api/";
+        apiUrl = "http://localhost:7001/api/";
 #endif
     }
     public IEnumerator RequestRoutine(string url, Action<string> callback = null, bool allowGuest = false)
