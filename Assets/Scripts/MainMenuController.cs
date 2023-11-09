@@ -225,7 +225,7 @@ public class MainMenuController : MonoBehaviour
     {
         Global.IsTutorial = true;
         Global.CPUGame = true;
-        Global.SecondPlayer = new Player() { Username = "Mike", IsCPU = true, UserId = 43 };
+        Global.SecondPlayer = new Player() { Username = "Mike", IsCPU = true, UserId = 8 };
         SceneManager.LoadScene("PlayScene");
     }
     public void OnVolumeChanged(string type)
@@ -319,7 +319,7 @@ public class MainMenuController : MonoBehaviour
     private void StartFakeOnlineGame()
     {
         StopMatchmaking();
-        Global.SecondPlayer = new Player() { Username = "Ethan", IsCPU = true, UserId = 42 };
+        Global.SecondPlayer = new Player() { Username = "Ethan", IsCPU = true, UserId = 4 };
         Global.FakeOnlineGame = true;
         Global.CPUGame = true;
         SceneManager.LoadScene("PlayScene");

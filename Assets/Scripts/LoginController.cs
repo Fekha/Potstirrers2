@@ -251,7 +251,7 @@ public class LoginController : MonoBehaviour
 
     private void GetPlayerCallback(string data)
     {
-        Player = sql.jsonConvert<Player>(data);
+        Player = sql.jsonConvert<Assets.Models.Player>(data);
         if (Player != null)
         {
             Global.LoggedInPlayer = Player;

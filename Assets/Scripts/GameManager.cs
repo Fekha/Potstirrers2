@@ -1530,7 +1530,7 @@ public class GameManager : MonoBehaviour
                 {
                     eventText.text += "\n \n Great work beating the tutorial! Now go try out the game online!";
                 }
-                else if (Global.SecondPlayer.UserId == 41)
+                else if (Global.SecondPlayer.UserId == 5)
                 {
                     Global.LoggedInPlayer.Wins++;
                     eventText.text += $" \n \n Jenn gets better each time you win against her, so play again and see if you got what it takes! You earned 50 Calories.";
@@ -1542,7 +1542,7 @@ public class GameManager : MonoBehaviour
                 {
                     eventText.text += "\n \n No worries, many of the greats have lost vs Mike, try again from the main menu!";
                 }
-                else if (Global.SecondPlayer.UserId == 41)
+                else if (Global.SecondPlayer.UserId == 5)
                 {
                     eventText.text += "\n \n Keep practicing, there's more skill to the game than you might think!";
                 }

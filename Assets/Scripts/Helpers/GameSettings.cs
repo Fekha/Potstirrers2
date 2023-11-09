@@ -5,7 +5,7 @@ using UnityEngine;
 public static class Global
 {
     public static Player LoggedInPlayer = new Player();
-    public static Player SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
+    public static Player SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 5 };
     public static int GameId = 0;
     public static double AppVersion = 1.25;
     public static bool IsConnected = true;
@@ -23,7 +23,7 @@ public static class Global
 
     public static void Reset()
     {
-        SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 41 };
+        SecondPlayer = new Player() { Username = "Jenn", IsCPU = true, UserId = 5 };
         GameId = 0;
         IsConnected = true;
         IsDebug = false;
