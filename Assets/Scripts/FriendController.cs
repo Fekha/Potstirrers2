@@ -162,6 +162,8 @@ public class FriendController : MonoBehaviour
 
     private void CreateFriend(Friend user, bool realFriend)
     {
+        //Temporary
+        realFriend = true;
         if (realFriend)
         {
             ToDropdown.options.Add(new Dropdown.OptionData()
