@@ -288,7 +288,7 @@ public class LoginController : MonoBehaviour
             Global.LoggedInPlayer.IsGuest = false;
             Global.IsTutorial = true;
             Global.CPUGame = true;
-            Global.SecondPlayer = new Assets.Models.Player() { Username = "Mike", IsCPU = true, UserId = 43 };
+            Global.SecondPlayer = new Assets.Models.Player() { Username = "Mike", IsCPU = true, UserId = 8 };
             SceneManager.LoadScene("PlayScene");
         }
         else
@@ -302,7 +302,7 @@ public class LoginController : MonoBehaviour
         Global.LoggedInPlayer.IsGuest = true;
         Global.IsTutorial = true;
         Global.CPUGame = true;
-        Global.SecondPlayer = new Assets.Models.Player() { Username = "Mike", IsCPU = true, UserId = 43 };
+        Global.SecondPlayer = new Assets.Models.Player() { Username = "Mike", IsCPU = true, UserId = 8 };
         SceneManager.LoadScene("PlayScene");
     }
 

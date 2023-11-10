@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.37322488, g: 0.38088858, b: 0.3588985, a: 1}
+  m_IndirectSpecularColor: {r: 0.37311918, g: 0.3807398, b: 0.35872716, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -67,9 +67,6 @@ LightmapSettings:
     m_LightmapParameters: {fileID: 0}
     m_LightmapsBakeMode: 1
     m_TextureCompression: 1
-    m_FinalGather: 0
-    m_FinalGatherFiltering: 1
-    m_FinalGatherRayCount: 256
     m_ReflectionCompression: 2
     m_MixedBakeMode: 2
     m_BakeBackend: 1
@@ -97,7 +94,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 0}
+  m_LightingDataAsset: {fileID: 112000000, guid: c8448d52e64983c4c8e283a06cc874c0, type: 2}
   m_LightingSettings: {fileID: 0}
 --- !u!196 &4
 NavMeshSettings:
@@ -8199,8 +8196,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   headerText: {fileID: 2008481176}
   eventLogTextContent: {fileID: 1731282843}
-  eventLogTextObject: {fileID: 8410678262817775341, guid: 3f2f7332b7b88f140970d2011bbe833a,
-    type: 3}
+  eventLogTextObject: {fileID: 8410678262817775341, guid: 3f2f7332b7b88f140970d2011bbe833a, type: 3}
 --- !u!114 &431876058
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8999,7 +8995,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -113.91998}
+  m_AnchoredPosition: {x: 0, y: -113.92001}
   m_SizeDelta: {x: 0, y: 227.84}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &452055038
@@ -14778,19 +14774,16 @@ MonoBehaviour:
   TitlePanel: {fileID: 71159543}
   TitleButtonImage: {fileID: 1792764280}
   SelectedTabSprite: {fileID: 21300000, guid: 8a8fb8cb14f70f241b8097753312c86d, type: 3}
-  UnselectedTabSprite: {fileID: 21300000, guid: 703f501487e934147ab29dbe3a6520b9,
-    type: 3}
+  UnselectedTabSprite: {fileID: 21300000, guid: 703f501487e934147ab29dbe3a6520b9, type: 3}
   IngButtonContent: {fileID: 532031772}
   DiceButtonContent: {fileID: 92590197}
   TitleButtonContent: {fileID: 529385845}
-  TitlePrefabObj: {fileID: 7575007150137455041, guid: d58b46ffbfc923444a3b4b4ce20e8dbb,
-    type: 3}
+  TitlePrefabObj: {fileID: 7575007150137455041, guid: d58b46ffbfc923444a3b4b4ce20e8dbb, type: 3}
   CraftPanel: {fileID: 451650290}
   CommonSprite: {fileID: 21300000, guid: 2b451c6638b757c459a6b068fe57e7d3, type: 3}
   EpicSprite: {fileID: 21300000, guid: 2ef6aada10bef2946977c88d102e54af, type: 3}
   RareSprite: {fileID: 21300000, guid: 0872e2e1767863f4c8c4d72bfc6bc085, type: 3}
-  ItemPrefabObj: {fileID: 776239834563011892, guid: 40bcf9702a9403249822766746be873b,
-    type: 3}
+  ItemPrefabObj: {fileID: 776239834563011892, guid: 40bcf9702a9403249822766746be873b, type: 3}
   alert: {fileID: 1017338614}
   UnlockPanel: {fileID: 1285069316}
   AreYouSurePanel: {fileID: 1268931627}
@@ -15109,7 +15102,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.09262978, y: 0.6676291}
   m_AnchorMax: {x: 0.7231359, y: 0.8112848}
-  m_AnchoredPosition: {x: 30.277985, y: -803}
+  m_AnchoredPosition: {x: 30.277985, y: -802.99994}
   m_SizeDelta: {x: 53.59, y: -118.81}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &905502831
@@ -16083,7 +16076,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.83721375, y: 0.8746927}
   m_AnchorMax: {x: 1, y: 1.0000017}
-  m_AnchoredPosition: {x: 17.589966, y: 34.700012}
+  m_AnchoredPosition: {x: 17.589981, y: 34.700012}
   m_SizeDelta: {x: -35.18, y: -69.41}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &967528194
@@ -26253,8 +26246,7 @@ MonoBehaviour:
   CollectionButtonImage: {fileID: 1432849325}
   LeaderboardPanel: {fileID: 431876055}
   SelectedTabSprite: {fileID: 21300000, guid: 7093c35e191508244a6f8dd244af3059, type: 3}
-  UnselectedTabSprite: {fileID: 21300000, guid: 969938864efc62849b4094440fad4e09,
-    type: 3}
+  UnselectedTabSprite: {fileID: 21300000, guid: 969938864efc62849b4094440fad4e09, type: 3}
 --- !u!114 &1551954384
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -28285,8 +28277,7 @@ MonoBehaviour:
   MessagePanel: {fileID: 1766646417}
   MessageButtonImage: {fileID: 1379594532}
   SelectedTabSprite: {fileID: 21300000, guid: 8a8fb8cb14f70f241b8097753312c86d, type: 3}
-  UnselectedTabSprite: {fileID: 21300000, guid: 703f501487e934147ab29dbe3a6520b9,
-    type: 3}
+  UnselectedTabSprite: {fileID: 21300000, guid: 703f501487e934147ab29dbe3a6520b9, type: 3}
   hasMessage: {fileID: 372251331}
   sendMessagePanel: {fileID: 93177007}
   SubjectInput: {fileID: 364411212}
@@ -28299,8 +28290,7 @@ MonoBehaviour:
   ViewMessagePanel: {fileID: 2069984052}
   MessageButtonContent: {fileID: 863262526}
   RemoveChoice: {fileID: 925662666}
-  MessagePrefabObj: {fileID: 9062562275713326126, guid: 46b99b362ef9c2d48b0e86d94c1e1d04,
-    type: 3}
+  MessagePrefabObj: {fileID: 9062562275713326126, guid: 46b99b362ef9c2d48b0e86d94c1e1d04, type: 3}
   friendslist: {fileID: 1870512895}
   FriendButtonContent: {fileID: 372027404}
   FriendText: {fileID: 106297729}
@@ -28467,13 +28457,14 @@ Animation:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1702602680}
   m_Enabled: 1
-  serializedVersion: 3
+  serializedVersion: 4
   m_Animation: {fileID: 7400000, guid: 8589704f11c819542bc785fcc86456e5, type: 2}
   m_Animations:
   - {fileID: 7400000, guid: 8589704f11c819542bc785fcc86456e5, type: 2}
   m_WrapMode: 0
   m_PlayAutomatically: 0
   m_AnimatePhysics: 0
+  m_UpdateMode: 0
   m_CullingType: 0
 --- !u!1 &1703861052
 GameObject:
@@ -29952,7 +29943,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.056331456, y: 0.38175976}
   m_AnchorMax: {x: 0.9436686, y: 0.95342326}
-  m_AnchoredPosition: {x: -0.16796875, y: -53.235367}
+  m_AnchoredPosition: {x: -0.16796875, y: -53.23535}
   m_SizeDelta: {x: 0.24865723, y: -4.373596}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1796261518
@@ -30694,15 +30685,12 @@ MonoBehaviour:
   UnlockPanel: {fileID: 595768736}
   TimerText: {fileID: 1678950347}
   EmptySlot: {fileID: 21300000, guid: 2b451c6638b757c459a6b068fe57e7d3, type: 3}
-  UnselectedChestSprite: {fileID: 21300000, guid: b66a62fdc436a8242995a74968fd7520,
-    type: 3}
-  SelectedChestSprite: {fileID: 21300000, guid: 192768e1d2159be489775338dabac2cc,
-    type: 3}
+  UnselectedChestSprite: {fileID: 21300000, guid: b66a62fdc436a8242995a74968fd7520, type: 3}
+  SelectedChestSprite: {fileID: 21300000, guid: 192768e1d2159be489775338dabac2cc, type: 3}
   SmallPack: {fileID: 21300000, guid: a8e62861e05663c4db490242681c26a5, type: 3}
   MediumPack: {fileID: 21300000, guid: 0fd222ec61daaf34db1eadda3e21abcf, type: 3}
   LargePack: {fileID: 21300000, guid: 4b29404c1b0e4a4468159318f9def70f, type: 3}
-  ItemPrefab: {fileID: 2388544592550130422, guid: 986e23accfadf4a4a8b830cde47d46b3,
-    type: 3}
+  ItemPrefab: {fileID: 2388544592550130422, guid: 986e23accfadf4a4a8b830cde47d46b3, type: 3}
   IngSmallPack: {fileID: 21300000, guid: 302f232814182274fa05ca8adb2fcc29, type: 3}
   IngMediumPack: {fileID: 21300000, guid: 4fa893ce17c3c5e44bb0d5a14e95cbd4, type: 3}
   IngLargePack: {fileID: 21300000, guid: 441918a15baddb24d98709486a0b243c, type: 3}
@@ -33722,7 +33710,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.09109269, y: 0.15913716}
   m_AnchorMax: {x: 0.91619486, y: 0.81831044}
-  m_AnchoredPosition: {x: -4.9559937, y: -276.1554}
+  m_AnchoredPosition: {x: -4.9559937, y: -276.15536}
   m_SizeDelta: {x: -503.9359, y: -992.6771}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2005183409
@@ -34527,7 +34515,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.8398303, y: 0.84353113}
   m_AnchorMax: {x: 1.0000012, y: 1.0000001}
-  m_AnchoredPosition: {x: 15.549927, y: 13.839966}
+  m_AnchoredPosition: {x: 15.549896, y: 13.839966}
   m_SizeDelta: {x: -31.09, y: -27.68}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2037448683
@@ -35561,7 +35549,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.0000073121705, y: 1.0116309}
   m_AnchorMax: {x: 0.99999255, y: 1.3605794}
-  m_AnchoredPosition: {x: 9, y: 18}
+  m_AnchoredPosition: {x: 9, y: 18.000008}
   m_SizeDelta: {x: 0, y: 69.96}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2104335060

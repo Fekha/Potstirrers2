@@ -813,7 +813,7 @@ public class GameManager : MonoBehaviour
         {
             textToChange.text = "The Dev";
         }
-        else if (User.UserId == 43)
+        else if (User.UserId == 8)
         {
             if (Global.IsTutorial)
                 textToChange.text = "Teacher";
