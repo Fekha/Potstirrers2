@@ -36,7 +36,6 @@ namespace Assets.Models
         public float VoiceVolume { get; set; } = .5f;
         public float EffectsVolume { get; set; } = .5f;
         public float MasterVolume { get; set; } = .5f;
-        public int SeasonScore { get; set; } = 0;
         public bool IsOnline { get; set; } = false;
         public DateTime? LastLogin { get; set; } = null;
         public DateTime? CreatedDate { get; set; } = null;

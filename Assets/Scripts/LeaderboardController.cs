@@ -4,7 +4,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.Analytics;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -20,7 +22,9 @@ public class LeaderboardController : MonoBehaviour
     public GameObject eventLogTextContent;
     public GameObject eventLogTextObject;
     private List<GameObject> eventLogList = new List<GameObject>();
-    public List<Player> leaderData;
+    public Dictionary<string,int> seasonData = new Dictionary<string, int>();
+    public Dictionary<string,int> cpuData = new Dictionary<string, int>();
+    public Dictionary<string,int> pvpData = new Dictionary<string, int>();
     private SqlController sql;
     private int numLeaderboards = 3;
     private int currentShowing = 0; 
@@ -61,7 +65,96 @@ public class LeaderboardController : MonoBehaviour
     }
     private void leaderboardCallback(string jdata)
     {
-        leaderData = sql.jsonConvert<List<Player>>(jdata);
+        var analytics = sql.jsonConvert<List<GameAnalytic>>(jdata);
+        foreach(var anal in analytics)
+        {
+            if(anal.Quit && anal.TotalTurns < 20)
+            {
+                continue;
+            }
+            bool? player1Won = null;          
+            if (anal.Player1CookedNum > anal.Player2CookedNum)
+            {
+                player1Won = true;
+                if (anal.IsCpuGame)
+                {
+                    if (cpuData.ContainsKey(anal.Player1))
+                    {
+                        cpuData[anal.Player1] += 1;
+                    }
+                    else
+                    {
+                        cpuData.Add(anal.Player1, 1);
+                    }
+                }
+                else
+                {
+                    if(pvpData.ContainsKey(anal.Player1))
+                    {
+                        pvpData[anal.Player1] += 1;
+                    }
+                    else
+                    {
+                        pvpData.Add(anal.Player1, 1);
+                    }
+                }
+               
+            }
+            else if (anal.Player1CookedNum < anal.Player2CookedNum)
+            {
+                player1Won = false;
+                if (!anal.IsCpuGame)
+                {
+                    if (pvpData.ContainsKey(anal.Player2))
+                    {
+                        pvpData[anal.Player2] += 1;
+                    }
+                    else
+                    {
+                        pvpData.Add(anal.Player2, 1);
+                    }
+                }
+            }
+            if (anal.IsCpuGame)
+            {
+                if (player1Won == true)
+                {
+                    if (seasonData.ContainsKey(anal.Player1))
+                    {
+                        seasonData[anal.Player1] += anal.Player2 == "Ethan" ? 100 : 50;
+                    }
+                    else
+                    {
+                        seasonData.Add(anal.Player1, anal.Player2 == "Ethan" ? 100 : 50);
+                    }
+                }
+            }
+            else
+            {
+                if (player1Won == true)
+                {
+                    if (seasonData.ContainsKey(anal.Player1))
+                    {
+                        seasonData[anal.Player1] += anal.Wager;
+                    }
+                    else
+                    {
+                        seasonData.Add(anal.Player1, anal.Wager);
+                    }
+                }
+                else if(player1Won == false)
+                {
+                    if (seasonData.ContainsKey(anal.Player2))
+                    {
+                        seasonData[anal.Player2] += anal.Wager;
+                    }
+                    else
+                    {
+                        seasonData.Add(anal.Player2, anal.Wager);
+                    }
+                }
+            }
+        }
         currentShowing = 0;// Random.Range(0, numLeaderboards);
         ShowLeaderboard();
         MainMenuController.i.HideLoading();
@@ -81,11 +174,11 @@ public class LeaderboardController : MonoBehaviour
             }
             else if (currentShowing == 1)
             {
-                ShowWins();
+                ShowCPUWins();
             }
             else
             {
-                ShowLocalWins();
+                ShowPVPWins();
             }
         }catch(Exception ex)
         {
@@ -98,49 +191,49 @@ public class LeaderboardController : MonoBehaviour
     {
         SceneManager.LoadScene(sceneName);
     }
-    private void ShowWins()
+    private void ShowCPUWins()
     {
-        headerText.text = "All-Time Wins vs CPU";
+        headerText.text = "Wins vs CPU";
         ClearMessages();
         var i = 1;
-        //foreach (var player in leaderData.Where(x => x.AllWins > 0).OrderByDescending(x => x.AllWins))
-        //{
-        //    SendEventToLog(player,i,player.AllWins);
-        //    i++;
-        //}
+        foreach (var player in cpuData)
+        {
+            SendEventToLog(player.Key, i, player.Value);
+            i++;
+        }
     }  
-    private void ShowLocalWins()
+    private void ShowPVPWins()
     {
-        headerText.text = "All-Time Wins vs Players";
+        headerText.text = "Wins vs Players";
         ClearMessages();
         var i = 1;
-        //foreach (var player in leaderData.Where(x => x.AllPVPWins > 0).OrderByDescending(x => x.AllPVPWins))
-        //{
-        //    SendEventToLog(player, i, player.AllPVPWins);
-        //    i++;
-        //}
+        foreach (var player in pvpData)
+        {
+            SendEventToLog(player.Key, i, player.Value);
+            i++;
+        }
     }
 
-    private void ShowDailyWins()
-    {
-        headerText.text = "Daily Wins vs CPU";
-        ClearMessages();
-        var i = 1;
-        //foreach (var player in leaderData.Where(x => x.DailyWins > 0).OrderByDescending(x => x.DailyWins))
-        //{
-        //    SendEventToLog(player, i, player.DailyWins);
-        //    i++;
-        //}
-    }
+    //private void ShowDailyWins()
+    //{
+    //    headerText.text = "Daily Wins vs CPU";
+    //    ClearMessages();
+    //    var i = 1;
+    //    foreach (var player in leaderData.Where(x => x.DailyWins > 0).OrderByDescending(x => x.DailyWins))
+    //    {
+    //        SendEventToLog(player, i, player.DailyWins);
+    //        i++;
+    //    }
+    //}
     
     private void ShowSeasonScore()
     {
-        headerText.text = "Calories Earned Online";
+        headerText.text = "Calories Earned";
         ClearMessages();
         var i = 1;
-        foreach (var player in leaderData.Where(x => x.SeasonScore > 0).OrderByDescending(x => x.SeasonScore))
+        foreach (var player in seasonData)
         {
-            SendEventToLog(player, i, player.SeasonScore);
+            SendEventToLog(player.Key, i, player.Value);
             i++;
         }
     }
@@ -171,12 +264,12 @@ public class LeaderboardController : MonoBehaviour
             }
         }
     }
-    private void SendEventToLog(Player player, int rank, int wins)
+    private void SendEventToLog(string username, int rank, int wins)
     {
         GameObject newMessage = Instantiate(eventLogTextObject, eventLogTextContent.transform);
         newMessage.transform.Find("RankText").gameObject.GetComponent<Text>().text = rank + ") ";
-        newMessage.transform.Find("PlayerText").gameObject.GetComponent<Text>().text = player.Username + " - " + wins;
-        newMessage.GetComponent<Button>().onClick.AddListener(() => MainMenuController.i.OpenFriendProfile(player.UserId));
+        newMessage.transform.Find("PlayerText").gameObject.GetComponent<Text>().text = username + " - " + wins;
+        //newMessage.GetComponent<Button>().onClick.AddListener(() => MainMenuController.i.OpenFriendProfile(player.UserId));
         eventLogList.Add(newMessage);
     }
 }

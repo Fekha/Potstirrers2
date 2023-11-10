@@ -913,7 +913,7 @@ public class CpuLogic : MonoBehaviour
     }
     private Ingredient BeDumb()
     {
-        if (!Global.IsDebug && !Global.IsTutorial && !Global.FakeOnlineGame && (!hasBeenDumb && (Random.Range(0, Mathf.Min((Global.LoggedInPlayer.Wins == 0 ? 2 : Global.LoggedInPlayer.Wins*2), 50)) == 0)))
+        if (!Global.IsDebug && !Global.IsTutorial && !Global.FakeOnlineGame && (!hasBeenDumb && (Random.Range(0, Mathf.Min((Global.LoggedInPlayer.Wins == 0 ? 1 : Global.LoggedInPlayer.Wins), 50)) == 0)))
         {
             if (IngredientMovedWithHigher == null)
             {
