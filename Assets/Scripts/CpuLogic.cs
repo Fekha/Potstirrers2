@@ -13,7 +13,6 @@ public class CpuLogic : MonoBehaviour
     private List<Ingredient> UseableEnemyIngredients;
     internal Ingredient IngredientMovedWithLower;
     internal Ingredient IngredientMovedWithHigher;
-    private bool hasBeenDumb = false;
     private bool SecondMoveDouble = false;
     internal static CpuLogic i;
     private void Awake()
@@ -41,7 +40,6 @@ public class CpuLogic : MonoBehaviour
 
         IngredientMovedWithLower = null;
         IngredientMovedWithHigher = null;
-        hasBeenDumb = false;
         SecondMoveDouble = false;
     }
 
@@ -913,7 +911,7 @@ public class CpuLogic : MonoBehaviour
     }
     private Ingredient BeDumb()
     {
-        if (!Global.IsDebug && !Global.IsTutorial && !Global.FakeOnlineGame && (!hasBeenDumb && (Random.Range(0, Mathf.Min((Global.LoggedInPlayer.Wins == 0 ? 1 : Global.LoggedInPlayer.Wins), 50)) == 0)))
+        if (!Global.IsDebug && !Global.IsTutorial && !Global.FakeOnlineGame && Random.Range(0, Global.LoggedInPlayer.Wins+1) == 0)
         {
             if (IngredientMovedWithHigher == null)
             {
@@ -921,7 +919,6 @@ public class CpuLogic : MonoBehaviour
                 if (ingsToMove.Count() > 0)
                 {
                     var toMove = ingsToMove[Random.Range(0, ingsToMove.Count())];
-                    hasBeenDumb = true;
                     IngredientMovedWithHigher = toMove;
                     return IngredientMovedWithHigher;
                 }
@@ -933,7 +930,6 @@ public class CpuLogic : MonoBehaviour
                 if (ingsToMove.Count() > 0)
                 {
                     var toMove = ingsToMove[Random.Range(0, ingsToMove.Count())];
-                    hasBeenDumb = true;
                     IngredientMovedWithLower = toMove;
                     return IngredientMovedWithLower;
                 }

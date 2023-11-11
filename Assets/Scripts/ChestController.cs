@@ -232,10 +232,9 @@ public class ChestController : MonoBehaviour
     }
     private void UpdateTime()
     {
-        TimeNow = DateTime.UtcNow.AddHours(-4);
         if (SelectedChest != null && SelectedChest.FinishUnlock != null)
         {
-            TimeSpan time = (DateTime)SelectedChest.FinishUnlock - TimeNow;
+            TimeSpan time = (DateTime)SelectedChest.FinishUnlock - DateTime.UtcNow;
             if (time.Hours > 0)
             {
                 HelpText.text = "Press again to unlock immediately!";

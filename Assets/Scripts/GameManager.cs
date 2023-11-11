@@ -809,7 +809,7 @@ public class GameManager : MonoBehaviour
             User = GetActivePlayer();
 
         var textToChange = User.UserId == playerList[0].UserId ? TitleText1 : TitleText2;
-        if (User.UserId == 5)
+        if (User.UserId == 3)
         {
             textToChange.text = "The Dev";
         }

@@ -196,7 +196,7 @@ public class LeaderboardController : MonoBehaviour
         headerText.text = "Wins vs CPU";
         ClearMessages();
         var i = 1;
-        foreach (var player in cpuData)
+        foreach (var player in cpuData.OrderByDescending(x => x.Value))
         {
             SendEventToLog(player.Key, i, player.Value);
             i++;
@@ -207,7 +207,7 @@ public class LeaderboardController : MonoBehaviour
         headerText.text = "Wins vs Players";
         ClearMessages();
         var i = 1;
-        foreach (var player in pvpData)
+        foreach (var player in pvpData.OrderByDescending(x => x.Value))
         {
             SendEventToLog(player.Key, i, player.Value);
             i++;
@@ -231,7 +231,7 @@ public class LeaderboardController : MonoBehaviour
         headerText.text = "Calories Earned";
         ClearMessages();
         var i = 1;
-        foreach (var player in seasonData)
+        foreach (var player in seasonData.OrderByDescending(x => x.Value))
         {
             SendEventToLog(player.Key, i, player.Value);
             i++;
