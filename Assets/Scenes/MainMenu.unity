@@ -3149,8 +3149,8 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1273596844}
-  - {fileID: 522188022}
   - {fileID: 1724610855}
+  - {fileID: 522188022}
   - {fileID: 208056618}
   - {fileID: 854051380}
   m_Father: {fileID: 1550922788}
@@ -23046,7 +23046,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "Play against Jenn the Computer. \nCosts Nothing, Win 50 Calories!"
+  m_Text: "Play against Jenn the Computer. \nWin 50 Calories and a small pack!"
 --- !u!222 &1369697340
 CanvasRenderer:
   m_ObjectHideFlags: 0

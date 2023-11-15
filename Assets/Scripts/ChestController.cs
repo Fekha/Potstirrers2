@@ -34,7 +34,6 @@ public class ChestController : MonoBehaviour
     #endregion
     public Sprite EpicBackground;
     public Sprite RareBackground;
-    private DateTime TimeNow;
     private float elapsed = 1;
     public GameObject PurchaseSpeedPanel;
     public class Chest
@@ -186,7 +185,7 @@ public class ChestController : MonoBehaviour
             {
                 StartCoroutine(sql.RequestRoutine($"skin/StartChestUnlock?ChestId={SelectedChest.ChestId}", UpdateChestTimerCallback));
             }
-            else if (SelectedChest.FinishUnlock < TimeNow)
+            else if (SelectedChest.FinishUnlock < DateTime.UtcNow)
             {
                 StartCoroutine(OpenChest());
             }
@@ -217,7 +216,7 @@ public class ChestController : MonoBehaviour
 
     private double getSpeedUpCost()
     {
-        var time = (DateTime)SelectedChest.FinishUnlock - TimeNow;
+        var time = (DateTime)SelectedChest.FinishUnlock - DateTime.UtcNow;
         return (int)time.TotalMinutes;
     }
 
