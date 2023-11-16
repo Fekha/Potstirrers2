@@ -164,15 +164,11 @@ If an ingredient is landed on, it stacks on top of it, unless it is in a danger 
 
 If it was in a danger zone, you do not stack, you instead send the ingredient that was landed on to prep.
 
-An ingredient that has been stacked on may not be moved until the pieces above it are moved.
+An ingredient that has been stacked on may not be moved until the pieces above it are moved.",
 
-Note: Cooked ingredients can't be landed on because you never count the space they are on while moving.",
+@"Dotted Lines Split Path:
 
-@"Exact Spaces:
-
-There are three spaces labeled Exact.
-
-Landing on them does NOTHING, instead they signal a split in the path that may be taken if you have exactly one move left.
+There are 3 split path locations on the board indicated by dotted lines, if you have 1 space left to move you may take it.
 
 The first two you come across lead the ingredient to a trash can that sends it back to prep.
 
@@ -184,7 +180,7 @@ If an ingredient ends its movement on a space with a utensil handle, immediately
 
 Note: If there is a cooked ingredient on the other side of the utensil, skip over it!",
 
-@"prep:
+@"Prep:
 
 All ingredients start on prep, and return there after being cooked, being landed on in a danger zone, or moving onto a trash can.
 

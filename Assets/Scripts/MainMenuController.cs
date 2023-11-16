@@ -551,7 +551,7 @@ public class MainMenuController : MonoBehaviour
         CookedIngredientsText.color = Color.white;
         CaloriesText.color = Color.white;
 
-        ProfileText.text = $"{CurrentProfile.Username}'s Profile";
+        ProfileText.text = $"{CurrentProfile.Username}";
         
         CurrentLevelText.text = $"Current Level: {CurrentProfile.Level}"; ;
         //DailyWinsText.text = $"Daily CPU Wins: {CurrentProfile.DailyWins}";

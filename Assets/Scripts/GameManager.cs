@@ -117,6 +117,7 @@ public class GameManager : MonoBehaviour
     [Header("Text")]
     public Text eventText;
     public Text helpText;
+    public Text helpTextTitle;
     public Text talkShitText;
     private GameObject tutorialPanel;
     private Text tutorialText;
@@ -572,7 +573,7 @@ public class GameManager : MonoBehaviour
         {
             pageNum = 0;
             helpText.text = Library.helpTextList[pageNum];
-            StartReading();
+            StartReading(false);
         }
         else
         {
@@ -1002,7 +1003,7 @@ public class GameManager : MonoBehaviour
     {
         IsDrinking = true;
         helpText.text = (teamYellow ? "Yellow" : "Purple") + " team drinks for " + v + (v == 1 ? " second" : " seconds") + ". \n \n Math: 1 second for each ingredient in Prep, other team drinks if cooked.";
-        StartReading();
+        StartReading(true);
     }
     internal void UpdateMoveText(int? moveAmount = null)
     {
@@ -1298,8 +1299,9 @@ public class GameManager : MonoBehaviour
         CpuLogic.i.IngredientMovedWithLower = null;
         TakeTurn();
     }
-    private void StartReading()
+    private void StartReading(bool isWine)
     {
+        helpTextTitle.text = isWine ? "Wine Menu" : "Instructions";
         IsReading = true;
         readingTimeStart = Time.time;
         WineCanvas.SetActive(true);
