@@ -1569,7 +1569,7 @@ public class GameManager : MonoBehaviour
         if (Global.LoggedInPlayer.WineMenu)
             eventText.text += "\n \n" + (playerWhoWon.UserId == Global.LoggedInPlayer.UserId ? " Purple" : " Yellow") + " Team finish your drinks!";
 
-        if (TurnNumber > 19 && !Global.FriendlyGame && (!Global.CPUGame || Global.FakeOnlineGame))
+        if (TurnNumber > 19 && !Global.FriendlyGame)
             Global.JustWonOnline = playerWhoWon.UserId == Global.LoggedInPlayer.UserId;
 
         EventCanvas.SetActive(true);
