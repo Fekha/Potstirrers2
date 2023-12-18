@@ -518,8 +518,8 @@ public class MainMenuController : MonoBehaviour
 
     public void UpdateLvlText() {
         float xpNeeded = (100 + (Global.LoggedInPlayer.Level * 50));
-        lvlText.text = $"Current Level: {Global.LoggedInPlayer.Level}";
-        xpText.text = $"XP To Next Level: {Global.LoggedInPlayer.Xp}/{xpNeeded}";
+        lvlText.text = $"Level: {Global.LoggedInPlayer.Level}";
+        xpText.text = $"XP: {Global.LoggedInPlayer.Xp}/{xpNeeded}";
         xpSlider.value = ((float)Global.LoggedInPlayer.Xp / xpNeeded);
     }
     private void GetProfileCallback(string data)
@@ -553,7 +553,7 @@ public class MainMenuController : MonoBehaviour
 
         ProfileText.text = $"{CurrentProfile.Username}";
         
-        CurrentLevelText.text = $"Current Level: {CurrentProfile.Level}"; ;
+        CurrentLevelText.text = $"Level: {CurrentProfile.Level}"; ;
         //DailyWinsText.text = $"Daily CPU Wins: {CurrentProfile.DailyWins}";
         //WeeklyWinsText.text = $"Weekly CPU Wins: {CurrentProfile.WeeklyWins}";
         //AllCPUWinsText.text = $"All CPU Wins: {CurrentProfile.AllWins}";
